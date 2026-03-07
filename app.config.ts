@@ -1,0 +1,34 @@
+import type { ConfigContext, ExpoConfig } from 'expo/config'
+
+export default ({ config }: ConfigContext): ExpoConfig => ({
+  ...config,
+  name: 'svitlo',
+  slug: 'svitlo',
+  version: '1.0.0',
+  orientation: 'portrait',
+  platforms: ['ios', 'web'],
+  icon: './assets/images/icon.png',
+  scheme: 'svitlo',
+  userInterfaceStyle: 'automatic',
+  ios: {
+    icon: './assets/expo.icon'
+  },
+  web: {
+    bundler: 'metro',
+    output: 'server',
+    favicon: './assets/images/favicon.png'
+  },
+  plugins: [
+    'expo-router',
+    [
+      'expo-splash-screen',
+      {
+        backgroundColor: '#208AEF'
+      }
+    ]
+  ],
+  experiments: {
+    typedRoutes: true,
+    reactCompiler: true
+  }
+})
