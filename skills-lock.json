@@ -65,6 +65,11 @@
       "source": "uni-stack/uniwind",
       "sourceType": "github",
       "computedHash": "69723f989a9fb09528f8fbdfbb2b4d3917223bc4538fcb5de1b07e0b72cb0873"
+    },
+    "vercel-react-native-skills": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "2e9088a7333666d8c2833b8ff58bd51b955501c42b4c7244f72b4cbf22dafcc4"
     }
   }
 }
