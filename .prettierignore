@@ -1,0 +1,30 @@
+# Ignore build artifacts and dependencies
+node_modules
+.expo
+.expo-shared
+dist
+build
+web-build
+coverage
+
+# Ignore lock files
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Ignore system files
+.DS_Store
+
+# Ignore output from Expo export
+exported-artifacts
+
+# Ignore miscellaneous
+*.log
+
+# Ignore generated uniwind types
+uniwind-types.d.ts
+
+# Ignore skills files
+.agents/skills/**
+.claude/skills/**
+.cursor/skills/**

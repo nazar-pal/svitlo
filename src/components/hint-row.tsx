@@ -1,35 +1,25 @@
-import React, { type ReactNode } from 'react';
-import { View, StyleSheet } from 'react-native';
-
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
-
-import { Spacing } from '@/constants/theme';
+import React, { type ReactNode } from 'react'
+import { Text, View } from 'react-native'
 
 type HintRowProps = {
-  title?: string;
-  hint?: ReactNode;
-};
-
-export function HintRow({ title = 'Try editing', hint = 'app/index.tsx' }: HintRowProps) {
-  return (
-    <View style={styles.stepRow}>
-      <ThemedText type="small">{title}</ThemedText>
-      <ThemedView type="backgroundSelected" style={styles.codeSnippet}>
-        <ThemedText themeColor="textSecondary">{hint}</ThemedText>
-      </ThemedView>
-    </View>
-  );
+  title?: string
+  hint?: ReactNode
 }
 
-const styles = StyleSheet.create({
-  stepRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  codeSnippet: {
-    borderRadius: Spacing.two,
-    paddingVertical: Spacing.half,
-    paddingHorizontal: Spacing.two,
-  },
-});
+export function HintRow({
+  title = 'Try editing',
+  hint = (
+    <Text className="text-muted font-mono text-xs font-medium">
+      app/index.tsx
+    </Text>
+  )
+}: HintRowProps) {
+  return (
+    <View className="flex-row items-center justify-between gap-3">
+      <Text className="text-foreground text-sm leading-5 font-medium">
+        {title}
+      </Text>
+      <View className="bg-default rounded-lg px-2 py-0.5">{hint}</View>
+    </View>
+  )
+}

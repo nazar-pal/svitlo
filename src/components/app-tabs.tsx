@@ -1,33 +1,34 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import React from 'react';
-import { useColorScheme } from 'react-native';
-
-import { Colors } from '@/constants/theme';
+import { NativeTabs } from 'expo-router/unstable-native-tabs'
+import React from 'react'
+import { useCSSVariable } from 'uniwind'
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const background = useCSSVariable('--color-background') as string | undefined
+  const surfaceSecondary = useCSSVariable('--color-surface-secondary') as
+    | string
+    | undefined
+  const foreground = useCSSVariable('--color-foreground') as string | undefined
 
   return (
     <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
+      backgroundColor={background}
+      indicatorColor={surfaceSecondary}
+      labelStyle={{ selected: { color: foreground } }}
+    >
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
+        <NativeTabs.Trigger.Icon sf="house.fill" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="explore">
         <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
+        <NativeTabs.Trigger.Icon sf="safari.fill" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="showcase">
+        <NativeTabs.Trigger.Label>Showcase</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="sparkles" />
       </NativeTabs.Trigger>
     </NativeTabs>
-  );
+  )
 }

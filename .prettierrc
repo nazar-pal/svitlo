@@ -1,0 +1,13 @@
+{
+  "semi": false,
+  "singleQuote": true,
+
+  "arrowParens": "avoid",
+  "trailingComma": "none",
+
+  "useTabs": false,
+  "tabWidth": 2,
+
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "tailwindFunctions": ["cn", "clsx", "twMerge"]
+}
