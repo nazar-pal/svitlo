@@ -57,38 +57,38 @@ Copy `.env.example` to `.env.local`. In development, only the "always required" 
 
 ### Always Required
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | Neon pooled Postgres connection string |
-| `BETTER_AUTH_SECRET` | Auth token signing secret (generate with `bun run auth:secret`) |
-| `POWERSYNC_URL` | PowerSync Cloud instance URL |
+| Variable                | Description                                                                                           |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | Neon pooled Postgres connection string                                                                |
+| `BETTER_AUTH_SECRET`    | Auth token signing secret (generate with `bun run auth:secret`)                                       |
+| `POWERSYNC_URL`         | PowerSync Cloud instance URL                                                                          |
 | `POWERSYNC_PRIVATE_KEY` | HMAC-SHA256 secret for signing PowerSync JWTs (min 32 chars; generate with `openssl rand -base64 32`) |
 
 ### Preview & Production Only
 
-| Variable | Description |
-|----------|-------------|
-| `BETTER_AUTH_URL` | Public URL where the Better Auth server is reachable |
-| `EXPO_PUBLIC_API_URL` | Public API origin used by native iOS builds |
+| Variable                  | Description                                                        |
+| ------------------------- | ------------------------------------------------------------------ |
+| `BETTER_AUTH_URL`         | Public URL where the Better Auth server is reachable               |
+| `EXPO_PUBLIC_API_URL`     | Public API origin used by native iOS builds                        |
 | `EXPO_PUBLIC_APP_VARIANT` | `preview` or `production` — controls app name suffix and bundle ID |
 
 Apple Sign In uses native iOS bundle identifiers, not environment variables.
 
 ## Scripts
 
-| Script | Description |
-|--------|-------------|
-| `bun run dev` | Start Expo dev server (development variant) |
-| `bun run start` | Start Expo dev server |
-| `bun run ios` | Run on iOS simulator |
-| `bun run auth:generate` | Generate Better Auth Drizzle schema |
-| `bun run auth:secret` | Generate a new `BETTER_AUTH_SECRET` |
-| `bun run db:generate` | Generate Drizzle migrations |
-| `bun run db:migrate` | Apply Drizzle migrations to Neon |
-| `bun run lint` | Run ESLint |
-| `bun run typecheck` | Run TypeScript type checking |
-| `bun run format` | Format code with Prettier |
-| `bun run flt` | Format + lint + typecheck (all three) |
+| Script                  | Description                                 |
+| ----------------------- | ------------------------------------------- |
+| `bun run dev`           | Start Expo dev server (development variant) |
+| `bun run start`         | Start Expo dev server                       |
+| `bun run ios`           | Run on iOS simulator                        |
+| `bun run auth:generate` | Generate Better Auth Drizzle schema         |
+| `bun run auth:secret`   | Generate a new `BETTER_AUTH_SECRET`         |
+| `bun run db:generate`   | Generate Drizzle migrations                 |
+| `bun run db:migrate`    | Apply Drizzle migrations to Neon            |
+| `bun run lint`          | Run ESLint                                  |
+| `bun run typecheck`     | Run TypeScript type checking                |
+| `bun run format`        | Format code with Prettier                   |
+| `bun run flt`           | Format + lint + typecheck (all three)       |
 
 ## Project Structure
 
@@ -126,11 +126,11 @@ Better Auth is mounted at `/api/auth/[...auth]` as an Expo API route. Authentica
 
 Three variants can coexist on a single device without callback collisions:
 
-| Variant | Bundle ID | App Name |
-|---------|-----------|----------|
-| development | `com.devnazar.svitlo.dev` | Svitlo (Dev) |
-| preview | `com.devnazar.svitlo.preview` | Svitlo (Preview) |
-| production | `com.devnazar.svitlo` | Svitlo |
+| Variant     | Bundle ID                     | App Name         |
+| ----------- | ----------------------------- | ---------------- |
+| development | `com.devnazar.svitlo.dev`     | Svitlo (Dev)     |
+| preview     | `com.devnazar.svitlo.preview` | Svitlo (Preview) |
+| production  | `com.devnazar.svitlo`         | Svitlo           |
 
 Set via `EXPO_PUBLIC_APP_VARIANT` at build time.
 

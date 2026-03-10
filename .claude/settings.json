@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run lint 2>&1; bun run typecheck 2>&1"
+          }
+        ]
+      }
+    ]
+  }
+}
