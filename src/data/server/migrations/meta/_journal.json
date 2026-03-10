@@ -8,6 +8,20 @@
       "when": 1773075285971,
       "tag": "0000_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773172490195,
+      "tag": "0001_init",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773172523082,
+      "tag": "0002_custom_validation_constraints",
+      "breakpoints": true
     }
   ]
 }

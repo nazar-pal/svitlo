@@ -23,6 +23,16 @@
 - Keep designs minimalistic following iOS design principles
 - This app is local-first — loading states are rarely needed
 
+## Validation Architecture
+
+3-layer validation for offline-first correctness:
+
+1. **Client Zod schemas** (`src/data/client/validation/`) — field-level constraints, immediate UX feedback
+2. **Client mutations** (`src/data/client/mutations/`) — authorization, FK existence checks, cross-table business rules
+3. **PostgreSQL constraints + triggers** (`src/data/server/db-schema/`, migrations) — final safety net, enforced even if client validation is bypassed
+
+Redundancy between layers is intentional: client validates for UX, server enforces for security.
+
 ## Commands
 
 - `bun run lint` — run after changes, fix all errors
