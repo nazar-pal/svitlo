@@ -63,13 +63,13 @@ export default function ExploreScreen() {
               <Text className="text-foreground text-sm leading-5 font-medium">
                 Mobile tabs live in{' '}
                 <Text className="text-foreground font-mono text-xs font-medium">
-                  src/app/(tabs)
+                  src/app/(protected)/(tabs)
                 </Text>
-                , while the privacy page and API routes live outside the tab
-                group.
+                , while the public privacy page and API routes live outside the
+                protected app shell.
               </Text>
               <Text className="text-foreground text-sm leading-5 font-medium">
-                That lets the hosted web page avoid inheriting the mobile tab
+                That lets hosted public pages avoid inheriting the native tab
                 shell.
               </Text>
             </Accordion.Content>
@@ -84,9 +84,8 @@ export default function ExploreScreen() {
             </Accordion.Trigger>
             <Accordion.Content className="gap-3">
               <Text className="text-foreground text-sm leading-5 font-medium">
-                The project now keeps web support enabled for Expo Hosting and
-                Expo API Routes, even though the product UI remains focused on
-                iOS.
+                The project keeps web support enabled for Expo Hosting and Expo
+                API Routes, even though the product UI remains focused on iOS.
               </Text>
               <ExternalLink href="https://docs.expo.dev/eas/hosting/introduction/">
                 <Text className="text-link text-sm leading-[30px]">

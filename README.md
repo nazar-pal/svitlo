@@ -1,56 +1,156 @@
-# Welcome to your Expo app 👋
+# Svitlo
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Power generator maintenance tracker for iOS. Log run sessions, schedule maintenance by hours or calendar time, and manage generators across organizations with role-based access — all offline-first.
 
-## Get started
+## Tech Stack
 
-1. Install dependencies
+- **Framework:** [Expo](https://expo.dev) (SDK 55) with [Expo Router](https://docs.expo.dev/router/introduction/)
+- **Language:** TypeScript
+- **Styling:** [Tailwind CSS v4](https://tailwindcss.com) via [Uniwind](https://uniwind.dev) + [HeroUI Native](https://herouinative.com)
+- **Auth:** [Better Auth](https://www.better-auth.com) (Apple Sign In) hosted in Expo API routes
+- **Server Database:** [Neon](https://neon.tech) Postgres with [Drizzle ORM](https://orm.drizzle.team)
+- **Local-first Sync:** [PowerSync](https://www.powersync.com) with [OP-SQLite](https://github.com/nicksrandall/op-sqlite)
+- **API Layer:** [tRPC](https://trpc.io) v11 with [TanStack Query](https://tanstack.com/query)
+- **Env Validation:** [@t3-oss/env-core](https://env.t3.gg) + [Zod](https://zod.dev)
+
+## Prerequisites
+
+- [Bun](https://bun.sh) (package manager and script runner)
+- [Xcode](https://developer.apple.com/xcode/) (iOS builds)
+- A [Neon](https://neon.tech) Postgres database
+- A [PowerSync](https://www.powersync.com) Cloud instance
+- An Apple Developer account (for Sign in with Apple)
+
+## Getting Started
+
+1. **Install dependencies:**
 
    ```bash
-   npm install
+   bun install
    ```
 
-2. Start the app
+2. **Set up environment variables:**
 
    ```bash
-   npx expo start
+   cp .env.example .env.local
    ```
 
-In the output, you'll find options to open the app in a
+   Fill in the required values (see [Environment Variables](#environment-variables) below).
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+3. **Generate auth schema and run database migrations:**
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+   ```bash
+   bun run auth:generate
+   bun run db:generate
+   bun run db:migrate
+   ```
 
-## Get a fresh project
+4. **Start the dev server:**
 
-When you're ready, run:
+   ```bash
+   bun run dev
+   ```
 
-```bash
-npm run reset-project
+## Environment Variables
+
+Copy `.env.example` to `.env.local`. In development, only the "always required" variables are needed — API origins are derived automatically from the Expo dev server.
+
+### Always Required
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Neon pooled Postgres connection string |
+| `BETTER_AUTH_SECRET` | Auth token signing secret (generate with `bun run auth:secret`) |
+| `POWERSYNC_URL` | PowerSync Cloud instance URL |
+| `POWERSYNC_PRIVATE_KEY` | HMAC-SHA256 secret for signing PowerSync JWTs (min 32 chars; generate with `openssl rand -base64 32`) |
+
+### Preview & Production Only
+
+| Variable | Description |
+|----------|-------------|
+| `BETTER_AUTH_URL` | Public URL where the Better Auth server is reachable |
+| `EXPO_PUBLIC_API_URL` | Public API origin used by native iOS builds |
+| `EXPO_PUBLIC_APP_VARIANT` | `preview` or `production` — controls app name suffix and bundle ID |
+
+Apple Sign In uses native iOS bundle identifiers, not environment variables.
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `bun run dev` | Start Expo dev server (development variant) |
+| `bun run start` | Start Expo dev server |
+| `bun run ios` | Run on iOS simulator |
+| `bun run auth:generate` | Generate Better Auth Drizzle schema |
+| `bun run auth:secret` | Generate a new `BETTER_AUTH_SECRET` |
+| `bun run db:generate` | Generate Drizzle migrations |
+| `bun run db:migrate` | Apply Drizzle migrations to Neon |
+| `bun run lint` | Run ESLint |
+| `bun run typecheck` | Run TypeScript type checking |
+| `bun run format` | Format code with Prettier |
+| `bun run flt` | Format + lint + typecheck (all three) |
+
+## Project Structure
+
+```
+src/
+├── app/                          # Expo Router file-based routes
+│   ├── (auth)/                   # Auth screens (sign-in)
+│   ├── (protected)/(tabs)/       # Authenticated tab navigator
+│   ├── (public)/                 # Public screens (privacy policy)
+│   └── api/                      # Expo API routes (auth, tRPC)
+├── components/                   # Shared UI components
+├── data/
+│   ├── client/                   # Client-side DB schema & queries (PowerSync)
+│   ├── server/                   # Server DB schema, migrations, auth config, tRPC routers
+│   └── trpc/                     # tRPC client setup & React integration
+├── lib/
+│   ├── auth/                     # Auth client, Apple sign-in, session management
+│   ├── config/                   # API origin helpers
+│   ├── hooks/                    # Shared hooks
+│   └── powersync/                # PowerSync connector, database, context
+└── screens/                      # Screen components extracted from routes
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Architecture
 
-### Other setup steps
+### Local-First
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+All reads and writes go against a local SQLite database (OP-SQLite) on the device. PowerSync handles bidirectional sync to Neon Postgres in the background. Core features — starting/stopping generators, logging maintenance, viewing history — work fully offline. Changes sync when connectivity is available.
 
-## Learn more
+### Auth Flow
 
-To learn more about developing your project with Expo, look at the following resources:
+Better Auth is mounted at `/api/auth/[...auth]` as an Expo API route. Authentication uses Apple Sign In exclusively (native on iOS, web fallback elsewhere). The auth gate in `src/components/auth-gate.tsx` protects the `(protected)` route group. An offline identity snapshot stored locally enables offline bootstrapping without a live session check.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### iOS Build Variants
 
-## Join the community
+Three variants can coexist on a single device without callback collisions:
 
-Join our community of developers creating universal apps.
+| Variant | Bundle ID | App Name |
+|---------|-----------|----------|
+| development | `com.devnazar.svitlo.dev` | Svitlo (Dev) |
+| preview | `com.devnazar.svitlo.preview` | Svitlo (Preview) |
+| production | `com.devnazar.svitlo` | Svitlo |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Set via `EXPO_PUBLIC_APP_VARIANT` at build time.
+
+## EAS Hosting
+
+Set production environment variables in EAS:
+
+```bash
+eas env:create --environment production --name BETTER_AUTH_SECRET --value "..."
+eas env:create --environment production --name BETTER_AUTH_URL --value "https://your-domain.example.com"
+eas env:create --environment production --name DATABASE_URL --value "postgresql://..."
+eas env:create --environment production --name POWERSYNC_URL --value "https://..."
+eas env:create --environment production --name POWERSYNC_PRIVATE_KEY --value "..."
+eas env:create --environment production --name EXPO_PUBLIC_API_URL --value "https://your-domain.example.com"
+```
+
+## Background
+
+Svitlo was built for the [PowerSync Hackathon](https://www.powersync.com) and doubles as a personal-use tool. The repository is public on GitHub.
+
+## License
+
+MIT

@@ -3,6 +3,9 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
+      "@/env": [
+        "./env.ts"
+      ],
       "@/*": [
         "./src/*"
       ],

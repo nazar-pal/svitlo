@@ -1,19 +1,23 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config'
 
-const IS_DEV = process.env.EXPO_PUBLIC_APP_VARIANT === 'development'
-const IS_PREVIEW = process.env.EXPO_PUBLIC_APP_VARIANT === 'preview'
-
 const APP_ID_PREFIX = 'com.devnazar.svitlo'
+export const APP_SCHEME = 'svitlo'
 
-const getUniqueIdentifier = () => {
-  if (IS_DEV) return `${APP_ID_PREFIX}.dev`
-  if (IS_PREVIEW) return `${APP_ID_PREFIX}.preview`
-  return APP_ID_PREFIX // TODO: maybe `${APP_ID_PREFIX}.app` for production ?
+export function getAppIdentifier() {
+  const variant = process.env.EXPO_PUBLIC_APP_VARIANT
+
+  if (variant === 'development') return `${APP_ID_PREFIX}.dev`
+  if (variant === 'preview') return `${APP_ID_PREFIX}.preview`
+
+  return APP_ID_PREFIX
 }
 
-const getAppName = () => {
-  if (IS_DEV) return 'Svitlo (Dev)'
-  if (IS_PREVIEW) return 'Svitlo (Preview)'
+export function getAppName() {
+  const variant = process.env.EXPO_PUBLIC_APP_VARIANT
+
+  if (variant === 'development') return 'Svitlo (Dev)'
+  if (variant === 'preview') return 'Svitlo (Preview)'
+
   return 'Svitlo'
 }
 
@@ -29,12 +33,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   platforms: ['ios', 'web'],
   icon: './assets/images/icon.png',
-  scheme: 'svitlo',
+  scheme: APP_SCHEME,
   userInterfaceStyle: 'automatic',
   ios: {
     icon: './assets/expo.icon',
     supportsTablet: false,
-    bundleIdentifier: getUniqueIdentifier()
+    bundleIdentifier: getAppIdentifier(),
+    usesAppleSignIn: true
   },
   web: {
     bundler: 'metro',
@@ -48,7 +53,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         backgroundColor: '#208AEF'
       }
-    ]
+    ],
+    'expo-secure-store',
+    'expo-web-browser',
+    'expo-apple-authentication'
   ],
   extra: {
     eas: {

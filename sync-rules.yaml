@@ -1,0 +1,13 @@
+config:
+  edition: 3
+
+streams:
+  user_data:
+    # Syncs each user's own record. auto_subscribe ensures it's
+    # available offline immediately on connect — no client-side
+    # subscription call needed.
+    query: >
+      SELECT id, name, email, email_verified, image, created_at, updated_at
+      FROM "user"
+      WHERE id = auth.user_id()
+    auto_subscribe: true

@@ -10,7 +10,7 @@ import {
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 
-import { buildApiUrl } from '@/lib/api'
+import { trpcClient } from '@/data/trpc/react'
 
 export default function ShowcaseScreen() {
   const [email, setEmail] = useState('ios@svitlo.app')
@@ -24,8 +24,7 @@ export default function ShowcaseScreen() {
   async function runHealthCheck() {
     try {
       setApiState({ loading: true, error: '', result: '' })
-      const response = await fetch(buildApiUrl('/api/health'))
-      const data = await response.json()
+      const data = await trpcClient.appTest.health.query()
       setApiState({
         loading: false,
         error: '',
@@ -37,7 +36,7 @@ export default function ShowcaseScreen() {
         error:
           error instanceof Error
             ? error.message
-            : 'Unable to reach /api/health.',
+            : 'Unable to reach appTest.health.',
         result: ''
       })
     }
@@ -46,17 +45,10 @@ export default function ShowcaseScreen() {
   async function runDemoPost() {
     try {
       setApiState({ loading: true, error: '', result: '' })
-      const response = await fetch(buildApiUrl('/api/demo'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          feature: 'showcase',
-          status: 'ok'
-        })
+      const data = await trpcClient.appTest.echo.mutate({
+        feature: 'showcase',
+        status: 'ok'
       })
-      const data = await response.json()
       setApiState({
         loading: false,
         error: '',
@@ -66,7 +58,28 @@ export default function ShowcaseScreen() {
       setApiState({
         loading: false,
         error:
-          error instanceof Error ? error.message : 'Unable to reach /api/demo.',
+          error instanceof Error
+            ? error.message
+            : 'Unable to reach appTest.echo.',
+        result: ''
+      })
+    }
+  }
+
+  async function runSessionCheck() {
+    try {
+      setApiState({ loading: true, error: '', result: '' })
+      const data = await trpcClient.user.me.query()
+      setApiState({
+        loading: false,
+        error: '',
+        result: JSON.stringify(data, null, 2)
+      })
+    } catch (error) {
+      setApiState({
+        loading: false,
+        error:
+          error instanceof Error ? error.message : 'Unable to reach user.me.',
         result: ''
       })
     }
@@ -160,18 +173,21 @@ export default function ShowcaseScreen() {
 
       <Card>
         <Card.Body className="gap-4">
-          <Card.Title>Expo API Routes</Card.Title>
+          <Card.Title>tRPC API</Card.Title>
           <Card.Description>
-            These actions verify that the app can talk to the hosted Expo Router
-            API endpoints.
+            These actions verify that the app can talk to the tRPC API
+            endpoints.
           </Card.Description>
 
           <View className="flex-row flex-wrap gap-3">
             <Button variant="primary" onPress={runHealthCheck}>
-              Check /api/health
+              appTest.health
             </Button>
             <Button variant="secondary" onPress={runDemoPost}>
-              POST /api/demo
+              appTest.echo
+            </Button>
+            <Button variant="outline" onPress={runSessionCheck}>
+              user.me
             </Button>
           </View>
 
