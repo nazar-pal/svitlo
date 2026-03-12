@@ -12,33 +12,35 @@ streams:
 
   # ── 2. Peer users in shared organizations (for display names / avatars) ────
   # Three queries: members of admin orgs, members of member orgs, admins of member orgs.
-  # Current user may appear but is deduplicated by PowerSync (same row ID).
   peer_users:
     auto_subscribe: true
     queries:
       - >
-        SELECT u.id, u.name, u.email, u.email_verified, u.image,
-               u.created_at, u.updated_at
-        FROM "user" u
-        INNER JOIN organization_members om ON om.user_id = u.id
-        WHERE om.organization_id IN (
-          SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
+        SELECT id, name, email, email_verified, image, created_at, updated_at
+        FROM "user"
+        WHERE id IN (
+          SELECT user_id FROM organization_members
+          WHERE organization_id IN (
+            SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
+          )
         )
       - >
-        SELECT u.id, u.name, u.email, u.email_verified, u.image,
-               u.created_at, u.updated_at
-        FROM "user" u
-        INNER JOIN organization_members om ON om.user_id = u.id
-        WHERE om.organization_id IN (
-          SELECT organization_id FROM organization_members WHERE user_id = auth.user_id()
+        SELECT id, name, email, email_verified, image, created_at, updated_at
+        FROM "user"
+        WHERE id IN (
+          SELECT user_id FROM organization_members
+          WHERE organization_id IN (
+            SELECT organization_id FROM organization_members WHERE user_id = auth.user_id()
+          )
         )
       - >
-        SELECT u.id, u.name, u.email, u.email_verified, u.image,
-               u.created_at, u.updated_at
-        FROM "user" u
-        INNER JOIN organizations o ON o.admin_user_id = u.id
-        WHERE o.id IN (
-          SELECT organization_id FROM organization_members WHERE user_id = auth.user_id()
+        SELECT id, name, email, email_verified, image, created_at, updated_at
+        FROM "user"
+        WHERE id IN (
+          SELECT admin_user_id FROM organizations
+          WHERE id IN (
+            SELECT organization_id FROM organization_members WHERE user_id = auth.user_id()
+          )
         )
 
   # ── 3. Organizations the user belongs to (as admin or member) ──────────────
@@ -86,7 +88,7 @@ streams:
       - >
         SELECT id, organization_id, invitee_email, created_at
         FROM invitations
-        WHERE invitee_email IN (SELECT LOWER(email) FROM "user" WHERE id = auth.user_id())
+        WHERE LOWER(invitee_email) IN (SELECT LOWER(email) FROM "user" WHERE id = auth.user_id())
 
   # ── 6. Generators — all in admin orgs, only assigned in member orgs ────────
   generator_data:
