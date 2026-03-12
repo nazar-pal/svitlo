@@ -84,10 +84,9 @@ streams:
           SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
         )
       - >
-        SELECT i.id, i.organization_id, i.invitee_email, i.created_at
-        FROM invitations i
-        INNER JOIN "user" u ON u.email = i.invitee_email
-        WHERE u.id = auth.user_id()
+        SELECT id, organization_id, invitee_email, created_at
+        FROM invitations
+        WHERE invitee_email IN (SELECT LOWER(email) FROM "user" WHERE id = auth.user_id())
 
   # ── 6. Generators — all in admin orgs, only assigned in member orgs ────────
   generator_data:
@@ -115,11 +114,12 @@ streams:
     auto_subscribe: true
     queries:
       - >
-        SELECT gua.id, gua.generator_id, gua.user_id, gua.assigned_at
-        FROM generator_user_assignments gua
-        INNER JOIN generators g ON g.id = gua.generator_id
-        WHERE g.organization_id IN (
-          SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
+        SELECT id, generator_id, user_id, assigned_at
+        FROM generator_user_assignments
+        WHERE generator_id IN (
+          SELECT id FROM generators WHERE organization_id IN (
+            SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
+          )
         )
       - >
         SELECT id, generator_id, user_id, assigned_at
@@ -131,12 +131,13 @@ streams:
     auto_subscribe: true
     queries:
       - >
-        SELECT gs.id, gs.generator_id, gs.started_by_user_id, gs.stopped_by_user_id,
-               gs.started_at, gs.stopped_at
-        FROM generator_sessions gs
-        INNER JOIN generators g ON g.id = gs.generator_id
-        WHERE g.organization_id IN (
-          SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
+        SELECT id, generator_id, started_by_user_id, stopped_by_user_id,
+               started_at, stopped_at
+        FROM generator_sessions
+        WHERE generator_id IN (
+          SELECT id FROM generators WHERE organization_id IN (
+            SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
+          )
         )
       - >
         SELECT id, generator_id, started_by_user_id, stopped_by_user_id,
@@ -151,13 +152,14 @@ streams:
     auto_subscribe: true
     queries:
       - >
-        SELECT mt.id, mt.generator_id, mt.task_name, mt.description,
-               mt.trigger_type, mt.trigger_hours_interval, mt.trigger_calendar_days,
-               mt.created_at
-        FROM maintenance_templates mt
-        INNER JOIN generators g ON g.id = mt.generator_id
-        WHERE g.organization_id IN (
-          SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
+        SELECT id, generator_id, task_name, description,
+               trigger_type, trigger_hours_interval, trigger_calendar_days,
+               created_at
+        FROM maintenance_templates
+        WHERE generator_id IN (
+          SELECT id FROM generators WHERE organization_id IN (
+            SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
+          )
         )
       - >
         SELECT id, generator_id, task_name, description,
@@ -173,12 +175,13 @@ streams:
     auto_subscribe: true
     queries:
       - >
-        SELECT mr.id, mr.template_id, mr.generator_id, mr.performed_by_user_id,
-               mr.performed_at, mr.notes
-        FROM maintenance_records mr
-        INNER JOIN generators g ON g.id = mr.generator_id
-        WHERE g.organization_id IN (
-          SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
+        SELECT id, template_id, generator_id, performed_by_user_id,
+               performed_at, notes
+        FROM maintenance_records
+        WHERE generator_id IN (
+          SELECT id FROM generators WHERE organization_id IN (
+            SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
+          )
         )
       - >
         SELECT id, template_id, generator_id, performed_by_user_id,
