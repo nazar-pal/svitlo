@@ -39,7 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false
     },
-    icon: './assets/expo.icon',
+    icon: './assets/app.icon',
     supportsTablet: false,
     bundleIdentifier: getAppIdentifier(),
     usesAppleSignIn: true
