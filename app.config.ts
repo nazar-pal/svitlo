@@ -36,6 +36,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: APP_SCHEME,
   userInterfaceStyle: 'automatic',
   ios: {
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false
+    },
     icon: './assets/expo.icon',
     supportsTablet: false,
     bundleIdentifier: getAppIdentifier(),
@@ -66,5 +69,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   experiments: {
     typedRoutes: true,
     reactCompiler: true
+  },
+  updates: {
+    url: 'https://u.expo.dev/b2d90d72-b3bf-4519-a298-bca139cf9ce9'
+  },
+  runtimeVersion: {
+    policy: 'appVersion'
   }
 })
