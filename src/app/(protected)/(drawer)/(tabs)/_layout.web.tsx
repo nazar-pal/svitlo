@@ -7,10 +7,8 @@ import {
   TabTrigger,
   TabTriggerSlotProps
 } from 'expo-router/ui'
-import { SymbolView } from 'expo-symbols'
 import React from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 export default function AppTabs() {
   return (
@@ -19,6 +17,9 @@ export default function AppTabs() {
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="index" href={'/' as Href} asChild>
+            <TabButton>Dashboard</TabButton>
+          </TabTrigger>
+          <TabTrigger name="generators" href={'/generators' as Href} asChild>
             <TabButton>Generators</TabButton>
           </TabTrigger>
           <TabTrigger name="settings" href="/settings" asChild>
@@ -47,8 +48,6 @@ function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
 }
 
 function CustomTabList(props: TabListProps) {
-  const foreground = useCSSVariable('--color-foreground') as string | undefined
-
   return (
     <View
       {...props}
@@ -64,13 +63,8 @@ function CustomTabList(props: TabListProps) {
         <Link href={'/privacy-policy' as Href} asChild>
           <Pressable className="ml-4 flex-row items-center justify-center gap-1 active:opacity-70">
             <Text className="text-foreground text-sm leading-[30px]">
-              Privacy Policy
+              Privacy Policy ↗
             </Text>
-            <SymbolView
-              tintColor={foreground}
-              name="arrow.up.right.square"
-              size={12}
-            />
           </Pressable>
         </Link>
       </View>
