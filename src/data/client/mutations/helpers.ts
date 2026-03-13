@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm'
+import { randomUUID } from 'expo-crypto'
 
 import {
   generators,
@@ -13,7 +14,7 @@ export const ok: MutationResult = { ok: true }
 
 export const fail = (error: string): MutationResult => ({ ok: false, error })
 
-export const newId = () => crypto.randomUUID()
+export const newId = () => randomUUID()
 
 export const nowISO = () => new Date().toISOString()
 

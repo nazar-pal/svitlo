@@ -85,7 +85,7 @@ export async function acceptInvitation(
     .limit(1)
 
   if (!invitation) return fail('Invitation not found')
-  if (invitation.inviteeEmail !== userEmail)
+  if (invitation.inviteeEmail.toLowerCase() !== userEmail.toLowerCase())
     return fail('This invitation is not for you')
 
   // Check not already a member
@@ -126,7 +126,7 @@ export async function declineInvitation(
     .limit(1)
 
   if (!invitation) return fail('Invitation not found')
-  if (invitation.inviteeEmail !== userEmail)
+  if (invitation.inviteeEmail.toLowerCase() !== userEmail.toLowerCase())
     return fail('This invitation is not for you')
 
   await db.delete(invitations).where(eq(invitations.id, invitationId))

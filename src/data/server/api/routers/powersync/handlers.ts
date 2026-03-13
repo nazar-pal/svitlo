@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 
 import {
   user as userTable,
@@ -206,7 +206,7 @@ export async function handleOrganizationMembers(
       const invitation = await db.query.invitations.findFirst({
         where: and(
           eq(invitations.organizationId, orgId),
-          eq(invitations.inviteeEmail, userEmail)
+          eq(sql`LOWER(${invitations.inviteeEmail})`, userEmail.toLowerCase())
         ),
         columns: { id: true }
       })
@@ -285,7 +285,7 @@ export async function handleInvitations(ctx: WriteContext): Promise<Result> {
     }
 
     // Invitee declining (email match)
-    if (invitation.inviteeEmail === userEmail) {
+    if (invitation.inviteeEmail.toLowerCase() === userEmail.toLowerCase()) {
       await db.delete(invitations).where(eq(invitations.id, id))
       return ok
     }
@@ -416,6 +416,25 @@ export async function handleGeneratorSessions(
     return ok
   }
 
+  if (op === 'delete') {
+    const session = await db.query.generatorSessions.findFirst({
+      where: eq(generatorSessions.id, id),
+      columns: { generatorId: true, startedByUserId: true }
+    })
+    if (!session) return ok
+
+    const isAdmin = await isGeneratorOrgAdmin(db, userId, session.generatorId)
+    if (!isAdmin) {
+      if (!(await canAccessGenerator(db, userId, session.generatorId)))
+        return deny('Not authorized for this generator')
+      if (session.startedByUserId !== userId)
+        return deny('Can only delete your own sessions')
+    }
+
+    await db.delete(generatorSessions).where(eq(generatorSessions.id, id))
+    return ok
+  }
+
   return deny('Invalid operation on generator_sessions')
 }
 
@@ -514,6 +533,25 @@ export async function handleMaintenanceRecords(
         .set(fields)
         .where(eq(maintenanceRecords.id, id))
 
+    return ok
+  }
+
+  if (op === 'delete') {
+    const record = await db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, id),
+      columns: { generatorId: true, performedByUserId: true }
+    })
+    if (!record) return ok
+
+    const isAdmin = await isGeneratorOrgAdmin(db, userId, record.generatorId)
+    if (!isAdmin) {
+      if (!(await canAccessGenerator(db, userId, record.generatorId)))
+        return deny('Not authorized for this generator')
+      if (record.performedByUserId !== userId)
+        return deny('Can only delete your own maintenance records')
+    }
+
+    await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, id))
     return ok
   }
 

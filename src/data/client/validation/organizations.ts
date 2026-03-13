@@ -10,7 +10,7 @@ export type InsertOrganizationInput = z.input<typeof insertOrganizationSchema>
 
 export const insertInvitationSchema = z.object({
   organizationId: z.string(),
-  inviteeEmail: z.string().email('Must be a valid email address')
+  inviteeEmail: z.string().email({ error: 'Must be a valid email address' })
 })
 
 export type InsertInvitationInput = z.input<typeof insertInvitationSchema>

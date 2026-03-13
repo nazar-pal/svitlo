@@ -12,8 +12,8 @@ export const insertGeneratorSchema = z.object({
   runWarningThresholdPct: z
     .number()
     .int()
-    .min(1, 'Must be at least 1%')
-    .max(100, 'Must be at most 100%')
+    .min(1, { error: 'Must be at least 1%' })
+    .max(100, { error: 'Must be at most 100%' })
     .default(80)
 })
 
@@ -29,12 +29,12 @@ export const updateGeneratorSchema = z
     runWarningThresholdPct: z
       .number()
       .int()
-      .min(1, 'Must be at least 1%')
-      .max(100, 'Must be at most 100%')
+      .min(1, { error: 'Must be at least 1%' })
+      .max(100, { error: 'Must be at most 100%' })
   })
   .partial()
   .refine(data => Object.keys(data).length > 0, {
-    message: 'At least one field must be provided'
+    error: 'At least one field must be provided'
   })
 
 export type UpdateGeneratorInput = z.input<typeof updateGeneratorSchema>

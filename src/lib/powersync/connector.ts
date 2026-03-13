@@ -108,21 +108,53 @@ interface ErrorCategory {
   isRecoverable: boolean
 }
 
+/**
+ * Extract a PostgreSQL SQLSTATE code from the error if present.
+ * Postgres errors typically include a 5-character code like '23505'.
+ */
+function extractSqlState(error: unknown): string | null {
+  if (error && typeof error === 'object') {
+    const rec = error as Record<string, unknown>
+    if (typeof rec.code === 'string' && /^\d{5}$/.test(rec.code))
+      return rec.code
+    if (typeof rec.sqlState === 'string' && /^\d{5}$/.test(rec.sqlState))
+      return rec.sqlState
+    if (
+      rec.cause &&
+      typeof rec.cause === 'object' &&
+      typeof (rec.cause as Record<string, unknown>).code === 'string'
+    ) {
+      const causeCode = (rec.cause as Record<string, unknown>).code as string
+      if (/^\d{5}$/.test(causeCode)) return causeCode
+    }
+  }
+  // Fallback: try to extract from message string (e.g. "SQLSTATE: 23505")
+  const message = error instanceof Error ? error.message : String(error)
+  const match = message.match(/(?:sqlstate|code)[:\s]*(\d{5})/i)
+  return match?.[1] ?? null
+}
+
 function categorizeError(error: unknown): ErrorCategory {
+  // Try structured SQLSTATE first — more reliable than string matching
+  const sqlState = extractSqlState(error)
+  if (sqlState) {
+    // Class 23 = integrity constraint violation (23000, 23502, 23503, 23505, 23514)
+    if (sqlState.startsWith('23'))
+      return { category: 'constraint_violation', isRecoverable: false }
+    // Class 08 = connection exception
+    if (sqlState.startsWith('08'))
+      return { category: 'network', isRecoverable: true }
+    // Class 28 = invalid authorization
+    if (sqlState.startsWith('28'))
+      return { category: 'auth_forbidden', isRecoverable: false }
+  }
+
+  // Fallback to message matching for non-Postgres errors (network, HTTP, etc.)
   const message =
     error instanceof Error
       ? error.message.toLowerCase()
       : String(error).toLowerCase()
 
-  // Constraint violations — client-side validation gap, not recoverable by retry
-  if (
-    message.includes('constraint') ||
-    message.includes('sqlstate: 23') ||
-    message.includes('code: 23')
-  )
-    return { category: 'constraint_violation', isRecoverable: false }
-
-  // Network errors — transient, PowerSync will retry
   if (
     message.includes('network') ||
     message.includes('timeout') ||
@@ -132,7 +164,6 @@ function categorizeError(error: unknown): ErrorCategory {
   )
     return { category: 'network', isRecoverable: true }
 
-  // Auth errors
   if (message.includes('403') || message.includes('forbidden'))
     return { category: 'auth_forbidden', isRecoverable: false }
   if (message.includes('401') || message.includes('unauthorized'))

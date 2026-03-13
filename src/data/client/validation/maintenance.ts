@@ -4,6 +4,36 @@ import { zNonEmptyString, zPositiveInt, zPositiveReal } from './helpers'
 
 const triggerTypeEnum = z.enum(['hours', 'calendar', 'whichever_first'])
 
+function refineTriggerFields(
+  data: {
+    triggerType?: string | null
+    triggerHoursInterval?: number | null
+    triggerCalendarDays?: number | null
+  },
+  ctx: z.RefinementCtx
+) {
+  if (data.triggerType == null) return
+
+  const needsHours =
+    data.triggerType === 'hours' || data.triggerType === 'whichever_first'
+  const needsDays =
+    data.triggerType === 'calendar' || data.triggerType === 'whichever_first'
+
+  if (needsHours && data.triggerHoursInterval == null)
+    ctx.addIssue({
+      code: 'custom',
+      path: ['triggerHoursInterval'],
+      message: `Required when trigger type is "${data.triggerType}"`
+    })
+
+  if (needsDays && data.triggerCalendarDays == null)
+    ctx.addIssue({
+      code: 'custom',
+      path: ['triggerCalendarDays'],
+      message: `Required when trigger type is "${data.triggerType}"`
+    })
+}
+
 export const insertMaintenanceTemplateSchema = z
   .object({
     generatorId: z.string(),
@@ -13,28 +43,7 @@ export const insertMaintenanceTemplateSchema = z
     triggerHoursInterval: zPositiveReal.optional(),
     triggerCalendarDays: zPositiveInt.optional()
   })
-  .superRefine((data, ctx) => {
-    const needsHours =
-      data.triggerType === 'hours' || data.triggerType === 'whichever_first'
-    const needsDays =
-      data.triggerType === 'calendar' || data.triggerType === 'whichever_first'
-
-    if (needsHours && data.triggerHoursInterval == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['triggerHoursInterval'],
-        message: `Required when trigger type is "${data.triggerType}"`
-      })
-    }
-
-    if (needsDays && data.triggerCalendarDays == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['triggerCalendarDays'],
-        message: `Required when trigger type is "${data.triggerType}"`
-      })
-    }
-  })
+  .superRefine(refineTriggerFields)
 
 export type InsertMaintenanceTemplateInput = z.input<
   typeof insertMaintenanceTemplateSchema
@@ -49,31 +58,7 @@ export const updateMaintenanceTemplateSchema = z
     triggerCalendarDays: zPositiveInt.nullable()
   })
   .partial()
-  .superRefine((data, ctx) => {
-    // Only validate cross-field when triggerType is explicitly provided
-    if (data.triggerType == null) return
-
-    const needsHours =
-      data.triggerType === 'hours' || data.triggerType === 'whichever_first'
-    const needsDays =
-      data.triggerType === 'calendar' || data.triggerType === 'whichever_first'
-
-    if (needsHours && data.triggerHoursInterval == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['triggerHoursInterval'],
-        message: `Required when trigger type is "${data.triggerType}"`
-      })
-    }
-
-    if (needsDays && data.triggerCalendarDays == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['triggerCalendarDays'],
-        message: `Required when trigger type is "${data.triggerType}"`
-      })
-    }
-  })
+  .superRefine(refineTriggerFields)
 
 export type UpdateMaintenanceTemplateInput = z.input<
   typeof updateMaintenanceTemplateSchema
@@ -82,7 +67,7 @@ export type UpdateMaintenanceTemplateInput = z.input<
 export const insertMaintenanceRecordSchema = z.object({
   templateId: z.string(),
   generatorId: z.string(),
-  performedAt: z.string().datetime().optional(),
+  performedAt: z.iso.datetime().optional(),
   notes: z.string().optional()
 })
 

@@ -1,25 +1,19 @@
+import { addHours, isFuture, parseISO } from 'date-fns'
 import { and, desc, eq, isNull, isNotNull } from 'drizzle-orm'
 
 import { generators, generatorSessions } from '@/data/client/db-schema'
+import { hoursBetween } from '@/lib/time'
 import { db } from '@/lib/powersync/database'
 
 import {
   canAccessGenerator,
   fail,
+  isGeneratorOrgAdmin,
   newId,
   nowISO,
   ok,
   type MutationResult
 } from './helpers'
-
-/**
- * Compute the duration in hours between two ISO timestamps.
- */
-function hoursBetween(start: string, end: string): number {
-  return (
-    (new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60)
-  )
-}
 
 /**
  * Determine if the generator is currently in a mandatory rest period.
@@ -66,10 +60,11 @@ async function isGeneratorResting(
     previousStartedAt = session.startedAt
 
     if (consecutiveHours >= maxConsecutiveRunHours) {
-      const restEndsAt =
-        new Date(closedSessions[0].stoppedAt!).getTime() +
-        requiredRestHours * 60 * 60 * 1000
-      return Date.now() < restEndsAt
+      const restEndsAt = addHours(
+        parseISO(closedSessions[0].stoppedAt!),
+        requiredRestHours
+      )
+      return isFuture(restEndsAt)
     }
   }
 
@@ -125,6 +120,32 @@ export async function startSession(
     startedAt: now,
     stoppedAt: null
   })
+
+  return ok
+}
+
+export async function deleteSession(
+  userId: string,
+  sessionId: string
+): Promise<MutationResult> {
+  const [session] = await db
+    .select()
+    .from(generatorSessions)
+    .where(eq(generatorSessions.id, sessionId))
+    .limit(1)
+
+  if (!session) return fail('Session not found')
+  if (!session.stoppedAt) return fail('Cannot delete an in-progress session')
+
+  const isAdmin = await isGeneratorOrgAdmin(userId, session.generatorId)
+  if (!isAdmin) {
+    if (!(await canAccessGenerator(userId, session.generatorId)))
+      return fail('Not authorized for this generator')
+    if (session.startedByUserId !== userId)
+      return fail('You can only delete your own sessions')
+  }
+
+  await db.delete(generatorSessions).where(eq(generatorSessions.id, sessionId))
 
   return ok
 }

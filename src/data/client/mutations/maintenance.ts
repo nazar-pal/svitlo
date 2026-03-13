@@ -127,6 +127,31 @@ export async function deleteMaintenanceTemplate(
   return ok
 }
 
+export async function deleteMaintenanceRecord(
+  userId: string,
+  recordId: string
+): Promise<MutationResult> {
+  const [record] = await db
+    .select()
+    .from(maintenanceRecords)
+    .where(eq(maintenanceRecords.id, recordId))
+    .limit(1)
+
+  if (!record) return fail('Record not found')
+
+  const isAdmin = await isGeneratorOrgAdmin(userId, record.generatorId)
+  if (!isAdmin) {
+    if (!(await canAccessGenerator(userId, record.generatorId)))
+      return fail('Not authorized for this generator')
+    if (record.performedByUserId !== userId)
+      return fail('You can only delete your own records')
+  }
+
+  await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, recordId))
+
+  return ok
+}
+
 export async function recordMaintenance(
   userId: string,
   input: InsertMaintenanceRecordInput

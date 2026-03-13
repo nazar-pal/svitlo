@@ -5,7 +5,7 @@ import {
   generatorUserAssignments,
   organizationMembers
 } from '@/data/client/db-schema'
-import { db } from '@/lib/powersync/database'
+import { db, powersync } from '@/lib/powersync/database'
 
 import {
   fail,
@@ -58,39 +58,33 @@ export async function removeMember(
       )
     )
 
-  // Transfer each assignment to the admin
-  for (const a of assignments) {
-    // Delete the member's assignment
-    await db
-      .delete(generatorUserAssignments)
-      .where(eq(generatorUserAssignments.id, a.assignmentId))
+  // Wrap all mutations in a transaction for atomicity
+  await powersync.writeTransaction(async tx => {
+    for (const a of assignments) {
+      // Delete the member's assignment
+      await tx.execute('DELETE FROM generator_user_assignments WHERE id = ?', [
+        a.assignmentId
+      ])
 
-    // Check if admin is already assigned
-    const [existing] = await db
-      .select({ id: generatorUserAssignments.id })
-      .from(generatorUserAssignments)
-      .where(
-        and(
-          eq(generatorUserAssignments.generatorId, a.generatorId),
-          eq(generatorUserAssignments.userId, adminUserId)
-        )
+      // Check if admin is already assigned
+      const existing = await tx.getOptional(
+        'SELECT id FROM generator_user_assignments WHERE generator_id = ? AND user_id = ? LIMIT 1',
+        [a.generatorId, adminUserId]
       )
-      .limit(1)
 
-    if (!existing) {
-      await db.insert(generatorUserAssignments).values({
-        id: newId(),
-        generatorId: a.generatorId,
-        userId: adminUserId,
-        assignedAt: nowISO()
-      })
+      if (!existing) {
+        await tx.execute(
+          'INSERT INTO generator_user_assignments (id, generator_id, user_id, assigned_at) VALUES (?, ?, ?, ?)',
+          [newId(), a.generatorId, adminUserId, nowISO()]
+        )
+      }
     }
-  }
 
-  // Delete the member
-  await db
-    .delete(organizationMembers)
-    .where(eq(organizationMembers.id, memberId))
+    // Delete the member
+    await tx.execute('DELETE FROM organization_members WHERE id = ?', [
+      memberId
+    ])
+  })
 
   return ok
 }

@@ -63,6 +63,20 @@ export const auth = betterAuth({
       ]
     }
   },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async user => {
+          await db.insert(schema.organizations).values({
+            id: crypto.randomUUID(),
+            name: 'Default',
+            adminUserId: user.id,
+            createdAt: new Date()
+          })
+        }
+      }
+    }
+  },
   plugins: [expo()]
 })
 
