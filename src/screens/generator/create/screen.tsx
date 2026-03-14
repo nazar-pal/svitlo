@@ -35,7 +35,6 @@ export default function CreateGeneratorScreen() {
       organizationId: selectedOrgId,
       title,
       model,
-      generatorType,
       description: description || undefined,
       maxConsecutiveRunHours: parseFloat(maxRunHours) || 0,
       requiredRestHours: parseFloat(restHours) || 0,

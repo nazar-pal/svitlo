@@ -98,10 +98,6 @@ export function GeneratorCard({
 
           <View className="flex-row items-center gap-2">
             <Text className="text-muted text-[13px]">
-              {generator.generatorType}
-            </Text>
-            <Text className="text-muted text-[11px]">·</Text>
-            <Text className="text-muted text-[13px]">
               {formatHours(lifetimeHours)} total
             </Text>
             {status === 'resting' && restEndsAt ? (

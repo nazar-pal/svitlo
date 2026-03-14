@@ -77,7 +77,7 @@ export function MyGeneratorCard({
             <GeneratorStatusBadge status={status} />
           </View>
           <Text className="text-muted text-[13px]">
-            {generator.generatorType}
+            {generator.model}
           </Text>
         </View>
         <SymbolView name="chevron.right" size={14} tintColor={mutedColor} />

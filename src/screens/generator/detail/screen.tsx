@@ -232,8 +232,7 @@ export default function GeneratorDetailScreen() {
           <View className="items-center gap-3 py-4">
             <GeneratorStatusBadge status={statusInfo.status} size="md" />
             <Text className="text-muted text-center text-[15px]">
-              {generator.generatorType}
-              {generator.model ? ` · ${generator.model}` : ''}
+              {generator.model}
               {generator.description ? ` · ${generator.description}` : ''}
             </Text>
             <Text className="text-muted text-[13px]">

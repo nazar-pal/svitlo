@@ -2,7 +2,6 @@ import { relations, sql } from 'drizzle-orm'
 import {
   index,
   integer,
-  pgEnum,
   pgTable,
   real,
   text,
@@ -16,18 +15,6 @@ import { user } from './auth'
 import { organizations } from './organizations'
 import { pgTimestamp, uuidId } from './utils'
 
-// ── Enums ───────────────────────────────────────────────────────────────────
-
-export const generatorTypeEnum = pgEnum('generator_type', [
-  'diesel',
-  'gasoline',
-  'natural_gas',
-  'propane',
-  'dual_fuel',
-  'solar',
-  'inverter'
-])
-
 // ── Generators ──────────────────────────────────────────────────────────────
 
 export const generators = pgTable(
@@ -39,7 +26,6 @@ export const generators = pgTable(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     model: text('model').notNull(),
-    generatorType: generatorTypeEnum('generator_type').notNull(),
     description: text('description'),
     maxConsecutiveRunHours: real('max_consecutive_run_hours').notNull(),
     requiredRestHours: real('required_rest_hours').notNull(),

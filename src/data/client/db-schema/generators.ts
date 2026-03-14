@@ -7,7 +7,6 @@ export const generators = sqliteTable('generators', {
   organizationId: text('organization_id').notNull(),
   title: text('title').notNull(),
   model: text('model').notNull(),
-  generatorType: text('generator_type').notNull(),
   description: text('description'),
   maxConsecutiveRunHours: real('max_consecutive_run_hours').notNull(),
   requiredRestHours: real('required_rest_hours').notNull(),

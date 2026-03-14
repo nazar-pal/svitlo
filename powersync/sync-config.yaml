@@ -95,7 +95,7 @@ streams:
     auto_subscribe: true
     queries:
       - >
-        SELECT id, organization_id, title, model, generator_type, description,
+        SELECT id, organization_id, title, model, description,
                max_consecutive_run_hours, required_rest_hours,
                run_warning_threshold_pct, created_at
         FROM generators
@@ -103,7 +103,7 @@ streams:
           SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
         )
       - >
-        SELECT id, organization_id, title, model, generator_type, description,
+        SELECT id, organization_id, title, model, description,
                max_consecutive_run_hours, required_rest_hours,
                run_warning_threshold_pct, created_at
         FROM generators

@@ -2,21 +2,10 @@ import { z } from 'zod'
 
 import { zNonEmptyString, zPositiveReal } from './helpers'
 
-export const GENERATOR_TYPES = [
-  'diesel',
-  'gasoline',
-  'natural_gas',
-  'propane',
-  'dual_fuel',
-  'solar',
-  'inverter'
-] as const
-
 export const insertGeneratorSchema = z.object({
   organizationId: z.string(),
   title: zNonEmptyString,
   model: zNonEmptyString,
-  generatorType: z.enum(GENERATOR_TYPES),
   description: z.string().optional(),
   maxConsecutiveRunHours: zPositiveReal,
   requiredRestHours: zPositiveReal,
@@ -34,7 +23,6 @@ export const updateGeneratorSchema = z
   .object({
     title: zNonEmptyString,
     model: zNonEmptyString,
-    generatorType: z.enum(GENERATOR_TYPES),
     description: z.string().nullable(),
     maxConsecutiveRunHours: zPositiveReal,
     requiredRestHours: zPositiveReal,

@@ -34,7 +34,6 @@ export async function createGenerator(
     organizationId: parsed.data.organizationId,
     title: parsed.data.title,
     model: parsed.data.model,
-    generatorType: parsed.data.generatorType,
     description: parsed.data.description ?? null,
     maxConsecutiveRunHours: parsed.data.maxConsecutiveRunHours,
     requiredRestHours: parsed.data.requiredRestHours,
