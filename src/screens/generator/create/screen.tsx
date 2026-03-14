@@ -193,82 +193,75 @@ export default function CreateGeneratorScreen() {
     router.back()
   }
 
+  const contentPaddingBottom =
+    keyboardHeight > 0 ? keyboardHeight + 8 : Math.max(insets.bottom, 16)
+
   if (step === 'basics')
     return (
-      <View className="bg-background flex-1">
-        <ScrollView
-          className="flex-1"
-          contentInsetAdjustmentBehavior="automatic"
-          contentContainerClassName="px-5 pt-6"
-          keyboardShouldPersistTaps="handled"
-        >
-          <View className="mx-auto w-full max-w-[600px] gap-7">
-            <View className="gap-2">
-              <Text className="text-foreground text-3xl font-bold">
-                New Generator
-              </Text>
-              <Text className="text-muted text-[15px] leading-[22px]">
-                Add a generator to start tracking its usage and maintenance.
-              </Text>
-            </View>
-
-            <View className="gap-5">
-              <TextField isInvalid={!!fieldErrors.title}>
-                <Label>Title</Label>
-                <Input
-                  placeholder='e.g. "Back Yard Generator"'
-                  value={title}
-                  onChangeText={setTitle}
-                  autoFocus
-                />
-                {fieldErrors.title ? (
-                  <Description className="text-danger">
-                    {fieldErrors.title}
-                  </Description>
-                ) : null}
-              </TextField>
-
-              <TextField isInvalid={!!fieldErrors.model}>
-                <Label>Model</Label>
-                <Input
-                  placeholder='e.g. "Honda EU2200i"'
-                  value={model}
-                  onChangeText={setModel}
-                />
-                {fieldErrors.model ? (
-                  <Description className="text-danger">
-                    {fieldErrors.model}
-                  </Description>
-                ) : null}
-              </TextField>
-
-              <TextField>
-                <Label>Description</Label>
-                <Input
-                  placeholder="Location, serial number, notes..."
-                  value={description}
-                  onChangeText={setDescription}
-                  multiline
-                />
-                <Description>Optional</Description>
-              </TextField>
-            </View>
+      <ScrollView
+        className="bg-background flex-1"
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerClassName="px-5 pt-6"
+        contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View className="mx-auto w-full max-w-[600px] gap-7">
+          <View className="gap-2">
+            <Text className="text-foreground text-3xl font-bold">
+              New Generator
+            </Text>
+            <Text className="text-muted text-[15px] leading-[22px]">
+              Add a generator to start tracking its usage and maintenance.
+            </Text>
           </View>
-        </ScrollView>
 
-        <View
-          className="px-5 pt-3"
-          style={{
-            paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : Math.max(insets.bottom, 16)
-          }}
-        >
-          <View className="mx-auto w-full max-w-[600px]">
-            <Button variant="primary" onPress={handleNext}>
-              Next
-            </Button>
+          <View className="gap-5">
+            <TextField isInvalid={!!fieldErrors.title}>
+              <Label>Title</Label>
+              <Input
+                placeholder='e.g. "Back Yard Generator"'
+                value={title}
+                onChangeText={setTitle}
+                autoFocus
+              />
+              {fieldErrors.title ? (
+                <Description className="text-danger">
+                  {fieldErrors.title}
+                </Description>
+              ) : null}
+            </TextField>
+
+            <TextField isInvalid={!!fieldErrors.model}>
+              <Label>Model</Label>
+              <Input
+                placeholder='e.g. "Honda EU2200i"'
+                value={model}
+                onChangeText={setModel}
+              />
+              {fieldErrors.model ? (
+                <Description className="text-danger">
+                  {fieldErrors.model}
+                </Description>
+              ) : null}
+            </TextField>
+
+            <TextField>
+              <Label>Description</Label>
+              <Input
+                placeholder="Location, serial number, notes..."
+                value={description}
+                onChangeText={setDescription}
+                multiline
+              />
+              <Description>Optional</Description>
+            </TextField>
           </View>
+
+          <Button variant="primary" onPress={handleNext}>
+            Next
+          </Button>
         </View>
-      </View>
+      </ScrollView>
     )
 
   // Step 2: Details
@@ -276,7 +269,9 @@ export default function CreateGeneratorScreen() {
     <ScrollView
       className="bg-background flex-1"
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerClassName="px-5 pb-10 pt-6"
+      contentContainerClassName="px-5 pt-6"
+      contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
+      keyboardShouldPersistTaps="handled"
     >
       <View className="mx-auto w-full max-w-[600px] gap-7">
         <View className="gap-2">
@@ -322,7 +317,9 @@ export default function CreateGeneratorScreen() {
         {isLoadingAI ? (
           <View className="items-center gap-3 py-10">
             <ActivityIndicator />
-            <Text className="text-muted text-sm">Researching {model}...</Text>
+            <Text className="text-muted text-sm">
+              Researching {model}...
+            </Text>
           </View>
         ) : null}
 
@@ -331,7 +328,9 @@ export default function CreateGeneratorScreen() {
             <View className="gap-5">
               <View className="flex-row gap-3">
                 <View className="flex-1">
-                  <TextField isInvalid={!!fieldErrors.maxConsecutiveRunHours}>
+                  <TextField
+                    isInvalid={!!fieldErrors.maxConsecutiveRunHours}
+                  >
                     <Label>Max Run Hours</Label>
                     <Input
                       placeholder="8"
@@ -421,7 +420,10 @@ export default function CreateGeneratorScreen() {
                     onPress={() => Linking.openURL(source)}
                     className="active:opacity-70"
                   >
-                    <Text className="text-xs text-blue-500" numberOfLines={1}>
+                    <Text
+                      className="text-xs text-blue-500"
+                      numberOfLines={1}
+                    >
                       {source}
                     </Text>
                   </Pressable>

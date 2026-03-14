@@ -87,136 +87,129 @@ export default function CreateMaintenanceTemplateScreen() {
     router.back()
   }
 
+  const contentPaddingBottom =
+    keyboardHeight > 0 ? keyboardHeight + 8 : Math.max(insets.bottom, 16)
+
   return (
-    <View className="bg-background flex-1">
-      <ScrollView
-        className="flex-1"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="px-5 pt-6"
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="mx-auto w-full max-w-[600px] gap-7">
+    <ScrollView
+      className="bg-background flex-1"
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerClassName="px-5 pt-6"
+      contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View className="mx-auto w-full max-w-[600px] gap-7">
+        <View className="gap-2">
+          <Text className="text-foreground text-3xl font-bold">
+            New Maintenance Task
+          </Text>
+          <Text className="text-muted text-[15px] leading-[22px]">
+            Define a recurring maintenance task for this generator.
+          </Text>
+        </View>
+
+        <View className="gap-5">
+          <TextField isInvalid={!!fieldErrors.taskName}>
+            <Label>Task Name</Label>
+            <Input
+              placeholder='e.g. "Oil Change", "Air Filter"'
+              value={taskName}
+              onChangeText={setTaskName}
+              autoFocus
+            />
+            {fieldErrors.taskName ? (
+              <Description className="text-danger">
+                {fieldErrors.taskName}
+              </Description>
+            ) : null}
+          </TextField>
+
+          <TextField>
+            <Label>Description</Label>
+            <Input
+              placeholder="Instructions or notes..."
+              value={description}
+              onChangeText={setDescription}
+              multiline
+            />
+            <Description>Optional</Description>
+          </TextField>
+
+          {/* Trigger Type Selector */}
           <View className="gap-2">
-            <Text className="text-foreground text-3xl font-bold">
-              New Maintenance Task
+            <Text className="text-foreground text-sm font-medium">
+              Trigger Type
             </Text>
-            <Text className="text-muted text-[15px] leading-[22px]">
-              Define a recurring maintenance task for this generator.
-            </Text>
+            <View className="bg-surface-secondary flex-row rounded-xl p-1">
+              {TRIGGER_TYPES.map(type => (
+                <Pressable
+                  key={type}
+                  onPress={() => setTriggerType(type)}
+                  className={`flex-1 items-center rounded-lg py-2 ${
+                    triggerType === type ? 'bg-background' : ''
+                  }`}
+                >
+                  <Text
+                    className={`text-[13px] font-medium ${
+                      triggerType === type ? 'text-foreground' : 'text-muted'
+                    }`}
+                  >
+                    {TRIGGER_LABELS[type]}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
 
-          <View className="gap-5">
-            <TextField isInvalid={!!fieldErrors.taskName}>
-              <Label>Task Name</Label>
+          {showHours ? (
+            <TextField isInvalid={!!fieldErrors.triggerHoursInterval}>
+              <Label>Hours Interval</Label>
               <Input
-                placeholder='e.g. "Oil Change", "Air Filter"'
-                value={taskName}
-                onChangeText={setTaskName}
-                autoFocus
+                placeholder="e.g. 100"
+                value={hoursInterval}
+                onChangeText={setHoursInterval}
+                keyboardType="decimal-pad"
               />
-              {fieldErrors.taskName ? (
+              <Description>
+                Maintenance due after this many run hours
+              </Description>
+              {fieldErrors.triggerHoursInterval ? (
                 <Description className="text-danger">
-                  {fieldErrors.taskName}
+                  {fieldErrors.triggerHoursInterval}
                 </Description>
               ) : null}
             </TextField>
+          ) : null}
 
-            <TextField>
-              <Label>Description</Label>
+          {showCalendar ? (
+            <TextField isInvalid={!!fieldErrors.triggerCalendarDays}>
+              <Label>Calendar Days</Label>
               <Input
-                placeholder="Instructions or notes..."
-                value={description}
-                onChangeText={setDescription}
-                multiline
+                placeholder="e.g. 30"
+                value={calendarDays}
+                onChangeText={setCalendarDays}
+                keyboardType="number-pad"
               />
-              <Description>Optional</Description>
-            </TextField>
-
-            {/* Trigger Type Selector */}
-            <View className="gap-2">
-              <Text className="text-foreground text-sm font-medium">
-                Trigger Type
-              </Text>
-              <View className="bg-surface-secondary flex-row rounded-xl p-1">
-                {TRIGGER_TYPES.map(type => (
-                  <Pressable
-                    key={type}
-                    onPress={() => setTriggerType(type)}
-                    className={`flex-1 items-center rounded-lg py-2 ${
-                      triggerType === type ? 'bg-background' : ''
-                    }`}
-                  >
-                    <Text
-                      className={`text-[13px] font-medium ${
-                        triggerType === type ? 'text-foreground' : 'text-muted'
-                      }`}
-                    >
-                      {TRIGGER_LABELS[type]}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {showHours ? (
-              <TextField isInvalid={!!fieldErrors.triggerHoursInterval}>
-                <Label>Hours Interval</Label>
-                <Input
-                  placeholder="e.g. 100"
-                  value={hoursInterval}
-                  onChangeText={setHoursInterval}
-                  keyboardType="decimal-pad"
-                />
-                <Description>
-                  Maintenance due after this many run hours
+              <Description>Maintenance due after this many days</Description>
+              {fieldErrors.triggerCalendarDays ? (
+                <Description className="text-danger">
+                  {fieldErrors.triggerCalendarDays}
                 </Description>
-                {fieldErrors.triggerHoursInterval ? (
-                  <Description className="text-danger">
-                    {fieldErrors.triggerHoursInterval}
-                  </Description>
-                ) : null}
-              </TextField>
-            ) : null}
-
-            {showCalendar ? (
-              <TextField isInvalid={!!fieldErrors.triggerCalendarDays}>
-                <Label>Calendar Days</Label>
-                <Input
-                  placeholder="e.g. 30"
-                  value={calendarDays}
-                  onChangeText={setCalendarDays}
-                  keyboardType="number-pad"
-                />
-                <Description>Maintenance due after this many days</Description>
-                {fieldErrors.triggerCalendarDays ? (
-                  <Description className="text-danger">
-                    {fieldErrors.triggerCalendarDays}
-                  </Description>
-                ) : null}
-              </TextField>
-            ) : null}
-          </View>
-
-          {error ? (
-            <Text className="bg-danger/10 text-danger rounded-2xl px-4 py-3 text-sm">
-              {error}
-            </Text>
+              ) : null}
+            </TextField>
           ) : null}
         </View>
-      </ScrollView>
 
-      <View
-        className="px-5 pt-3"
-        style={{
-          paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : Math.max(insets.bottom, 16)
-        }}
-      >
-        <View className="mx-auto w-full max-w-[600px]">
-          <Button variant="primary" onPress={handleCreate}>
-            Create Task
-          </Button>
-        </View>
+        {error ? (
+          <Text className="bg-danger/10 text-danger rounded-2xl px-4 py-3 text-sm">
+            {error}
+          </Text>
+        ) : null}
+
+        <Button variant="primary" onPress={handleCreate}>
+          Create Task
+        </Button>
       </View>
-    </View>
+    </ScrollView>
   )
 }
