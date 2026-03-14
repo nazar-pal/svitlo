@@ -4,6 +4,7 @@ import React from 'react'
 export default function PublicLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
       <Stack.Screen name="privacy-policy" />
     </Stack>
   )
