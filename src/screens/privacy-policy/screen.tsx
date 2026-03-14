@@ -2,7 +2,7 @@ import { Card } from 'heroui-native'
 import { ScrollView, Text, View } from 'react-native'
 
 const effectiveDate = 'March 14, 2026'
-const contactEmail = 'svitlo@nazarii.dev'
+const contactEmail = 'ua.nazar.palamarchuk.ua@gmail.com'
 
 const sections = [
   {

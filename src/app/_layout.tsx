@@ -9,7 +9,6 @@ export default function RootLayout() {
     <HeroUINativeProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(public)" />
-        <Stack.Screen name="(protected)" />
         <Stack.Screen name="+not-found" />
       </Stack>
     </HeroUINativeProvider>
