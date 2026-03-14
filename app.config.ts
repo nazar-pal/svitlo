@@ -29,7 +29,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   owner: EAS_APP_OWNER,
   name: getAppName(),
   slug: 'svitlo',
-  version: '1.0.1',
+  version: '1.0.2',
   orientation: 'portrait',
   platforms: ['ios', 'web'],
   icon: './assets/images/icon.png',
