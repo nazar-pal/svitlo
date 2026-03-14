@@ -8,8 +8,8 @@ import { startSession, stopSession } from '@/data/client/mutations'
 import { GeneratorStatusBadge } from '@/components/generator-status-badge'
 import { useElapsedHours, formatHours } from '@/lib/hooks/use-elapsed-time'
 import { computeGeneratorStatus } from '@/lib/hooks/use-generator-status'
+import { useRestCountdown } from '@/lib/hooks/use-rest-countdown'
 import type { NextMaintenanceCardInfo } from '@/lib/hooks/use-maintenance-due'
-import { formatRestRemaining } from '@/lib/time'
 
 import { formatUpcoming } from '../helpers'
 
@@ -45,6 +45,8 @@ export function MyGeneratorCard({
       : progress >= warningFraction
         ? 'bg-orange-500'
         : 'bg-green-500'
+
+  const restCountdown = useRestCountdown(restEndsAt, generator.requiredRestHours)
 
   async function handleStart() {
     const result = await startSession(userId, generator.id)
@@ -103,9 +105,22 @@ export function MyGeneratorCard({
       ) : null}
 
       {status === 'resting' && restEndsAt ? (
-        <Text className="text-muted mt-2 text-[13px]">
-          Ready in {formatRestRemaining(restEndsAt)}
-        </Text>
+        <View className="mt-3 gap-1.5">
+          <View className="bg-default h-1.5 overflow-hidden rounded-full">
+            <View
+              className="h-full rounded-full bg-orange-500"
+              style={{ width: `${restCountdown.progress * 100}%` }}
+            />
+          </View>
+          <View className="flex-row justify-between">
+            <Text className="text-muted text-[12px]">
+              {restCountdown.remainingFormatted} remaining
+            </Text>
+            <Text className="text-muted text-[12px]">
+              {formatHours(generator.requiredRestHours)} required
+            </Text>
+          </View>
+        </View>
       ) : null}
 
       {nextMaintenance ? (
@@ -148,6 +163,28 @@ export function MyGeneratorCard({
           onPress={handleStop}
         >
           Stop
+        </Button>
+      ) : status === 'resting' ? (
+        <Button
+          variant="ghost"
+          size="md"
+          className="mt-3"
+          onPress={() =>
+            Alert.alert(
+              'Generator is Resting',
+              'It\u2019s recommended to let the generator rest before starting again. Starting now may reduce its lifespan.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Start Anyway',
+                  style: 'destructive',
+                  onPress: handleStart
+                }
+              ]
+            )
+          }
+        >
+          Start
         </Button>
       ) : null}
     </Pressable>

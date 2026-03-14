@@ -1,6 +1,6 @@
 import { differenceInMilliseconds, format, parseISO } from 'date-fns'
 import { desc, eq } from 'drizzle-orm'
-import { Stack, useLocalSearchParams } from 'expo-router'
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { ListGroup, Separator } from 'heroui-native'
 import { useRef, useState } from 'react'
@@ -84,6 +84,7 @@ function buildActivityItems(
 
 export default function ActivityScreen() {
   const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
+  const router = useRouter()
   const [filter, setFilter] = useState<Filter>('all')
   const openRowRef = useRef<SwipeableMethods | null>(null)
   const localUser = useLocalUser()
@@ -196,7 +197,23 @@ export default function ActivityScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Activity' }} />
+      <Stack.Screen
+        options={{
+          title: 'Activity',
+          headerRight: () => (
+            <Pressable
+              onPress={() =>
+                router.push(`/generator/log-session?generatorId=${generatorId}`)
+              }
+              className="active:opacity-70"
+            >
+              <Text className="text-[15px] font-medium text-blue-500">
+                Log Past Run
+              </Text>
+            </Pressable>
+          )
+        }}
+      />
       <FlatList
         data={items}
         contentInsetAdjustmentBehavior="automatic"

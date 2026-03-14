@@ -1,8 +1,10 @@
 import { SymbolView } from 'expo-symbols'
-import { Pressable, Text, View } from 'react-native'
+import { Button } from 'heroui-native'
+import { Alert, Pressable, Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
+import { startSession, stopSession } from '@/data/client/mutations'
 import {
   computeGeneratorStatus,
   computeLifetimeHours
@@ -16,6 +18,7 @@ import type {
   NextMaintenanceCardInfo,
   MaintenanceUrgency
 } from '@/lib/hooks/use-maintenance-due'
+import { useRestCountdown } from '@/lib/hooks/use-rest-countdown'
 import { formatRestRemaining } from '@/lib/time'
 
 import { GeneratorStatusBadge } from './generator-status-badge'
@@ -24,6 +27,7 @@ interface GeneratorCardProps {
   generator: Generator
   sessions: GeneratorSession[]
   nextMaintenance: NextMaintenanceCardInfo | null
+  userId: string
   onPress: () => void
 }
 
@@ -52,6 +56,7 @@ export function GeneratorCard({
   generator,
   sessions,
   nextMaintenance,
+  userId,
   onPress
 }: GeneratorCardProps) {
   const mutedColor = useCSSVariable('--color-muted') as string | undefined
@@ -74,6 +79,19 @@ export function GeneratorCard({
       : progress >= warningFraction
         ? 'bg-orange-500'
         : 'bg-green-500'
+
+  const restCountdown = useRestCountdown(restEndsAt, generator.requiredRestHours)
+
+  async function handleStart() {
+    const result = await startSession(userId, generator.id)
+    if (!result.ok) Alert.alert('Error', result.error)
+  }
+
+  async function handleStop() {
+    if (!openSession) return
+    const result = await stopSession(userId, openSession.id)
+    if (!result.ok) Alert.alert('Error', result.error)
+  }
 
   return (
     <Pressable
@@ -129,6 +147,25 @@ export function GeneratorCard({
         </View>
       ) : null}
 
+      {status === 'resting' && restEndsAt ? (
+        <View className="mt-3 gap-1.5">
+          <View className="bg-default h-1.5 overflow-hidden rounded-full">
+            <View
+              className="h-full rounded-full bg-orange-500"
+              style={{ width: `${restCountdown.progress * 100}%` }}
+            />
+          </View>
+          <View className="flex-row justify-between">
+            <Text className="text-muted text-[12px]">
+              {restCountdown.remainingFormatted} remaining
+            </Text>
+            <Text className="text-muted text-[12px]">
+              {formatHours(generator.requiredRestHours)} required
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
       {nextMaintenance ? (
         <View className="mt-2.5 flex-row items-center gap-1.5">
           <SymbolView name="wrench.fill" size={12} tintColor={mutedColor} />
@@ -140,6 +177,48 @@ export function GeneratorCard({
             </Text>
           </Text>
         </View>
+      ) : null}
+
+      {status === 'available' ? (
+        <Button
+          variant="primary"
+          size="md"
+          className="mt-3"
+          onPress={handleStart}
+        >
+          Start
+        </Button>
+      ) : status === 'running' ? (
+        <Button
+          variant="danger"
+          size="md"
+          className="mt-3"
+          onPress={handleStop}
+        >
+          Stop
+        </Button>
+      ) : status === 'resting' ? (
+        <Button
+          variant="ghost"
+          size="md"
+          className="mt-3"
+          onPress={() =>
+            Alert.alert(
+              'Generator is Resting',
+              'It\u2019s recommended to let the generator rest before starting again. Starting now may reduce its lifespan.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Start Anyway',
+                  style: 'destructive',
+                  onPress: handleStart
+                }
+              ]
+            )
+          }
+        >
+          Start
+        </Button>
       ) : null}
     </Pressable>
   )

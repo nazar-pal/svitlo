@@ -13,6 +13,7 @@ import {
 } from '@/lib/hooks/use-maintenance-due'
 import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
 import { useUserOrgs } from '@/lib/hooks/use-user-orgs'
+import { usePowerSync } from '@/lib/powersync'
 import { groupBy } from '@/lib/group-by'
 import { db } from '@/lib/powersync/database'
 import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
@@ -23,6 +24,7 @@ import { FlatList, View } from 'react-native'
 
 export default function GeneratorsScreen() {
   const router = useRouter()
+  const { userId } = usePowerSync()
   const { selectedOrgId } = useSelectedOrg()
   const { userOrgs, isAdmin } = useUserOrgs()
 
@@ -112,6 +114,7 @@ export default function GeneratorsScreen() {
               generator={item}
               sessions={sessionsByGenerator.get(item.id) ?? []}
               nextMaintenance={nextMaintenanceByGenerator.get(item.id) ?? null}
+              userId={userId ?? ''}
               onPress={() => router.push(`/generator/${item.id}`)}
             />
           </View>

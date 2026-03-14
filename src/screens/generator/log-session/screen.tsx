@@ -1,0 +1,123 @@
+import { eq } from 'drizzle-orm'
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { Button } from 'heroui-native'
+import { useState } from 'react'
+import { ScrollView, Text, View } from 'react-native'
+import { DatePicker, Host } from '@expo/ui/swift-ui'
+
+import { generators } from '@/data/client/db-schema'
+import { logManualSession } from '@/data/client/mutations'
+import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
+import { useLocalUser } from '@/lib/powersync'
+import { db } from '@/lib/powersync/database'
+
+export default function LogSessionScreen() {
+  const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
+  const router = useRouter()
+  const localUser = useLocalUser()
+
+  const now = new Date()
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+
+  const [startedAt, setStartedAt] = useState(oneHourAgo)
+  const [stoppedAt, setStoppedAt] = useState(now)
+  const [error, setError] = useState('')
+
+  const { data: generatorData } = useDrizzleQuery(
+    generatorId
+      ? db.select().from(generators).where(eq(generators.id, generatorId))
+      : undefined
+  )
+  const generator = generatorData[0]
+
+  async function handleSubmit() {
+    if (!localUser || !generatorId) return
+    setError('')
+
+    const result = await logManualSession(localUser.id, {
+      generatorId,
+      startedAt: startedAt.toISOString(),
+      stoppedAt: stoppedAt.toISOString()
+    })
+
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
+
+    router.back()
+  }
+
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Log Past Run' }} />
+      <ScrollView
+        className="bg-background flex-1"
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerClassName="px-5 pb-10 pt-6"
+      >
+        <View className="mx-auto w-full max-w-[600px] gap-7">
+          <View className="gap-2">
+            <Text className="text-foreground text-3xl font-bold">
+              Log Past Run
+            </Text>
+            <Text className="text-muted text-[15px] leading-[22px]">
+              Retroactively record a generator run by specifying the start and
+              end times.
+            </Text>
+          </View>
+
+          {/* Generator info */}
+          <View className="bg-surface-secondary gap-1 rounded-2xl px-4 py-3">
+            <Text className="text-foreground text-[17px] font-semibold">
+              {generator?.title ?? 'Loading...'}
+            </Text>
+            <Text className="text-muted text-[13px]">
+              {generator?.model ?? ''}
+            </Text>
+          </View>
+
+          {/* Start time */}
+          <View className="gap-2">
+            <Text className="text-muted ml-1 text-sm font-medium">
+              Start Time
+            </Text>
+            <Host matchContents>
+              <DatePicker
+                selection={startedAt}
+                onDateChange={setStartedAt}
+                displayedComponents={['date', 'hourAndMinute']}
+                range={{ end: new Date() }}
+              />
+            </Host>
+          </View>
+
+          {/* End time */}
+          <View className="gap-2">
+            <Text className="text-muted ml-1 text-sm font-medium">
+              End Time
+            </Text>
+            <Host matchContents>
+              <DatePicker
+                selection={stoppedAt}
+                onDateChange={setStoppedAt}
+                displayedComponents={['date', 'hourAndMinute']}
+                range={{ end: new Date() }}
+              />
+            </Host>
+          </View>
+
+          {error ? (
+            <Text className="bg-danger/10 text-danger rounded-2xl px-4 py-3 text-sm">
+              {error}
+            </Text>
+          ) : null}
+
+          <Button variant="primary" onPress={handleSubmit}>
+            Log Session
+          </Button>
+        </View>
+      </ScrollView>
+    </>
+  )
+}

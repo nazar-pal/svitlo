@@ -15,7 +15,6 @@ import {
 } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
-import { GeneratorStatusBadge } from '@/components/generator-status-badge'
 import {
   generators,
   generatorSessions,
@@ -32,17 +31,20 @@ import {
   stopSession,
   unassignUserFromGenerator
 } from '@/data/client/mutations'
+import { trpcClient } from '@/data/trpc/react'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
   formatDuration,
   formatHours,
+  useElapsedHours,
   useElapsedTime
 } from '@/lib/hooks/use-elapsed-time'
 import {
   computeGeneratorStatus,
   computeLifetimeHours
 } from '@/lib/hooks/use-generator-status'
-import { trpcClient } from '@/data/trpc/react'
+import type { RestCountdown } from '@/lib/hooks/use-rest-countdown'
+import { useRestCountdown } from '@/lib/hooks/use-rest-countdown'
 import { useLocalUser } from '@/lib/powersync'
 import { db } from '@/lib/powersync/database'
 
@@ -132,6 +134,13 @@ export default function GeneratorDetailScreen() {
     ? computeGeneratorStatus(generator, sessions)
     : null
   const elapsedTime = useElapsedTime(statusInfo?.openSession?.startedAt ?? null)
+  const elapsedHours = useElapsedHours(
+    statusInfo?.openSession?.startedAt ?? null
+  )
+  const restCountdown = useRestCountdown(
+    statusInfo?.restEndsAt ?? null,
+    generator?.requiredRestHours ?? 0
+  )
 
   if (!generator || !statusInfo) return null
 
@@ -257,8 +266,6 @@ export default function GeneratorDetailScreen() {
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
     .slice(0, 5)
 
-  const totalActivityCount = sessions.length + records.length
-
   function getLastRecordForTemplate(templateId: string) {
     return records.find(r => r.templateId === templateId)
   }
@@ -272,9 +279,8 @@ export default function GeneratorDetailScreen() {
         contentContainerClassName="px-5 pb-10 pt-4"
       >
         <View className="mx-auto w-full max-w-[600px] gap-6">
-          {/* Hero */}
-          <View className="items-center gap-3 py-4">
-            <GeneratorStatusBadge status={statusInfo.status} size="md" />
+          {/* Generator Info */}
+          <View className="items-center gap-1 pt-4">
             <Text className="text-muted text-center text-[15px]">
               {generator.model}
               {generator.description ? ` · ${generator.description}` : ''}
@@ -284,46 +290,31 @@ export default function GeneratorDetailScreen() {
             </Text>
           </View>
 
-          {/* Action Button */}
+          {/* Status Card */}
           {statusInfo.status === 'available' ? (
-            <Button
-              variant="primary"
-              size="lg"
-              className="bg-green-600"
-              onPress={handleStartSession}
-            >
-              <Text className="text-lg font-semibold text-white">
+            <View className=" gap-4 rounded-2xl pt-4 pb-4">
+              <Text className="text-muted text-center text-sm">
+                Ready to run
+              </Text>
+              <Button variant="primary" size="lg" onPress={handleStartSession}>
                 Start Generator
-              </Text>
-            </Button>
+              </Button>
+            </View>
           ) : statusInfo.status === 'running' ? (
-            <View className="gap-2">
-              <Text className="text-foreground text-center font-mono text-2xl font-bold">
-                {elapsedTime}
-              </Text>
-              <Button
-                variant="primary"
-                size="lg"
-                className="bg-red-600"
-                onPress={handleStopSession}
-              >
-                <Text className="text-lg font-semibold text-white">
-                  Stop Generator
-                </Text>
-              </Button>
-            </View>
+            <RunningStatusCard
+              elapsedTime={elapsedTime}
+              elapsedHours={elapsedHours}
+              consecutiveRunHours={statusInfo.consecutiveRunHours}
+              maxConsecutiveRunHours={generator.maxConsecutiveRunHours}
+              warningThresholdPct={generator.runWarningThresholdPct}
+              onStop={handleStopSession}
+            />
           ) : (
-            <View className="gap-2">
-              <Text className="text-center text-sm text-orange-600">
-                Resting until{' '}
-                {statusInfo.restEndsAt
-                  ? format(statusInfo.restEndsAt, 'HH:mm')
-                  : ''}
-              </Text>
-              <Button variant="outline" size="lg" isDisabled>
-                Resting...
-              </Button>
-            </View>
+            <RestingStatusCard
+              countdown={restCountdown}
+              requiredRestHours={generator.requiredRestHours}
+              onStart={handleStartSession}
+            />
           )}
 
           {/* Stats */}
@@ -362,25 +353,27 @@ export default function GeneratorDetailScreen() {
           </View>
 
           {/* Recent Activity */}
-          {activityItems.length > 0 ? (
-            <View className="gap-2">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-muted ml-4 text-xs uppercase">
-                  Recent Activity
+          <View className="gap-2">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-muted ml-4 text-xs uppercase">
+                Recent Activity
+              </Text>
+              <Pressable
+                onPress={() =>
+                  router.push(`/generator/activity?generatorId=${id}`)
+                }
+                className="active:opacity-70"
+              >
+                <Text className="text-sm font-medium text-blue-500">
+                  View All
                 </Text>
-                {totalActivityCount > 5 ? (
-                  <Pressable
-                    onPress={() =>
-                      router.push(`/generator/activity?generatorId=${id}`)
-                    }
-                    className="active:opacity-70"
-                  >
-                    <Text className="text-sm font-medium text-blue-500">
-                      View All
-                    </Text>
-                  </Pressable>
-                ) : null}
+              </Pressable>
+            </View>
+            {activityItems.length === 0 ? (
+              <View className="bg-surface-secondary items-center rounded-2xl py-6">
+                <Text className="text-muted text-sm">No activity recorded</Text>
               </View>
+            ) : (
               <ListGroup>
                 {activityItems.map((item, index) => {
                   if (item.type === 'session') {
@@ -430,8 +423,8 @@ export default function GeneratorDetailScreen() {
                   )
                 })}
               </ListGroup>
-            </View>
-          ) : null}
+            )}
+          </View>
 
           {/* Maintenance Templates */}
           <View className="gap-2">
@@ -596,5 +589,130 @@ export default function GeneratorDetailScreen() {
         </View>
       </ScrollView>
     </>
+  )
+}
+
+function RunningStatusCard({
+  elapsedTime,
+  elapsedHours,
+  consecutiveRunHours,
+  maxConsecutiveRunHours,
+  warningThresholdPct,
+  onStop
+}: {
+  elapsedTime: string
+  elapsedHours: number
+  consecutiveRunHours: number
+  maxConsecutiveRunHours: number
+  warningThresholdPct: number
+  onStop: () => void
+}) {
+  const totalRunHours = consecutiveRunHours + elapsedHours
+  const progress = Math.min(totalRunHours / maxConsecutiveRunHours, 1)
+  const warningFraction = warningThresholdPct / 100
+  const progressColor =
+    progress >= 1
+      ? 'bg-red-500'
+      : progress >= warningFraction
+        ? 'bg-orange-500'
+        : 'bg-green-500'
+  const timeColor =
+    progress >= 1
+      ? 'text-red-600'
+      : progress >= warningFraction
+        ? 'text-orange-600'
+        : 'text-green-600'
+
+  return (
+    <View className=" gap-4 rounded-2xlpt-4 pb-4">
+      <Text
+        className={`text-center text-[44px] leading-none font-semibold ${timeColor}`}
+        style={{ fontVariant: ['tabular-nums'] }}
+      >
+        {elapsedTime}
+      </Text>
+
+      <View className="gap-1.5">
+        <View className="bg-default h-2 overflow-hidden rounded-full">
+          <View
+            className={`h-full rounded-full ${progressColor}`}
+            style={{ width: `${progress * 100}%` }}
+          />
+        </View>
+        <View className="flex-row justify-between">
+          <Text className="text-muted text-[12px]">
+            {formatHours(totalRunHours)} elapsed
+          </Text>
+          <Text className="text-muted text-[12px]">
+            {formatHours(maxConsecutiveRunHours)} max
+          </Text>
+        </View>
+      </View>
+
+      <Button variant="danger" size="lg" onPress={onStop}>
+        Stop Generator
+      </Button>
+    </View>
+  )
+}
+
+function confirmRestingStart(onStart: () => void) {
+  Alert.alert(
+    'Generator is Resting',
+    "It's recommended to let the generator rest before starting again. Starting now may reduce its lifespan.",
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Start Anyway', style: 'destructive', onPress: onStart }
+    ]
+  )
+}
+
+function RestingStatusCard({
+  countdown,
+  requiredRestHours,
+  onStart
+}: {
+  countdown: RestCountdown
+  requiredRestHours: number
+  onStart: () => void
+}) {
+  const restedHours = requiredRestHours * countdown.progress
+  const progressColor =
+    countdown.progress >= 1 ? 'bg-green-500' : 'bg-orange-500'
+
+  return (
+    <View className=" gap-4 rounded-2xl  pt-4 pb-4">
+      <Text
+        className="text-center text-[44px] leading-none font-semibold text-orange-600"
+        style={{ fontVariant: ['tabular-nums'] }}
+      >
+        {countdown.remainingFormatted}
+      </Text>
+
+      <View className="gap-1.5">
+        <View className="bg-default h-2 overflow-hidden rounded-full">
+          <View
+            className={`h-full rounded-full ${progressColor}`}
+            style={{ width: `${countdown.progress * 100}%` }}
+          />
+        </View>
+        <View className="flex-row justify-between">
+          <Text className="text-muted text-[12px]">
+            {formatHours(restedHours)} rested
+          </Text>
+          <Text className="text-muted text-[12px]">
+            {formatHours(requiredRestHours)} required
+          </Text>
+        </View>
+      </View>
+
+      <Button
+        variant="ghost"
+        size="lg"
+        onPress={() => confirmRestingStart(onStart)}
+      >
+        Start Generator
+      </Button>
+    </View>
   )
 }

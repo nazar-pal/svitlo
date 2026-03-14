@@ -1,8 +1,6 @@
-import { addHours, isFuture, parseISO } from 'date-fns'
-import { and, desc, eq, isNull, isNotNull } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 
 import { generators, generatorSessions } from '@/data/client/db-schema'
-import { hoursBetween } from '@/lib/time'
 import { db } from '@/lib/powersync/database'
 
 import {
@@ -14,62 +12,6 @@ import {
   ok,
   type MutationResult
 } from './helpers'
-
-/**
- * Determine if the generator is currently in a mandatory rest period.
- *
- * Walk backward through closed sessions to find the current consecutive run
- * streak. If the streak meets or exceeds maxConsecutiveRunHours, the generator
- * is resting until the last session's stoppedAt + requiredRestHours.
- */
-async function isGeneratorResting(
-  generatorId: string,
-  maxConsecutiveRunHours: number,
-  requiredRestHours: number
-): Promise<boolean> {
-  // Get closed sessions ordered most recent first
-  const closedSessions = await db
-    .select({
-      startedAt: generatorSessions.startedAt,
-      stoppedAt: generatorSessions.stoppedAt
-    })
-    .from(generatorSessions)
-    .where(
-      and(
-        eq(generatorSessions.generatorId, generatorId),
-        isNotNull(generatorSessions.stoppedAt)
-      )
-    )
-    .orderBy(desc(generatorSessions.stoppedAt))
-
-  if (closedSessions.length === 0) return false
-
-  // Walk backward to compute the current consecutive run streak.
-  // If there's a gap >= requiredRestHours between sessions, the generator
-  // already rested — only count hours from the current streak.
-  let consecutiveHours = 0
-  let previousStartedAt: string | null = null
-
-  for (const session of closedSessions) {
-    if (previousStartedAt) {
-      const gap = hoursBetween(session.stoppedAt!, previousStartedAt)
-      if (gap >= requiredRestHours) break
-    }
-
-    consecutiveHours += hoursBetween(session.startedAt, session.stoppedAt!)
-    previousStartedAt = session.startedAt
-
-    if (consecutiveHours >= maxConsecutiveRunHours) {
-      const restEndsAt = addHours(
-        parseISO(closedSessions[0].stoppedAt!),
-        requiredRestHours
-      )
-      return isFuture(restEndsAt)
-    }
-  }
-
-  return false
-}
 
 export async function startSession(
   userId: string,
@@ -101,14 +43,6 @@ export async function startSession(
     .limit(1)
 
   if (openSession) return fail('Generator already has an active session')
-
-  // Check generator is not in mandatory rest period
-  const resting = await isGeneratorResting(
-    generatorId,
-    gen.maxConsecutiveRunHours,
-    gen.requiredRestHours
-  )
-  if (resting) return fail('Generator is in mandatory rest period')
 
   // Insert new session
   const now = nowISO()
@@ -175,6 +109,41 @@ export async function stopSession(
       stoppedByUserId: userId
     })
     .where(eq(generatorSessions.id, sessionId))
+
+  return ok
+}
+
+export async function logManualSession(
+  userId: string,
+  input: { generatorId: string; startedAt: string; stoppedAt: string }
+): Promise<MutationResult> {
+  const { generatorId, startedAt, stoppedAt } = input
+
+  // Check generator exists
+  const [gen] = await db
+    .select()
+    .from(generators)
+    .where(eq(generators.id, generatorId))
+    .limit(1)
+
+  if (!gen) return fail('Generator not found')
+
+  if (!(await canAccessGenerator(userId, generatorId)))
+    return fail('Not authorized for this generator')
+
+  if (startedAt >= stoppedAt) return fail('Start time must be before end time')
+
+  if (new Date(stoppedAt) > new Date())
+    return fail('End time cannot be in the future')
+
+  await db.insert(generatorSessions).values({
+    id: newId(),
+    generatorId,
+    startedByUserId: userId,
+    stoppedByUserId: userId,
+    startedAt,
+    stoppedAt
+  })
 
   return ok
 }
