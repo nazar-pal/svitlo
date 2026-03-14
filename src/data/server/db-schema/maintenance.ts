@@ -1,6 +1,7 @@
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import {
   boolean,
+  check,
   index,
   integer,
   pgEnum,
@@ -40,7 +41,11 @@ export const maintenanceTemplates = pgTable(
     createdAt: pgTimestamp('created_at')
   },
   table => [
-    index('maintenance_templates_generator_id_idx').on(table.generatorId)
+    index('maintenance_templates_generator_id_idx').on(table.generatorId),
+    check(
+      'trigger_fields_match_type',
+      sql`(trigger_type = 'hours' AND trigger_hours_interval IS NOT NULL) OR (trigger_type = 'calendar' AND trigger_calendar_days IS NOT NULL) OR (trigger_type = 'whichever_first' AND trigger_hours_interval IS NOT NULL AND trigger_calendar_days IS NOT NULL)`
+    )
   ]
 )
 

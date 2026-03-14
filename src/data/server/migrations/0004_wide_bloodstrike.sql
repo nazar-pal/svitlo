@@ -1,0 +1,1 @@
+ALTER TABLE "maintenance_templates" ADD CONSTRAINT "trigger_fields_match_type" CHECK ((trigger_type = 'hours' AND trigger_hours_interval IS NOT NULL) OR (trigger_type = 'calendar' AND trigger_calendar_days IS NOT NULL) OR (trigger_type = 'whichever_first' AND trigger_hours_interval IS NOT NULL AND trigger_calendar_days IS NOT NULL));
