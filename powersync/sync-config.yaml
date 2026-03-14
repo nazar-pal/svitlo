@@ -95,7 +95,7 @@ streams:
     auto_subscribe: true
     queries:
       - >
-        SELECT id, organization_id, name, generator_type, description,
+        SELECT id, organization_id, title, model, generator_type, description,
                max_consecutive_run_hours, required_rest_hours,
                run_warning_threshold_pct, created_at
         FROM generators
@@ -103,7 +103,7 @@ streams:
           SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
         )
       - >
-        SELECT id, organization_id, name, generator_type, description,
+        SELECT id, organization_id, title, model, generator_type, description,
                max_consecutive_run_hours, required_rest_hours,
                run_warning_threshold_pct, created_at
         FROM generators
@@ -156,7 +156,7 @@ streams:
       - >
         SELECT id, generator_id, task_name, description,
                trigger_type, trigger_hours_interval, trigger_calendar_days,
-               created_at
+               is_one_time, created_at
         FROM maintenance_templates
         WHERE generator_id IN (
           SELECT id FROM generators WHERE organization_id IN (
@@ -166,7 +166,7 @@ streams:
       - >
         SELECT id, generator_id, task_name, description,
                trigger_type, trigger_hours_interval, trigger_calendar_days,
-               created_at
+               is_one_time, created_at
         FROM maintenance_templates
         WHERE generator_id IN (
           SELECT generator_id FROM generator_user_assignments WHERE user_id = auth.user_id()

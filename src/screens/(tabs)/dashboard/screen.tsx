@@ -120,7 +120,7 @@ export default function DashboardScreen() {
                 {overdueItems.map(({ gen, next }) => (
                   <OverdueMaintenanceItem
                     key={`${gen.id}-${next.templateId}`}
-                    generatorName={gen.name}
+                    generatorTitle={gen.title}
                     taskName={next.taskName}
                     hoursRemaining={next.hoursRemaining}
                     daysRemaining={next.daysRemaining}
@@ -154,7 +154,7 @@ export default function DashboardScreen() {
                 {upcomingItems.map(({ gen, next }) => (
                   <UpcomingMaintenanceItem
                     key={`${gen.id}-${next.templateId}`}
-                    generatorName={gen.name}
+                    generatorTitle={gen.title}
                     taskName={next.taskName}
                     info={next}
                     onPress={() => router.push(`/generator/${gen.id}`)}

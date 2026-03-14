@@ -28,14 +28,14 @@ const URGENCY_CONFIG = {
 
 interface MaintenanceTaskRowProps {
   taskName: string
-  generatorName: string
+  generatorTitle: string
   dueInfo: MaintenanceDueInfo
   onPress: () => void
 }
 
 export function MaintenanceTaskRow({
   taskName,
-  generatorName,
+  generatorTitle,
   dueInfo,
   onPress
 }: MaintenanceTaskRowProps) {
@@ -56,7 +56,7 @@ export function MaintenanceTaskRow({
         >
           {taskName}
         </Text>
-        <Text className="text-muted text-[13px]">{generatorName}</Text>
+        <Text className="text-muted text-[13px]">{generatorTitle}</Text>
         {dueInfo.lastPerformedAt ? (
           <Text className="text-muted text-[12px]">
             Last: {format(parseISO(dueInfo.lastPerformedAt), 'PP')}

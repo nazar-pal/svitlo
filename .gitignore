@@ -33,6 +33,9 @@ yarn-error.*
 # local env files
 .env*.local
 
+# PowerSync CLI local config
+powersync/cli.yaml
+
 # typescript
 *.tsbuildinfo
 

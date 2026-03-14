@@ -5,7 +5,8 @@ import { textId, textTimestamp } from './utils'
 export const generators = sqliteTable('generators', {
   id: textId(),
   organizationId: text('organization_id').notNull(),
-  name: text('name').notNull(),
+  title: text('title').notNull(),
+  model: text('model').notNull(),
   generatorType: text('generator_type').notNull(),
   description: text('description'),
   maxConsecutiveRunHours: real('max_consecutive_run_hours').notNull(),

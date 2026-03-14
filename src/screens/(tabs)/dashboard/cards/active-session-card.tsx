@@ -60,7 +60,7 @@ export function ActiveSessionCard({
           className="text-foreground text-[22px] leading-tight font-bold"
           numberOfLines={1}
         >
-          {generator.name}
+          {generator.title}
         </Text>
         <Text
           className="text-[52px] leading-none font-semibold text-green-600"

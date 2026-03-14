@@ -7,14 +7,14 @@ import type { NextMaintenanceCardInfo } from '@/lib/hooks/use-maintenance-due'
 import { formatUpcoming } from '../helpers'
 
 interface UpcomingMaintenanceItemProps {
-  generatorName: string
+  generatorTitle: string
   taskName: string
   info: NextMaintenanceCardInfo
   onPress: () => void
 }
 
 export function UpcomingMaintenanceItem({
-  generatorName,
+  generatorTitle,
   taskName,
   info,
   onPress
@@ -40,7 +40,7 @@ export function UpcomingMaintenanceItem({
             {taskName}
           </Text>
           <Text className="text-muted text-[13px]" numberOfLines={1}>
-            {generatorName}
+            {generatorTitle}
             {' · '}
             <Text className={labelColor}>{formatUpcoming(info)}</Text>
           </Text>

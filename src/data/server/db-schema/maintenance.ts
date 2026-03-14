@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm'
 import {
+  boolean,
   index,
   integer,
   pgEnum,
@@ -35,6 +36,7 @@ export const maintenanceTemplates = pgTable(
     triggerType: triggerTypeEnum('trigger_type').notNull(),
     triggerHoursInterval: real('trigger_hours_interval'),
     triggerCalendarDays: integer('trigger_calendar_days'),
+    isOneTime: boolean('is_one_time').default(false).notNull(),
     createdAt: pgTimestamp('created_at')
   },
   table => [

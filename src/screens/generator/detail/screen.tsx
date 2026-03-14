@@ -221,7 +221,7 @@ export default function GeneratorDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: generator.name }} />
+      <Stack.Screen options={{ title: generator.title }} />
       <ScrollView
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"
@@ -233,6 +233,7 @@ export default function GeneratorDetailScreen() {
             <GeneratorStatusBadge status={statusInfo.status} size="md" />
             <Text className="text-muted text-center text-[15px]">
               {generator.generatorType}
+              {generator.model ? ` · ${generator.model}` : ''}
               {generator.description ? ` · ${generator.description}` : ''}
             </Text>
             <Text className="text-muted text-[13px]">
@@ -438,7 +439,13 @@ export default function GeneratorDetailScreen() {
                             {template.taskName}
                           </ListGroup.ItemTitle>
                           <ListGroup.ItemDescription>
-                            {template.triggerType === 'hours'
+                            {template.isOneTime
+                              ? template.triggerType === 'hours'
+                                ? `Once at ${template.triggerHoursInterval}h`
+                                : template.triggerType === 'calendar'
+                                  ? `Once at ${template.triggerCalendarDays} days`
+                                  : `Once at ${template.triggerHoursInterval}h or ${template.triggerCalendarDays} days`
+                              : template.triggerType === 'hours'
                               ? `Every ${template.triggerHoursInterval}h`
                               : template.triggerType === 'calendar'
                                 ? `Every ${template.triggerCalendarDays} days`

@@ -5,7 +5,7 @@ import { useCSSVariable } from 'uniwind'
 import { formatHours } from '@/lib/hooks/use-elapsed-time'
 
 interface OverdueMaintenanceItemProps {
-  generatorName: string
+  generatorTitle: string
   taskName: string
   hoursRemaining: number | null
   daysRemaining: number | null
@@ -28,7 +28,7 @@ function formatOverdue(
 }
 
 export function OverdueMaintenanceItem({
-  generatorName,
+  generatorTitle,
   taskName,
   hoursRemaining,
   daysRemaining,
@@ -53,7 +53,7 @@ export function OverdueMaintenanceItem({
             {taskName}
           </Text>
           <Text className="text-muted text-[13px]" numberOfLines={1}>
-            {generatorName}
+            {generatorTitle}
             {' · '}
             <Text className="text-red-500">
               {formatOverdue(hoursRemaining, daysRemaining)}

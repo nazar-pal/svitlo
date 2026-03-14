@@ -91,7 +91,7 @@ export function GeneratorCard({
               className="text-foreground flex-1 text-[17px] font-semibold"
               numberOfLines={1}
             >
-              {generator.name}
+              {generator.title}
             </Text>
             <GeneratorStatusBadge status={status} />
           </View>

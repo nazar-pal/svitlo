@@ -80,7 +80,7 @@ export default function RecordMaintenanceScreen() {
             {template?.taskName ?? 'Loading...'}
           </Text>
           <Text className="text-muted text-[13px]">
-            {generator?.name ?? 'Loading...'}
+            {generator?.title ?? 'Loading...'}
           </Text>
         </View>
 

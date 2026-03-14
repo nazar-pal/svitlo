@@ -127,6 +127,15 @@ export function computeMaintenanceDue(
 ): MaintenanceDueInfo {
   const lastRecord = lastRecordForTemplate(records, template.id)
   const lastPerformedAt = lastRecord?.performedAt ?? null
+
+  if (template.isOneTime && lastRecord)
+    return {
+      templateId: template.id,
+      generatorId: template.generatorId,
+      urgency: 'ok',
+      lastPerformedAt
+    }
+
   const now = new Date().toISOString()
 
   const remaining = computeRemaining(template, lastPerformedAt, sessions, now)
@@ -168,6 +177,16 @@ export function computeNextMaintenance(
   const candidates: Candidate[] = templates.map(template => {
     const lastRecord = lastRecordForTemplate(records, template.id)
     const lastPerformedAt = lastRecord?.performedAt ?? null
+
+    if (template.isOneTime && lastRecord)
+      return {
+        templateId: template.id,
+        taskName: template.taskName,
+        urgency: 'ok' as const,
+        sortValue: Infinity,
+        hoursRemaining: null,
+        daysRemaining: null
+      }
 
     const { hoursRemaining, daysRemaining } = computeRemaining(
       template,

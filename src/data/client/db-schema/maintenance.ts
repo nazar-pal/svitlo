@@ -10,6 +10,7 @@ export const maintenanceTemplates = sqliteTable('maintenance_templates', {
   triggerType: text('trigger_type').notNull(), // 'hours' | 'calendar' | 'whichever_first'
   triggerHoursInterval: real('trigger_hours_interval'),
   triggerCalendarDays: integer('trigger_calendar_days'),
+  isOneTime: integer('is_one_time').notNull(),
   createdAt: textTimestamp('created_at')
 })
 

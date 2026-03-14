@@ -9,6 +9,9 @@ const TIMESTAMP_FIELDS = new Set([
   'updated_at'
 ])
 
+// Fields that arrive as 0/1 from SQLite and need boolean conversion
+const BOOLEAN_FIELDS = new Set(['is_one_time'])
+
 // Fields that may arrive as strings from SQLite and need Number conversion
 const NUMBER_FIELDS = new Set([
   'max_consecutive_run_hours',
@@ -25,6 +28,8 @@ function snakeToCamel(s: string): string {
 function convertValue(key: string, value: unknown): unknown {
   if (value == null) return null
   if (TIMESTAMP_FIELDS.has(key)) return new Date(value as string)
+  if (BOOLEAN_FIELDS.has(key))
+    return value === '1' || value === 1 || value === true
   if (NUMBER_FIELDS.has(key)) return Number(value)
   return value
 }

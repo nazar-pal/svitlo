@@ -32,7 +32,8 @@ export async function createGenerator(
   await db.insert(generators).values({
     id: newId(),
     organizationId: parsed.data.organizationId,
-    name: parsed.data.name,
+    title: parsed.data.title,
+    model: parsed.data.model,
     generatorType: parsed.data.generatorType,
     description: parsed.data.description ?? null,
     maxConsecutiveRunHours: parsed.data.maxConsecutiveRunHours,

@@ -1,10 +1,13 @@
 import { useRouter } from 'expo-router'
 import { Button, Description, Input, Label, TextField } from 'heroui-native'
 import { useState } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View } from 'react-native'
 
 import { createGenerator } from '@/data/client/mutations'
-import { insertGeneratorSchema } from '@/data/client/validation'
+import {
+  GENERATOR_TYPES,
+  insertGeneratorSchema
+} from '@/data/client/validation'
 import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -13,8 +16,9 @@ export default function CreateGeneratorScreen() {
   const localUser = useLocalUser()
   const { selectedOrgId } = useSelectedOrg()
 
-  const [name, setName] = useState('')
-  const [generatorType, setGeneratorType] = useState('')
+  const [title, setTitle] = useState('')
+  const [model, setModel] = useState('')
+  const [generatorType, setGeneratorType] = useState<string>(GENERATOR_TYPES[0])
   const [description, setDescription] = useState('')
   const [maxRunHours, setMaxRunHours] = useState('8')
   const [restHours, setRestHours] = useState('4')
@@ -29,7 +33,8 @@ export default function CreateGeneratorScreen() {
 
     const input = {
       organizationId: selectedOrgId,
-      name,
+      title,
+      model,
       generatorType,
       description: description || undefined,
       maxConsecutiveRunHours: parseFloat(maxRunHours) || 0,
@@ -47,7 +52,7 @@ export default function CreateGeneratorScreen() {
       return
     }
 
-    const result = await createGenerator(localUser.id, input)
+    const result = await createGenerator(localUser.id, parsed.data)
     if (!result.ok) {
       setError(result.error)
       return
@@ -73,39 +78,67 @@ export default function CreateGeneratorScreen() {
         </View>
 
         <View className="gap-5">
-          <TextField isInvalid={!!fieldErrors.name}>
-            <Label>Name</Label>
+          <TextField isInvalid={!!fieldErrors.title}>
+            <Label>Title</Label>
             <Input
-              placeholder='e.g. "Back Yard Honda"'
-              value={name}
-              onChangeText={setName}
+              placeholder='e.g. "Back Yard Generator"'
+              value={title}
+              onChangeText={setTitle}
               autoFocus
             />
-            {fieldErrors.name ? (
+            {fieldErrors.title ? (
               <Description className="text-danger">
-                {fieldErrors.name}
+                {fieldErrors.title}
               </Description>
             ) : null}
           </TextField>
 
-          <TextField isInvalid={!!fieldErrors.generatorType}>
-            <Label>Type</Label>
+          <TextField isInvalid={!!fieldErrors.model}>
+            <Label>Model</Label>
             <Input
-              placeholder="e.g. Diesel, Gas, Propane"
-              value={generatorType}
-              onChangeText={setGeneratorType}
+              placeholder='e.g. "Honda EU2200i"'
+              value={model}
+              onChangeText={setModel}
             />
-            {fieldErrors.generatorType ? (
+            {fieldErrors.model ? (
               <Description className="text-danger">
-                {fieldErrors.generatorType}
+                {fieldErrors.model}
               </Description>
             ) : null}
           </TextField>
+
+          <View className="gap-2">
+            <Text className="text-foreground text-sm font-medium">Type</Text>
+            <View className="bg-surface-secondary flex-row flex-wrap rounded-xl p-1">
+              {GENERATOR_TYPES.map(type => (
+                <Pressable
+                  key={type}
+                  onPress={() => setGeneratorType(type)}
+                  className={`items-center rounded-lg px-3 py-2 ${
+                    generatorType === type ? 'bg-background' : ''
+                  }`}
+                >
+                  <Text
+                    className={`text-[13px] font-medium capitalize ${
+                      generatorType === type ? 'text-foreground' : 'text-muted'
+                    }`}
+                  >
+                    {type.replace('_', ' ')}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            {fieldErrors.generatorType ? (
+              <Text className="text-danger text-xs">
+                {fieldErrors.generatorType}
+              </Text>
+            ) : null}
+          </View>
 
           <TextField>
             <Label>Description</Label>
             <Input
-              placeholder="Location, model, serial number, notes..."
+              placeholder="Location, serial number, notes..."
               value={description}
               onChangeText={setDescription}
               multiline

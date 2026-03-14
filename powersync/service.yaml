@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://unpkg.com/@powersync/cli-schemas@latest/json-schema/service-config.json
+
+_type: cloud
+name: svitlo
+region: us
+
+replication:
+  connections:
+    - type: postgresql
+      uri: !env DATABASE_URL
+      sslmode: verify-full
+
+client_auth:
+  jwks:
+    keys:
+      - kty: oct
+        alg: HS256
+        kid: powersync-key
+        k:
+          secret: !env POWERSYNC_PRIVATE_KEY

@@ -32,7 +32,7 @@ export function RestingGeneratorItem({
             className="text-foreground text-[17px] font-semibold"
             numberOfLines={1}
           >
-            {generator.name}
+            {generator.title}
           </Text>
           <Text className="text-muted text-[13px]">
             Resting — ready in {formatRestRemaining(restEndsAt)}

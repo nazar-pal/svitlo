@@ -41,7 +41,8 @@ export const insertMaintenanceTemplateSchema = z
     description: z.string().optional(),
     triggerType: triggerTypeEnum,
     triggerHoursInterval: zPositiveReal.optional(),
-    triggerCalendarDays: zPositiveInt.optional()
+    triggerCalendarDays: zPositiveInt.optional(),
+    isOneTime: z.boolean().default(false)
   })
   .superRefine(refineTriggerFields)
 
@@ -55,7 +56,8 @@ export const updateMaintenanceTemplateSchema = z
     description: z.string().nullable(),
     triggerType: triggerTypeEnum,
     triggerHoursInterval: zPositiveReal.nullable(),
-    triggerCalendarDays: zPositiveInt.nullable()
+    triggerCalendarDays: zPositiveInt.nullable(),
+    isOneTime: z.boolean()
   })
   .partial()
   .superRefine(refineTriggerFields)
