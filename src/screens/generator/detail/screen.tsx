@@ -1,9 +1,18 @@
 import { differenceInMilliseconds, format, parseISO } from 'date-fns'
 import { desc, eq } from 'drizzle-orm'
+import * as Network from 'expo-network'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { Button, ListGroup, Separator } from 'heroui-native'
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
+import { useState } from 'react'
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  View
+} from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
 import { GeneratorStatusBadge } from '@/components/generator-status-badge'
@@ -33,8 +42,11 @@ import {
   computeGeneratorStatus,
   computeLifetimeHours
 } from '@/lib/hooks/use-generator-status'
+import { trpcClient } from '@/data/trpc/react'
 import { useLocalUser } from '@/lib/powersync'
 import { db } from '@/lib/powersync/database'
+
+import { setPendingSuggestions } from './maintenance-suggestions-store'
 
 export default function GeneratorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -46,6 +58,7 @@ export default function GeneratorDetailScreen() {
   const mutedColor = useCSSVariable('--color-muted') as string | undefined
 
   const userId = localUser?.id ?? ''
+  const [isSuggesting, setIsSuggesting] = useState(false)
 
   // Generator data
   const { data: gens } = useDrizzleQuery(
@@ -163,6 +176,37 @@ export default function GeneratorDetailScreen() {
         }
       }
     ])
+  }
+
+  async function handleSuggestMaintenance() {
+    const networkState = await Network.getNetworkStateAsync()
+    if (!networkState.isConnected || !networkState.isInternetReachable) {
+      Alert.alert(
+        'Offline',
+        'Internet connection is required for AI suggestions.'
+      )
+      return
+    }
+
+    setIsSuggesting(true)
+    const result = await trpcClient.ai.suggestMaintenancePlan
+      .mutate({
+        generatorModel: generator.model,
+        description: generator.description ?? undefined
+      })
+      .catch((error: unknown) => {
+        Alert.alert(
+          'Error',
+          error instanceof Error ? error.message : 'Failed to get suggestions'
+        )
+        return null
+      })
+    setIsSuggesting(false)
+
+    if (result) {
+      setPendingSuggestions(result)
+      router.push(`/maintenance/add-suggestions?generatorId=${id}`)
+    }
   }
 
   // Unassigned members (members not yet assigned to this generator)
@@ -396,20 +440,36 @@ export default function GeneratorDetailScreen() {
                 Maintenance
               </Text>
               {isAdmin ? (
-                <Pressable
-                  onPress={() =>
-                    router.push(
-                      `/maintenance/create-template?generatorId=${id}`
-                    )
-                  }
-                  className="active:opacity-70"
-                >
-                  <SymbolView
-                    name="plus.circle.fill"
-                    size={22}
-                    tintColor={foregroundColor}
-                  />
-                </Pressable>
+                <View className="flex-row items-center gap-3">
+                  {isSuggesting ? (
+                    <ActivityIndicator size="small" />
+                  ) : (
+                    <Pressable
+                      onPress={handleSuggestMaintenance}
+                      className="active:opacity-70"
+                    >
+                      <SymbolView
+                        name="sparkles"
+                        size={20}
+                        tintColor={foregroundColor}
+                      />
+                    </Pressable>
+                  )}
+                  <Pressable
+                    onPress={() =>
+                      router.push(
+                        `/maintenance/create-template?generatorId=${id}`
+                      )
+                    }
+                    className="active:opacity-70"
+                  >
+                    <SymbolView
+                      name="plus.circle.fill"
+                      size={22}
+                      tintColor={foregroundColor}
+                    />
+                  </Pressable>
+                </View>
               ) : null}
             </View>
 
@@ -445,10 +505,10 @@ export default function GeneratorDetailScreen() {
                                   ? `Once at ${template.triggerCalendarDays} days`
                                   : `Once at ${template.triggerHoursInterval}h or ${template.triggerCalendarDays} days`
                               : template.triggerType === 'hours'
-                              ? `Every ${template.triggerHoursInterval}h`
-                              : template.triggerType === 'calendar'
-                                ? `Every ${template.triggerCalendarDays} days`
-                                : `${template.triggerHoursInterval}h or ${template.triggerCalendarDays} days`}
+                                ? `Every ${template.triggerHoursInterval}h`
+                                : template.triggerType === 'calendar'
+                                  ? `Every ${template.triggerCalendarDays} days`
+                                  : `${template.triggerHoursInterval}h or ${template.triggerCalendarDays} days`}
                             {lastRecord
                               ? ` · Last: ${format(parseISO(lastRecord.performedAt), 'PP')}`
                               : ' · Never performed'}

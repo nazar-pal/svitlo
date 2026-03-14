@@ -48,6 +48,10 @@ export default function ProtectedLayout() {
             options={{ presentation: 'modal' }}
           />
           <Stack.Screen
+            name="maintenance/add-suggestions"
+            options={{ presentation: 'modal' }}
+          />
+          <Stack.Screen
             name="maintenance/record"
             options={{ presentation: 'modal' }}
           />
