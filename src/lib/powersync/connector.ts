@@ -6,7 +6,7 @@ import type {
 import { UpdateType } from '@powersync/react-native'
 
 import type { SyncRejection } from '@/data/server/api/routers/powersync'
-import { trpcClient } from '@/data/trpc/react'
+import { rpcClient } from '@/data/rpc/client'
 
 let cachedCredentials: PowerSyncCredentials | null = null
 
@@ -19,7 +19,7 @@ export class Connector implements PowerSyncBackendConnector {
     )
       return cachedCredentials
 
-    const result = await trpcClient.powersync.token.query()
+    const result = await rpcClient.powersync.token()
 
     cachedCredentials = {
       endpoint: result.endpoint,
@@ -48,7 +48,7 @@ export class Connector implements PowerSyncBackendConnector {
         const serverTable = op.table === 'user' ? 'user' : op.table
         lastOp = { table: serverTable, op: opType, id: op.id }
 
-        const result = await trpcClient.powersync.applyWrite.mutate({
+        const result = await rpcClient.powersync.applyWrite({
           table: serverTable,
           op: opType,
           id: op.id,

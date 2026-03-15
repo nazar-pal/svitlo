@@ -1,9 +1,9 @@
 import { z } from 'zod'
 
-import { createTRPCRouter, publicProcedure } from '../trpc'
+import { publicProcedure } from '../orpc'
 
-export const appTestRouter = createTRPCRouter({
-  health: publicProcedure.query(() => ({
+export const appTestRouter = {
+  health: publicProcedure.handler(() => ({
     ok: true,
     service: 'svitlo-api',
     timestamp: new Date().toISOString()
@@ -16,11 +16,11 @@ export const appTestRouter = createTRPCRouter({
         status: z.string().optional()
       })
     )
-    .mutation(({ input }) => ({
+    .handler(({ input }) => ({
       accepted: true,
       bodyEcho: {
         feature: input.feature ?? 'unknown',
         status: input.status ?? 'unspecified'
       }
     }))
-})
+}

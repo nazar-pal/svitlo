@@ -4,7 +4,7 @@ import '../global.css'
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon'
 import { AuthGate } from '@/components/auth-gate'
-import { queryClient } from '@/data/trpc/query-client'
+import { queryClient } from '@/data/rpc/query-client'
 import { LocalIdentityProvider } from '@/lib/auth/local-identity-context'
 import {
   DarkTheme,

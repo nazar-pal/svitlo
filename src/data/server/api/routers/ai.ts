@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import { maintenanceAgent } from '@/data/server/ai/maintenance-agent'
 
-import { createTRPCRouter, protectedProcedure } from '../trpc'
+import { protectedProcedure } from '../orpc'
 
 const maintenanceSuggestionSchema = z.object({
   maxConsecutiveRunHours: z.number().nullable(),
@@ -21,7 +21,7 @@ const maintenanceSuggestionSchema = z.object({
   modelInfo: z.string()
 })
 
-export const aiRouter = createTRPCRouter({
+export const aiRouter = {
   suggestMaintenancePlan: protectedProcedure
     .input(
       z.object({
@@ -29,7 +29,7 @@ export const aiRouter = createTRPCRouter({
         description: z.string().optional()
       })
     )
-    .mutation(async ({ input }) => {
+    .handler(async ({ input }) => {
       const prompt = [
         `Generator: ${input.generatorModel}`,
         input.description ? `Description: ${input.description}` : null
@@ -46,4 +46,4 @@ export const aiRouter = createTRPCRouter({
 
       return result.object
     })
-})
+}

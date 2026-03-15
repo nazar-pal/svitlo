@@ -1,11 +1,11 @@
-import { createTRPCRouter, protectedProcedure } from '../trpc'
+import { protectedProcedure } from '../orpc'
 
-export const userRouter = createTRPCRouter({
-  me: protectedProcedure.query(({ ctx }) => ({
-    user: ctx.session.user,
+export const userRouter = {
+  me: protectedProcedure.handler(({ context }) => ({
+    user: context.session.user,
     session: {
-      id: ctx.session.session.id,
-      expiresAt: ctx.session.session.expiresAt
+      id: context.session.session.id,
+      expiresAt: context.session.session.expiresAt
     }
   }))
-})
+}

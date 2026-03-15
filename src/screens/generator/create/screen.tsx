@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
 import { insertGeneratorSchema } from '@/data/client/validation'
-import { trpcClient } from '@/data/trpc/react'
+import { rpcClient } from '@/data/rpc/client'
 import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -89,8 +89,8 @@ export default function CreateGeneratorScreen() {
     }
 
     setIsLoadingAI(true)
-    const result = await trpcClient.ai.suggestMaintenancePlan
-      .mutate({
+    const result = await rpcClient.ai
+      .suggestMaintenancePlan({
         generatorModel: model,
         description: description || undefined
       })

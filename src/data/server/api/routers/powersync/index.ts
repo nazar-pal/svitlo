@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { env } from '@/env'
 
-import { createTRPCRouter, protectedProcedure } from '../../trpc'
+import { protectedProcedure } from '../../orpc'
 import {
   handleGeneratorSessions,
   handleGeneratorUserAssignments,
@@ -43,9 +43,9 @@ function isConstraintError(error: unknown): error is NeonDbError {
   )
 }
 
-export const powersyncRouter = createTRPCRouter({
-  token: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.session.user.id
+export const powersyncRouter = {
+  token: protectedProcedure.handler(async ({ context }) => {
+    const userId = context.session.user.id
     const now = Math.floor(Date.now() / 1000)
     const expiresAt = now + TOKEN_LIFETIME_SECONDS
 
@@ -70,14 +70,14 @@ export const powersyncRouter = createTRPCRouter({
         data: z.record(z.string(), z.unknown()).optional()
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .handler(async ({ context, input }) => {
       // PowerSync requires 2xx responses — never throw, return error flags.
       // Data validation is handled client-side (Zod) and by DB constraints.
       // This handler only enforces authorization and passes data through.
       const wctx: WriteContext = {
-        db: ctx.db,
-        userId: ctx.session.user.id,
-        userEmail: ctx.session.user.email,
+        db: context.db,
+        userId: context.session.user.id,
+        userEmail: context.session.user.email,
         op: input.op,
         id: input.id,
         data: input.data ?? {}
@@ -131,4 +131,4 @@ export const powersyncRouter = createTRPCRouter({
         return { ok: false as const, error: message }
       }
     })
-})
+}

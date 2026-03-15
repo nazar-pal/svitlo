@@ -20,7 +20,7 @@ import {
   stopSession,
   unassignUserFromGenerator
 } from '@/data/client/mutations'
-import { trpcClient } from '@/data/trpc/react'
+import { rpcClient } from '@/data/rpc/client'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
   formatHours,
@@ -215,8 +215,8 @@ export default function GeneratorDetailScreen() {
     }
 
     setIsSuggesting(true)
-    const result = await trpcClient.ai.suggestMaintenancePlan
-      .mutate({
+    const result = await rpcClient.ai
+      .suggestMaintenancePlan({
         generatorModel: generator.model,
         description: generator.description ?? undefined
       })
@@ -283,9 +283,7 @@ export default function GeneratorDetailScreen() {
         <RecentActivitySection
           items={activityItems}
           getUserName={getUserName}
-          onViewAll={() =>
-            router.push(`/generator/activity?generatorId=${id}`)
-          }
+          onViewAll={() => router.push(`/generator/activity?generatorId=${id}`)}
         />
 
         {/* Maintenance Templates */}

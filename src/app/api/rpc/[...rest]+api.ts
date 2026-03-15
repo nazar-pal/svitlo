@@ -1,7 +1,22 @@
+import { RPCHandler } from '@orpc/server/fetch'
+
 import { appRouter } from '@/data/server/api/root'
-import { createTRPCContext } from '@/data/server/api/trpc'
+import { db } from '@/data/server'
+import { auth } from '@/data/server/auth'
 import { env } from '@/env'
-import { fetchRequestHandler } from '@trpc/server/adapters/fetch'
+
+const rpcHandler = new RPCHandler(appRouter, {
+  clientInterceptors: [
+    async options => {
+      try {
+        return await options.next()
+      } catch (error) {
+        console.error(`>>> RPC Error on '${options.path.join('.')}'`, error)
+        throw error
+      }
+    }
+  ]
+})
 
 const getAllowedOrigin = () => {
   if (process.env.NODE_ENV === 'production') {
@@ -30,18 +45,19 @@ export const OPTIONS = () => {
 }
 
 const handler = async (req: Request) => {
-  const response = await fetchRequestHandler({
-    endpoint: '/api/trpc',
-    router: appRouter,
-    req,
-    createContext: () => createTRPCContext({ req }),
-    onError({ error, path }) {
-      console.error(`>>> tRPC Error on '${path}'`, error)
-    }
+  const session = await auth.api.getSession({ headers: req.headers })
+
+  const { matched, response } = await rpcHandler.handle(req, {
+    prefix: '/api/rpc',
+    context: { db, session, headers: req.headers }
   })
 
-  setCorsHeaders(response)
-  return response
+  if (matched) {
+    setCorsHeaders(response)
+    return response
+  }
+
+  return new Response('Not found', { status: 404 })
 }
 
 export { handler as GET, handler as POST }
