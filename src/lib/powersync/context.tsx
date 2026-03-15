@@ -1,4 +1,7 @@
-import { PowerSyncContext as NativePowerSyncContext } from '@powersync/react-native'
+import {
+  PowerSyncContext as NativePowerSyncContext,
+  useStatus
+} from '@powersync/react-native'
 import React, {
   createContext,
   useContext,
@@ -6,6 +9,7 @@ import React, {
   useRef,
   useState
 } from 'react'
+import { ActivityIndicator, Text, View } from 'react-native'
 
 import { useSessionStatus } from '@/lib/auth/session-status-context'
 
@@ -72,9 +76,40 @@ export function PowerSyncProvider({
     <AppPowerSyncContext.Provider value={{ userId, isReady }}>
       {/* NativePowerSyncContext enables SDK hooks (useQuery, useStatus) */}
       <NativePowerSyncContext.Provider value={powersync}>
-        {children}
+        <SyncGate>{children}</SyncGate>
       </NativePowerSyncContext.Provider>
     </AppPowerSyncContext.Provider>
+  )
+}
+
+function SyncGate({ children }: { children: React.ReactNode }) {
+  const status = useStatus()
+
+  // hasSynced persists in SQLite — after first sync, subsequent launches skip this gate
+  if (!status.hasSynced)
+    return <InitialSyncScreen progress={status.downloadProgress} />
+
+  return children
+}
+
+function InitialSyncScreen({
+  progress
+}: {
+  progress: { downloadedFraction: number } | null
+}) {
+  const percentage = progress
+    ? Math.round(progress.downloadedFraction * 100)
+    : null
+
+  return (
+    <View className="bg-background flex-1 items-center justify-center gap-4">
+      <ActivityIndicator size="small" />
+      <Text className="text-muted text-sm">
+        {percentage !== null
+          ? `Syncing your data… ${percentage}%`
+          : 'Syncing your data…'}
+      </Text>
+    </View>
   )
 }
 
