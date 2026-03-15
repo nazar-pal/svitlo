@@ -2,12 +2,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Button, Description, Input, Label, TextField } from 'heroui-native'
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
-import { eq } from 'drizzle-orm'
 
-import { generators, maintenanceTemplates } from '@/data/client/db-schema'
 import { recordMaintenance } from '@/data/client/mutations'
+import { getGenerator, getMaintenanceTemplate } from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { db } from '@/lib/powersync/database'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function RecordMaintenanceScreen() {
@@ -23,20 +21,13 @@ export default function RecordMaintenanceScreen() {
 
   // Template info
   const { data: templateData } = useDrizzleQuery(
-    templateId
-      ? db
-          .select()
-          .from(maintenanceTemplates)
-          .where(eq(maintenanceTemplates.id, templateId))
-      : undefined
+    templateId ? getMaintenanceTemplate(templateId) : undefined
   )
   const template = templateData[0]
 
   // Generator info
   const { data: generatorData } = useDrizzleQuery(
-    generatorId
-      ? db.select().from(generators).where(eq(generators.id, generatorId))
-      : undefined
+    generatorId ? getGenerator(generatorId) : undefined
   )
   const generator = generatorData[0]
 

@@ -1,15 +1,13 @@
-import { eq } from 'drizzle-orm'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Button } from 'heroui-native'
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 import { DatePicker, Host } from '@expo/ui/swift-ui'
 
-import { generators } from '@/data/client/db-schema'
 import { logManualSession } from '@/data/client/mutations'
+import { getGenerator } from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
-import { db } from '@/lib/powersync/database'
 
 export default function LogSessionScreen() {
   const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
@@ -24,9 +22,7 @@ export default function LogSessionScreen() {
   const [error, setError] = useState('')
 
   const { data: generatorData } = useDrizzleQuery(
-    generatorId
-      ? db.select().from(generators).where(eq(generators.id, generatorId))
-      : undefined
+    generatorId ? getGenerator(generatorId) : undefined
   )
   const generator = generatorData[0]
 

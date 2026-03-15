@@ -1,11 +1,11 @@
 import { EmptyState } from '@/components/empty-state'
 import { GeneratorCard } from '@/components/generator-card'
 import {
-  generators,
-  generatorSessions,
-  maintenanceRecords,
-  maintenanceTemplates
-} from '@/data/client/db-schema'
+  getAllGeneratorSessions,
+  getAllMaintenanceRecords,
+  getAllMaintenanceTemplates,
+  getGeneratorsByOrg
+} from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
   computeNextMaintenance,
@@ -15,10 +15,8 @@ import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
 import { useUserOrgs } from '@/lib/hooks/use-user-orgs'
 import { usePowerSync } from '@/lib/powersync'
 import { groupBy } from '@/lib/group-by'
-import { db } from '@/lib/powersync/database'
 import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
-import { eq } from 'drizzle-orm'
 import { Stack, useRouter } from 'expo-router'
 import { FlatList, View } from 'react-native'
 
@@ -31,25 +29,14 @@ export default function GeneratorsScreen() {
   const admin = isAdmin(selectedOrgId)
 
   const { data: orgGenerators } = useDrizzleQuery(
-    selectedOrgId
-      ? db
-          .select()
-          .from(generators)
-          .where(eq(generators.organizationId, selectedOrgId))
-      : undefined
+    selectedOrgId ? getGeneratorsByOrg(selectedOrgId) : undefined
   )
 
-  const { data: allSessions } = useDrizzleQuery(db =>
-    db.select().from(generatorSessions)
-  )
+  const { data: allSessions } = useDrizzleQuery(getAllGeneratorSessions())
 
-  const { data: allTemplates } = useDrizzleQuery(db =>
-    db.select().from(maintenanceTemplates)
-  )
+  const { data: allTemplates } = useDrizzleQuery(getAllMaintenanceTemplates())
 
-  const { data: allRecords } = useDrizzleQuery(db =>
-    db.select().from(maintenanceRecords)
-  )
+  const { data: allRecords } = useDrizzleQuery(getAllMaintenanceRecords())
 
   const sessionsByGenerator = groupBy(allSessions, s => s.generatorId)
   const templatesByGenerator = groupBy(allTemplates, t => t.generatorId)

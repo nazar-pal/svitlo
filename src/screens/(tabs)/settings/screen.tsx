@@ -1,21 +1,19 @@
-import { eq } from 'drizzle-orm'
 import { useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { Button, ListGroup, Separator } from 'heroui-native'
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
-import {
-  invitations,
-  organizations,
-  organizationMembers,
-  user
-} from '@/data/client/db-schema'
 import { cancelInvitation, removeMember } from '@/data/client/mutations'
+import {
+  getAllUsers,
+  getOrganization,
+  getOrgInvitations,
+  getOrgMembers
+} from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
 import { useUserOrgs } from '@/lib/hooks/use-user-orgs'
-import { db } from '@/lib/powersync/database'
 
 export default function SettingsScreen() {
   const router = useRouter()
@@ -28,37 +26,22 @@ export default function SettingsScreen() {
 
   // Selected organization
   const { data: orgData } = useDrizzleQuery(
-    selectedOrgId
-      ? db
-          .select()
-          .from(organizations)
-          .where(eq(organizations.id, selectedOrgId))
-      : undefined
+    selectedOrgId ? getOrganization(selectedOrgId) : undefined
   )
   const org = orgData[0]
 
   // Organization members
   const { data: members } = useDrizzleQuery(
-    selectedOrgId
-      ? db
-          .select()
-          .from(organizationMembers)
-          .where(eq(organizationMembers.organizationId, selectedOrgId))
-      : undefined
+    selectedOrgId ? getOrgMembers(selectedOrgId) : undefined
   )
 
   // Outbound org invitations
   const { data: orgInvitations } = useDrizzleQuery(
-    selectedOrgId
-      ? db
-          .select()
-          .from(invitations)
-          .where(eq(invitations.organizationId, selectedOrgId))
-      : undefined
+    selectedOrgId ? getOrgInvitations(selectedOrgId) : undefined
   )
 
   // All users for resolving names
-  const { data: users } = useDrizzleQuery(db => db.select().from(user))
+  const { data: users } = useDrizzleQuery(getAllUsers())
 
   const isAdmin = org?.adminUserId === userId
   const adminUser = users.find(u => u.id === org?.adminUserId)

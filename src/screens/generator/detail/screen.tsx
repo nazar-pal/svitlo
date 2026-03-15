@@ -1,25 +1,24 @@
-import { desc, eq } from 'drizzle-orm'
 import * as Network from 'expo-network'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Alert, ScrollView, Text, View } from 'react-native'
 
 import {
-  generators,
-  generatorSessions,
-  generatorUserAssignments,
-  maintenanceRecords,
-  maintenanceTemplates,
-  organizationMembers,
-  organizations,
-  user
-} from '@/data/client/db-schema'
-import {
   assignUserToGenerator,
   startSession,
   stopSession,
   unassignUserFromGenerator
 } from '@/data/client/mutations'
+import {
+  getAllOrganizations,
+  getAllUsers,
+  getGenerator,
+  getGeneratorAssignments,
+  getGeneratorSessions,
+  getMaintenanceRecords,
+  getMaintenanceTemplates,
+  getOrgMembers
+} from '@/data/client/queries'
 import { rpcClient } from '@/data/rpc/client'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
@@ -33,7 +32,6 @@ import {
 } from '@/lib/hooks/use-generator-status'
 import { useRestCountdown } from '@/lib/hooks/use-rest-countdown'
 import { useLocalUser } from '@/lib/powersync'
-import { db } from '@/lib/powersync/database'
 
 import { AssignedEmployeesSection } from './assigned-employees-section'
 import { ConfigurationSection } from './configuration-section'
@@ -54,64 +52,31 @@ export default function GeneratorDetailScreen() {
 
   // --- Data queries ---
 
-  const { data: gens } = useDrizzleQuery(
-    id ? db.select().from(generators).where(eq(generators.id, id)) : undefined
-  )
+  const { data: gens } = useDrizzleQuery(id ? getGenerator(id) : undefined)
   const generator = gens[0]
 
   const { data: sessions } = useDrizzleQuery(
-    id
-      ? db
-          .select()
-          .from(generatorSessions)
-          .where(eq(generatorSessions.generatorId, id))
-          .orderBy(desc(generatorSessions.startedAt))
-      : undefined
+    id ? getGeneratorSessions(id) : undefined
   )
 
   const { data: templates } = useDrizzleQuery(
-    id
-      ? db
-          .select()
-          .from(maintenanceTemplates)
-          .where(eq(maintenanceTemplates.generatorId, id))
-      : undefined
+    id ? getMaintenanceTemplates(id) : undefined
   )
 
   const { data: records } = useDrizzleQuery(
-    id
-      ? db
-          .select()
-          .from(maintenanceRecords)
-          .where(eq(maintenanceRecords.generatorId, id))
-          .orderBy(desc(maintenanceRecords.performedAt))
-      : undefined
+    id ? getMaintenanceRecords(id) : undefined
   )
 
   const { data: assignments } = useDrizzleQuery(
-    id
-      ? db
-          .select()
-          .from(generatorUserAssignments)
-          .where(eq(generatorUserAssignments.generatorId, id))
-      : undefined
+    id ? getGeneratorAssignments(id) : undefined
   )
 
-  const { data: users } = useDrizzleQuery(db => db.select().from(user))
+  const { data: users } = useDrizzleQuery(getAllUsers())
 
-  const { data: allOrgs } = useDrizzleQuery(db =>
-    db.select().from(organizations)
-  )
+  const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
 
   const { data: orgMembers } = useDrizzleQuery(
-    generator
-      ? db
-          .select()
-          .from(organizationMembers)
-          .where(
-            eq(organizationMembers.organizationId, generator.organizationId)
-          )
-      : undefined
+    generator ? getOrgMembers(generator.organizationId) : undefined
   )
 
   // --- Computed state ---

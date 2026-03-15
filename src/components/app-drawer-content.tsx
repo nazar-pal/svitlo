@@ -1,5 +1,4 @@
 import type { DrawerContentComponentProps } from '@react-navigation/drawer'
-import { eq } from 'drizzle-orm'
 import { useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { Avatar, Button, ListGroup, Separator } from 'heroui-native'
@@ -8,14 +7,16 @@ import { useCSSVariable } from 'uniwind'
 
 import { SafeAreaView } from '@/components/styled'
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
-import { invitations, organizations } from '@/data/client/db-schema'
 import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
+import {
+  getAllOrganizations,
+  getInvitationsByEmail
+} from '@/data/client/queries'
 import { useSignOut } from '@/lib/auth/use-sign-out'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
 import { useUserOrgs } from '@/lib/hooks/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
-import { db } from '@/lib/powersync/database'
 
 function getInitials(name: string | null | undefined): string {
   if (!name) return '?'
@@ -41,19 +42,12 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
   const userEmail = localUser?.email ?? ''
   const userName = localUser?.name || 'Unknown'
 
-  const { data: allOrgs } = useDrizzleQuery(db =>
-    db.select().from(organizations)
-  )
+  const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
 
   const normalizedEmail = userEmail.toLowerCase()
 
   const { data: pendingInvitations } = useDrizzleQuery(
-    normalizedEmail
-      ? db
-          .select()
-          .from(invitations)
-          .where(eq(invitations.inviteeEmail, normalizedEmail))
-      : undefined
+    normalizedEmail ? getInvitationsByEmail(normalizedEmail) : undefined
   )
 
   function getOrgName(orgId: string): string {

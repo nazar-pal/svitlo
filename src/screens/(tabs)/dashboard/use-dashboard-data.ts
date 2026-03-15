@@ -1,18 +1,15 @@
-import { eq } from 'drizzle-orm'
-
 import {
-  generators,
-  generatorSessions,
-  generatorUserAssignments,
-  maintenanceTemplates,
-  maintenanceRecords,
-  user
-} from '@/data/client/db-schema'
+  getAllGeneratorSessions,
+  getAllMaintenanceRecords,
+  getAllMaintenanceTemplates,
+  getAllUsers,
+  getGeneratorsByOrg,
+  getUserAssignments
+} from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
 import { useUserOrgs } from '@/lib/hooks/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
-import { db } from '@/lib/powersync/database'
 import { groupBy } from '@/lib/group-by'
 import { computeGeneratorStatus } from '@/lib/hooks/use-generator-status'
 import {
@@ -28,30 +25,14 @@ export function useDashboardData() {
   const { selectedOrgId } = useSelectedOrg()
 
   const { data: allGenerators } = useDrizzleQuery(
-    selectedOrgId
-      ? db
-          .select()
-          .from(generators)
-          .where(eq(generators.organizationId, selectedOrgId))
-      : undefined
+    selectedOrgId ? getGeneratorsByOrg(selectedOrgId) : undefined
   )
-  const { data: allSessions } = useDrizzleQuery(db =>
-    db.select().from(generatorSessions)
-  )
-  const { data: allTemplates } = useDrizzleQuery(db =>
-    db.select().from(maintenanceTemplates)
-  )
-  const { data: allRecords } = useDrizzleQuery(db =>
-    db.select().from(maintenanceRecords)
-  )
-  const { data: allUsers } = useDrizzleQuery(db => db.select().from(user))
+  const { data: allSessions } = useDrizzleQuery(getAllGeneratorSessions())
+  const { data: allTemplates } = useDrizzleQuery(getAllMaintenanceTemplates())
+  const { data: allRecords } = useDrizzleQuery(getAllMaintenanceRecords())
+  const { data: allUsers } = useDrizzleQuery(getAllUsers())
   const { data: myAssignments } = useDrizzleQuery(
-    userId
-      ? db
-          .select()
-          .from(generatorUserAssignments)
-          .where(eq(generatorUserAssignments.userId, userId))
-      : undefined
+    userId ? getUserAssignments(userId) : undefined
   )
 
   // Pre-index

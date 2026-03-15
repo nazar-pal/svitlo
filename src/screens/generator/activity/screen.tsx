@@ -1,5 +1,4 @@
 import { differenceInMilliseconds, format, parseISO } from 'date-fns'
-import { desc, eq } from 'drizzle-orm'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { ListGroup, Separator } from 'heroui-native'
@@ -9,21 +8,20 @@ import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSw
 import { useCSSVariable } from 'uniwind'
 
 import { SwipeableRow } from '@/components/swipeable-row'
-import {
-  generators,
-  generatorSessions,
-  maintenanceRecords,
-  maintenanceTemplates,
-  organizations,
-  user
-} from '@/data/client/db-schema'
 import type { GeneratorSession } from '@/data/client/db-schema/generators'
 import type { MaintenanceRecord } from '@/data/client/db-schema/maintenance'
 import { deleteMaintenanceRecord, deleteSession } from '@/data/client/mutations'
+import {
+  getAllOrganizations,
+  getAllUsers,
+  getGenerator,
+  getGeneratorSessions,
+  getMaintenanceRecords,
+  getMaintenanceTemplateSummaries
+} from '@/data/client/queries'
 import { formatDuration } from '@/lib/hooks/use-elapsed-time'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
-import { db } from '@/lib/powersync/database'
 
 const FILTERS = ['all', 'sessions', 'maintenance'] as const
 type Filter = (typeof FILTERS)[number]
@@ -93,49 +91,25 @@ export default function ActivityScreen() {
   const userId = localUser?.id ?? ''
 
   const { data: sessions } = useDrizzleQuery(
-    generatorId
-      ? db
-          .select()
-          .from(generatorSessions)
-          .where(eq(generatorSessions.generatorId, generatorId))
-          .orderBy(desc(generatorSessions.startedAt))
-      : undefined
+    generatorId ? getGeneratorSessions(generatorId) : undefined
   )
 
   const { data: records } = useDrizzleQuery(
-    generatorId
-      ? db
-          .select()
-          .from(maintenanceRecords)
-          .where(eq(maintenanceRecords.generatorId, generatorId))
-          .orderBy(desc(maintenanceRecords.performedAt))
-      : undefined
+    generatorId ? getMaintenanceRecords(generatorId) : undefined
   )
 
   const { data: templates } = useDrizzleQuery(
-    generatorId
-      ? db
-          .select({
-            id: maintenanceTemplates.id,
-            taskName: maintenanceTemplates.taskName
-          })
-          .from(maintenanceTemplates)
-          .where(eq(maintenanceTemplates.generatorId, generatorId))
-      : undefined
+    generatorId ? getMaintenanceTemplateSummaries(generatorId) : undefined
   )
 
-  const { data: users } = useDrizzleQuery(db => db.select().from(user))
+  const { data: users } = useDrizzleQuery(getAllUsers())
 
   const { data: gens } = useDrizzleQuery(
-    generatorId
-      ? db.select().from(generators).where(eq(generators.id, generatorId))
-      : undefined
+    generatorId ? getGenerator(generatorId) : undefined
   )
   const generator = gens[0]
 
-  const { data: allOrgs } = useDrizzleQuery(db =>
-    db.select().from(organizations)
-  )
+  const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
 
   const org = generator
     ? allOrgs.find(o => o.id === generator.organizationId)
