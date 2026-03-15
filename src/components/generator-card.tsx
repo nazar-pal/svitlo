@@ -80,7 +80,10 @@ export function GeneratorCard({
         ? 'bg-orange-500'
         : 'bg-green-500'
 
-  const restCountdown = useRestCountdown(restEndsAt, generator.requiredRestHours)
+  const restCountdown = useRestCountdown(
+    restEndsAt,
+    generator.requiredRestHours
+  )
 
   async function handleStart() {
     const result = await startSession(userId, generator.id)

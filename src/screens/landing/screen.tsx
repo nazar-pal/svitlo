@@ -7,38 +7,38 @@ const features = [
     icon: '\u26A1',
     title: 'One-Tap Sessions',
     description:
-      'Start and stop generator sessions with one tap. Track total runtime automatically.',
+      'Start and stop generator sessions with one tap. Track total runtime automatically.'
   },
   {
     icon: '\uD83D\uDD27',
     title: 'Smart Maintenance',
     description:
-      'Schedule maintenance by runtime hours or calendar dates. Never miss a service interval.',
+      'Schedule maintenance by runtime hours or calendar dates. Never miss a service interval.'
   },
   {
     icon: '\u2728',
     title: 'AI-Powered Suggestions',
     description:
-      'Get AI-generated maintenance templates tailored to your generator type and usage patterns.',
+      'Get AI-generated maintenance templates tailored to your generator type and usage patterns.'
   },
   {
     icon: '\uD83D\uDC65',
     title: 'Team Management',
     description:
-      'Create organizations, invite team members, and control access with role-based permissions.',
+      'Create organizations, invite team members, and control access with role-based permissions.'
   },
   {
     icon: '\uD83D\uDCF6',
     title: 'Works Offline',
     description:
-      'All data is stored locally and syncs automatically when you\u2019re back online.',
+      'All data is stored locally and syncs automatically when you\u2019re back online.'
   },
   {
     icon: '\u23F1\uFE0F',
     title: 'Run Limits & Rest',
     description:
-      'Set maximum run times and required rest periods. Get warned before limits are reached.',
-  },
+      'Set maximum run times and required rest periods. Get warned before limits are reached.'
+  }
 ] as const
 
 const steps = [
@@ -46,20 +46,19 @@ const steps = [
     number: '1',
     title: 'Add Your Generators',
     description:
-      'Set up generators with run limits, rest periods, and maintenance schedules.',
+      'Set up generators with run limits, rest periods, and maintenance schedules.'
   },
   {
     number: '2',
     title: 'Track Sessions',
-    description:
-      'Start and stop sessions to log runtime hours automatically.',
+    description: 'Start and stop sessions to log runtime hours automatically.'
   },
   {
     number: '3',
     title: 'Stay on Schedule',
     description:
-      'Get maintenance reminders based on hours or calendar intervals.',
-  },
+      'Get maintenance reminders based on hours or calendar intervals.'
+  }
 ] as const
 
 function AppStoreButton() {
@@ -81,7 +80,7 @@ export default function LandingScreen() {
   return (
     <ScrollView className="flex-1 bg-white">
       {/* Hero */}
-      <View className="items-center px-6 pb-20 pt-24">
+      <View className="items-center px-6 pt-24 pb-20">
         <Image
           source={require('../../../assets/images/icon.png')}
           className="mb-8 h-28 w-28 rounded-[28px] shadow-lg"

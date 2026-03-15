@@ -46,7 +46,10 @@ export function MyGeneratorCard({
         ? 'bg-orange-500'
         : 'bg-green-500'
 
-  const restCountdown = useRestCountdown(restEndsAt, generator.requiredRestHours)
+  const restCountdown = useRestCountdown(
+    restEndsAt,
+    generator.requiredRestHours
+  )
 
   async function handleStart() {
     const result = await startSession(userId, generator.id)
@@ -78,9 +81,7 @@ export function MyGeneratorCard({
             </Text>
             <GeneratorStatusBadge status={status} />
           </View>
-          <Text className="text-muted text-[13px]">
-            {generator.model}
-          </Text>
+          <Text className="text-muted text-[13px]">{generator.model}</Text>
         </View>
         <SymbolView name="chevron.right" size={14} tintColor={mutedColor} />
       </View>

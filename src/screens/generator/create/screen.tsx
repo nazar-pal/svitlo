@@ -317,9 +317,7 @@ export default function CreateGeneratorScreen() {
         {isLoadingAI ? (
           <View className="items-center gap-3 py-10">
             <ActivityIndicator />
-            <Text className="text-muted text-sm">
-              Researching {model}...
-            </Text>
+            <Text className="text-muted text-sm">Researching {model}...</Text>
           </View>
         ) : null}
 
@@ -328,9 +326,7 @@ export default function CreateGeneratorScreen() {
             <View className="gap-5">
               <View className="flex-row gap-3">
                 <View className="flex-1">
-                  <TextField
-                    isInvalid={!!fieldErrors.maxConsecutiveRunHours}
-                  >
+                  <TextField isInvalid={!!fieldErrors.maxConsecutiveRunHours}>
                     <Label>Max Run Hours</Label>
                     <Input
                       placeholder="8"
@@ -420,10 +416,7 @@ export default function CreateGeneratorScreen() {
                     onPress={() => Linking.openURL(source)}
                     className="active:opacity-70"
                   >
-                    <Text
-                      className="text-xs text-blue-500"
-                      numberOfLines={1}
-                    >
+                    <Text className="text-xs text-blue-500" numberOfLines={1}>
                       {source}
                     </Text>
                   </Pressable>
