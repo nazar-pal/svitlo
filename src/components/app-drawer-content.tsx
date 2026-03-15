@@ -10,6 +10,7 @@ import { SyncStatusIndicator } from '@/components/sync-status-indicator'
 import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
 import {
   getAllOrganizations,
+  getAllUsers,
   getInvitationsByEmail
 } from '@/data/client/queries'
 import { useSignOut } from '@/lib/auth/use-sign-out'
@@ -50,8 +51,14 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
     normalizedEmail ? getInvitationsByEmail(normalizedEmail) : undefined
   )
 
+  const { data: allUsers } = useDrizzleQuery(getAllUsers())
+
   function getOrgName(orgId: string): string {
     return allOrgs.find(o => o.id === orgId)?.name ?? 'Unknown'
+  }
+
+  function getInviterName(userId: string): string {
+    return allUsers.find(u => u.id === userId)?.name ?? 'Unknown'
   }
 
   async function handleAccept(invitationId: string) {
@@ -153,6 +160,9 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
                       <ListGroup.ItemTitle>
                         {getOrgName(inv.organizationId)}
                       </ListGroup.ItemTitle>
+                      <ListGroup.ItemDescription>
+                        Invited by {getInviterName(inv.invitedByUserId)}
+                      </ListGroup.ItemDescription>
                     </ListGroup.ItemContent>
                     <View className="flex-row gap-2">
                       <Button

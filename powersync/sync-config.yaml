@@ -42,6 +42,13 @@ streams:
             SELECT organization_id FROM organization_members WHERE user_id = auth.user_id()
           )
         )
+      - >
+        SELECT id, name, email, email_verified, image, created_at, updated_at
+        FROM "user"
+        WHERE id IN (
+          SELECT invited_by_user_id FROM invitations
+          WHERE LOWER(invitee_email) IN (SELECT LOWER(email) FROM "user" WHERE id = auth.user_id())
+        )
 
   # ── 3. Organizations the user belongs to (as admin or member) ──────────────
   org_data:
@@ -56,6 +63,13 @@ streams:
         FROM organizations
         WHERE id IN (
           SELECT organization_id FROM organization_members WHERE user_id = auth.user_id()
+        )
+      - >
+        SELECT id, name, admin_user_id, created_at
+        FROM organizations
+        WHERE id IN (
+          SELECT organization_id FROM invitations
+          WHERE LOWER(invitee_email) IN (SELECT LOWER(email) FROM "user" WHERE id = auth.user_id())
         )
 
   # ── 4. Organization members for the user's organizations ───────────────────
@@ -80,13 +94,13 @@ streams:
     auto_subscribe: true
     queries:
       - >
-        SELECT id, organization_id, invitee_email, created_at
+        SELECT id, organization_id, invitee_email, invited_by_user_id, created_at
         FROM invitations
         WHERE organization_id IN (
           SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
         )
       - >
-        SELECT id, organization_id, invitee_email, created_at
+        SELECT id, organization_id, invitee_email, invited_by_user_id, created_at
         FROM invitations
         WHERE LOWER(invitee_email) IN (SELECT LOWER(email) FROM "user" WHERE id = auth.user_id())
 

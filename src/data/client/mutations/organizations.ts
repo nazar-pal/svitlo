@@ -67,6 +67,7 @@ export async function createInvitation(
     id: newId(),
     organizationId: parsed.data.organizationId,
     inviteeEmail: parsed.data.inviteeEmail,
+    invitedByUserId: userId,
     createdAt: nowISO()
   })
 
