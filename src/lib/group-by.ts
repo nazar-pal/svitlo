@@ -2,7 +2,7 @@
  * Group an array of items into a Map keyed by a string extracted from each item.
  */
 export function groupBy<T>(
-  items: T[],
+  items: readonly T[],
   keyFn: (item: T) => string
 ): Map<string, T[]> {
   const map = new Map<string, T[]>()

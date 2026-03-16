@@ -35,12 +35,32 @@ export function PowerSyncProvider({
   const connectorRef = useRef<Connector | null>(null)
   const connectedRef = useRef(false)
 
-  // Open the SQLite database on mount
+  // Open the SQLite database and register status listener on mount
   useEffect(() => {
     powersync
       .init()
       .then(() => setIsReady(true))
       .catch(console.error)
+
+    // TODO: Report these errors to Sentry when it's set up instead of console.error
+    const dispose = powersync.registerListener({
+      statusChanged: status => {
+        if (status.dataFlowStatus?.downloadError)
+          console.error('[powersync] Download error', {
+            error: status.dataFlowStatus.downloadError,
+            lastSyncedAt: status.lastSyncedAt,
+            connected: status.connected
+          })
+        if (status.dataFlowStatus?.uploadError)
+          console.error('[powersync] Upload error', {
+            error: status.dataFlowStatus.uploadError,
+            lastSyncedAt: status.lastSyncedAt,
+            connected: status.connected
+          })
+      }
+    })
+
+    return dispose
   }, [])
 
   // Connect when session is valid, disconnect otherwise
@@ -85,7 +105,9 @@ export function PowerSyncProvider({
 function SyncGate({ children }: { children: React.ReactNode }) {
   const status = useStatus()
 
-  // hasSynced persists in SQLite — after first sync, subsequent launches skip this gate
+  // hasSynced persists in SQLite — after first sync, subsequent launches skip this gate.
+  // Priorities still help: PowerSync syncs user/org data (p1) before generators (p2) and
+  // sessions/records (p3), so the gate shows meaningful progress as data arrives in order.
   if (!status.hasSynced)
     return <InitialSyncScreen progress={status.downloadProgress} />
 

@@ -6,7 +6,10 @@ import { useCSSVariable } from 'uniwind'
 function useSyncState() {
   const status = useStatus()
 
-  if (status.dataFlowStatus?.uploadError)
+  if (
+    status.dataFlowStatus?.uploadError ||
+    status.dataFlowStatus?.downloadError
+  )
     return {
       label: 'Sync error',
       icon: 'exclamationmark.triangle.fill' as const,
