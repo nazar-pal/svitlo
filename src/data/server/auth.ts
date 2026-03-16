@@ -42,7 +42,7 @@ export const auth = betterAuth({
   }),
   trustedOrigins: getTrustedOrigins(authBaseUrl),
   session: {
-    expiresIn: 60 * 60 * 24 * 30, // 30 days
+    expiresIn: 60 * 60 * 24 * 90, // 90 days — offline-first needs generous session lifetime
     updateAge: 60 * 60 * 24, // refresh daily when online
     cookieCache: {
       enabled: true,
