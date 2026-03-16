@@ -3,8 +3,19 @@ import { SymbolView } from 'expo-symbols'
 import { ActivityIndicator, Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
+import { useSyncRejections } from '@/lib/powersync/sync-rejections'
+
 function useSyncState() {
   const status = useStatus()
+  const rejections = useSyncRejections()
+
+  if (rejections.length > 0)
+    return {
+      label: `${rejections.length} change${rejections.length === 1 ? '' : 's'} could not be synced`,
+      icon: 'exclamationmark.triangle.fill' as const,
+      color: 'text-warning' as const,
+      loading: false
+    }
 
   if (
     status.dataFlowStatus?.uploadError ||
@@ -51,14 +62,19 @@ function useSyncState() {
 
 export function SyncStatusIndicator() {
   const { label, icon, color, loading } = useSyncState()
-  const mutedColor = useCSSVariable('--color-muted') as string | undefined
+  const [mutedColor, warningColor] = useCSSVariable([
+    '--color-muted',
+    '--color-warning'
+  ]) as string[]
+
+  const iconTint = color === 'text-warning' ? warningColor : mutedColor
 
   return (
     <View className="flex-row items-center gap-1.5">
       {loading ? (
         <ActivityIndicator size={12} color={mutedColor} />
       ) : icon ? (
-        <SymbolView name={icon} size={12} tintColor={mutedColor} />
+        <SymbolView name={icon} size={12} tintColor={iconTint} />
       ) : null}
       <Text className={`text-xs ${color}`}>{label}</Text>
     </View>

@@ -13,8 +13,9 @@ import { ActivityIndicator, Text, View } from 'react-native'
 
 import { useSessionStatus } from '@/lib/auth/session-status-context'
 
-import { Connector } from './connector'
+import { Connector, clearCredentialCache } from './connector'
 import { powersync } from './database'
+import { clearRejections } from './sync-rejections'
 
 interface PowerSyncContextValue {
   userId: string | null
@@ -30,7 +31,7 @@ export function PowerSyncProvider({
   userId: string | null
   children: React.ReactNode
 }) {
-  const { sessionStatus } = useSessionStatus()
+  const { sessionStatus, setSessionStatus } = useSessionStatus()
   const [isReady, setIsReady] = useState(false)
   const connectorRef = useRef<Connector | null>(null)
   const connectedRef = useRef(false)
@@ -69,7 +70,7 @@ export function PowerSyncProvider({
 
     if (sessionStatus === 'valid') {
       if (!connectedRef.current) {
-        connectorRef.current = new Connector()
+        connectorRef.current = new Connector(() => setSessionStatus('expired'))
         // connect() is fire-and-forget per PowerSync docs
         powersync.connect(connectorRef.current)
         connectedRef.current = true
@@ -78,6 +79,8 @@ export function PowerSyncProvider({
       // 'expired' or 'unknown': disconnect but keep local data
       if (connectedRef.current) {
         powersync.disconnect()
+        clearCredentialCache()
+        clearRejections()
         connectorRef.current = null
         connectedRef.current = false
       }
@@ -86,11 +89,13 @@ export function PowerSyncProvider({
     return () => {
       if (connectedRef.current) {
         powersync.disconnect()
+        clearCredentialCache()
+        clearRejections()
         connectorRef.current = null
         connectedRef.current = false
       }
     }
-  }, [isReady, userId, sessionStatus])
+  }, [isReady, userId, sessionStatus, setSessionStatus])
 
   return (
     <AppPowerSyncContext.Provider value={{ userId, isReady }}>

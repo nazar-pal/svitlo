@@ -4,13 +4,30 @@ import type {
   PowerSyncCredentials
 } from '@powersync/react-native'
 import { UpdateType } from '@powersync/react-native'
+import { ORPCError } from '@orpc/client'
 
-import type { SyncRejection } from '@/data/server/api/routers/powersync'
 import { rpcClient } from '@/data/rpc/client'
+
+import { addRejection } from './sync-rejections'
 
 let cachedCredentials: PowerSyncCredentials | null = null
 
+function isAuthError(error: unknown): boolean {
+  if (error instanceof ORPCError && error.code === 'UNAUTHORIZED') return true
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase()
+    return msg.includes('401') || msg.includes('unauthorized')
+  }
+  return false
+}
+
 export class Connector implements PowerSyncBackendConnector {
+  private onAuthFailure: (() => void) | null
+
+  constructor(onAuthFailure?: () => void) {
+    this.onAuthFailure = onAuthFailure ?? null
+  }
+
   async fetchCredentials(): Promise<PowerSyncCredentials> {
     // Return cached credentials if still valid (with 30s buffer)
     if (
@@ -19,15 +36,23 @@ export class Connector implements PowerSyncBackendConnector {
     )
       return cachedCredentials
 
-    const result = await rpcClient.powersync.token()
+    try {
+      const result = await rpcClient.powersync.token()
 
-    cachedCredentials = {
-      endpoint: result.endpoint,
-      token: result.token,
-      expiresAt: new Date(result.expiresAt)
+      cachedCredentials = {
+        endpoint: result.endpoint,
+        token: result.token,
+        expiresAt: new Date(result.expiresAt)
+      }
+
+      return cachedCredentials
+    } catch (error) {
+      if (isAuthError(error)) {
+        cachedCredentials = null
+        this.onAuthFailure?.()
+      }
+      throw error
     }
-
-    return cachedCredentials
   }
 
   async uploadData(database: AbstractPowerSyncDatabase): Promise<void> {
@@ -56,19 +81,32 @@ export class Connector implements PowerSyncBackendConnector {
         })
 
         if (!result.ok) {
-          if ('rejection' in result && result.rejection)
-            this.logRejection(result.rejection, opType, op.id)
-          else if ('error' in result)
-            console.error(
-              `[sync] ${serverTable}.${opType} (${op.id}) denied:`,
-              result.error
-            )
+          if ('rejection' in result && result.rejection) {
+            addRejection({
+              table: result.rejection.table,
+              op: opType,
+              id: op.id,
+              reason: result.rejection.message
+            })
+          } else if ('error' in result) {
+            addRejection({
+              table: serverTable,
+              op: opType,
+              id: op.id,
+              reason: result.error
+            })
+          }
         }
       }
 
       // MUST call complete() to advance the queue — stalls permanently otherwise
       await transaction.complete()
     } catch (error) {
+      if (isAuthError(error)) {
+        cachedCredentials = null
+        this.onAuthFailure?.()
+      }
+
       const { category, isRecoverable } = categorizeError(error)
 
       console.error(`[sync] Upload failed (${category}):`, {
@@ -83,17 +121,6 @@ export class Connector implements PowerSyncBackendConnector {
       // PowerSync will back off and retry automatically.
       throw error
     }
-  }
-
-  private logRejection(rejection: SyncRejection, op: string, recordId: string) {
-    console.error(`[sync] Constraint rejection:`, {
-      table: rejection.table,
-      op,
-      recordId,
-      code: rejection.code,
-      constraint: rejection.constraint,
-      message: rejection.message
-    })
   }
 }
 
@@ -135,6 +162,9 @@ function extractSqlState(error: unknown): string | null {
 }
 
 function categorizeError(error: unknown): ErrorCategory {
+  if (isAuthError(error))
+    return { category: 'auth_expired', isRecoverable: true }
+
   // Try structured SQLSTATE first — more reliable than string matching
   const sqlState = extractSqlState(error)
   if (sqlState) {
@@ -166,8 +196,6 @@ function categorizeError(error: unknown): ErrorCategory {
 
   if (message.includes('403') || message.includes('forbidden'))
     return { category: 'auth_forbidden', isRecoverable: false }
-  if (message.includes('401') || message.includes('unauthorized'))
-    return { category: 'auth_expired', isRecoverable: true }
 
   return { category: 'unknown', isRecoverable: false }
 }

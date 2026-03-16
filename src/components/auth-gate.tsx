@@ -56,11 +56,23 @@ function AuthGateInner() {
         // the local identity — the user keeps full access to their local data.
         setSessionStatus('expired')
       }
-      // result.error means a network/server failure — keep everything as-is.
+      // result.error means a network/server failure — retry once after a short
+      // delay to handle transient errors on reconnect.
+      if (result.error) scheduleRetry()
     } finally {
       revalidationInFlightRef.current = false
       setIsBootstrapped(true)
     }
+  }
+
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function scheduleRetry() {
+    if (retryTimerRef.current) return
+    retryTimerRef.current = setTimeout(() => {
+      retryTimerRef.current = null
+      void revalidateRef.current()
+    }, 5_000)
   }
 
   const revalidateRef = useRef(revalidate)
@@ -84,6 +96,7 @@ function AuthGateInner() {
     return () => {
       appState.remove()
       network.remove()
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
     }
   }, [])
 
