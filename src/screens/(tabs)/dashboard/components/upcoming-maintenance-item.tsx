@@ -4,7 +4,7 @@ import { useCSSVariable } from 'uniwind'
 
 import type { NextMaintenanceCardInfo } from '@/lib/hooks/use-maintenance-due'
 
-import { formatUpcoming } from '../helpers'
+import { formatUpcoming } from '../lib/helpers'
 
 interface UpcomingMaintenanceItemProps {
   generatorTitle: string

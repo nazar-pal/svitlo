@@ -7,7 +7,7 @@ import { Alert, FlatList, Pressable, Text, View } from 'react-native'
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import { useCSSVariable } from 'uniwind'
 
-import { SwipeableRow } from '@/components/swipeable-row'
+import { SwipeableRow } from './components/swipeable-row'
 import type { GeneratorSession } from '@/data/client/db-schema/generators'
 import type { MaintenanceRecord } from '@/data/client/db-schema/maintenance'
 import { deleteMaintenanceRecord, deleteSession } from '@/data/client/mutations'

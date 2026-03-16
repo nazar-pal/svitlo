@@ -33,14 +33,14 @@ import {
 import { useRestCountdown } from '@/lib/hooks/use-rest-countdown'
 import { useLocalUser } from '@/lib/powersync'
 
-import { AssignedEmployeesSection } from './assigned-employees-section'
-import { ConfigurationSection } from './configuration-section'
-import { setPendingSuggestions } from './maintenance-suggestions-store'
-import { MaintenanceSection } from './maintenance-section'
-import type { ActivityItem } from './recent-activity-section'
-import { RecentActivitySection } from './recent-activity-section'
-import type { StatusCardProps } from './status-card'
-import { StatusCard } from './status-card'
+import { AssignedEmployeesSection } from './components/assigned-employees-section'
+import { ConfigurationSection } from './components/configuration-section'
+import { MaintenanceSection } from './components/maintenance-section'
+import type { ActivityItem } from './components/recent-activity-section'
+import { RecentActivitySection } from './components/recent-activity-section'
+import type { StatusCardProps } from './components/status-card'
+import { StatusCard } from './components/status-card'
+import { setPendingSuggestions } from '@/lib/maintenance-suggestions-store'
 
 export default function GeneratorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()

@@ -11,7 +11,7 @@ import { computeGeneratorStatus } from '@/lib/hooks/use-generator-status'
 import { useRestCountdown } from '@/lib/hooks/use-rest-countdown'
 import type { NextMaintenanceCardInfo } from '@/lib/hooks/use-maintenance-due'
 
-import { formatUpcoming } from '../helpers'
+import { formatUpcoming } from '../lib/helpers'
 
 interface MyGeneratorCardProps {
   generator: Generator

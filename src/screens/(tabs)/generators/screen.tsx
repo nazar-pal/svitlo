@@ -1,5 +1,5 @@
 import { EmptyState } from '@/components/empty-state'
-import { GeneratorCard } from '@/components/generator-card'
+import { GeneratorCard } from './components/generator-card'
 import {
   getAllGeneratorSessions,
   getAllMaintenanceRecords,

@@ -3,14 +3,14 @@ import { ScrollView, Text, View } from 'react-native'
 
 import { EmptyState } from '@/components/empty-state'
 
-import { ActiveSessionCard } from './cards/active-session-card'
-import { AllClearCard } from './cards/all-clear-card'
-import { MyGeneratorCard } from './cards/my-generator-card'
-import { OverdueMaintenanceItem } from './cards/overdue-maintenance-item'
-import { RestingGeneratorItem } from './cards/resting-generator-item'
-import { UpcomingMaintenanceItem } from './cards/upcoming-maintenance-item'
-import { WarningGeneratorItem } from './cards/warning-generator-item'
-import { useDashboardData } from './use-dashboard-data'
+import { ActiveSessionCard } from './components/active-session-card'
+import { AllClearCard } from './components/all-clear-card'
+import { MyGeneratorCard } from './components/my-generator-card'
+import { OverdueMaintenanceItem } from './components/overdue-maintenance-item'
+import { RestingGeneratorItem } from './components/resting-generator-item'
+import { UpcomingMaintenanceItem } from './components/upcoming-maintenance-item'
+import { WarningGeneratorItem } from './components/warning-generator-item'
+import { useDashboardData } from './lib/use-dashboard-data'
 
 function SectionHeader({ title }: { title: string }) {
   return (

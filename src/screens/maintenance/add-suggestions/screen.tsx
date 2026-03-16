@@ -7,7 +7,7 @@ import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { createManyMaintenanceTemplates } from '@/data/client/mutations'
 import type { InsertMaintenanceTemplateInput } from '@/data/client/validation'
 import { useLocalUser } from '@/lib/powersync'
-import { consumePendingSuggestions } from '@/screens/generator/detail/maintenance-suggestions-store'
+import { consumePendingSuggestions } from '@/lib/maintenance-suggestions-store'
 
 export default function AddSuggestionsScreen() {
   const { generatorId } = useLocalSearchParams<{ generatorId: string }>()

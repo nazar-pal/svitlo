@@ -21,7 +21,7 @@ import type {
 import { useRestCountdown } from '@/lib/hooks/use-rest-countdown'
 import { formatRestRemaining } from '@/lib/time'
 
-import { GeneratorStatusBadge } from './generator-status-badge'
+import { GeneratorStatusBadge } from '@/components/generator-status-badge'
 
 interface GeneratorCardProps {
   generator: Generator
