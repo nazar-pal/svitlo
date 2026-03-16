@@ -1,4 +1,4 @@
-import { os, ORPCError } from '@orpc/server'
+import { os } from '@orpc/server'
 
 import { db } from '@/data/server'
 import { auth } from '@/data/server/auth'
@@ -13,9 +13,13 @@ const base = os.$context<Context>()
 
 export const publicProcedure = base
 
-export const protectedProcedure = base.use(({ context, next }) => {
-  if (!context.session) throw new ORPCError('UNAUTHORIZED')
-  return next({ context: { session: context.session } })
-})
+export const protectedProcedure = base
+  .errors({
+    UNAUTHORIZED: { message: 'Authentication required' }
+  })
+  .use(({ context, next, errors }) => {
+    if (!context.session) throw errors.UNAUTHORIZED()
+    return next({ context: { session: context.session } })
+  })
 
 export type { Context }

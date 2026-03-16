@@ -29,6 +29,7 @@ export const aiRouter = {
         description: z.string().optional()
       })
     )
+    .output(maintenanceSuggestionSchema)
     .handler(async ({ input }) => {
       const prompt = [
         `Generator: ${input.generatorModel}`,

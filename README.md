@@ -10,7 +10,7 @@ Power generator maintenance tracker for iOS. Log run sessions, schedule maintena
 - **Auth:** [Better Auth](https://www.better-auth.com) (Apple Sign In) hosted in Expo API routes
 - **Server Database:** [Neon](https://neon.tech) Postgres with [Drizzle ORM](https://orm.drizzle.team)
 - **Local-first Sync:** [PowerSync](https://www.powersync.com) with [OP-SQLite](https://github.com/nicksrandall/op-sqlite)
-- **API Layer:** [tRPC](https://trpc.io) v11 with [TanStack Query](https://tanstack.com/query)
+- **API Layer:** [ORPC](https://orpc.dev)
 - **Env Validation:** [@t3-oss/env-core](https://env.t3.gg) + [Zod](https://zod.dev)
 
 ## Prerequisites
@@ -98,12 +98,12 @@ src/
 │   ├── (auth)/                   # Auth screens (sign-in)
 │   ├── (protected)/(tabs)/       # Authenticated tab navigator
 │   ├── (public)/                 # Public screens (privacy policy)
-│   └── api/                      # Expo API routes (auth, tRPC)
+│   └── api/                      # Expo API routes (auth, ORPC)
 ├── components/                   # Shared UI components
 ├── data/
 │   ├── client/                   # Client-side DB schema & queries (PowerSync)
-│   ├── server/                   # Server DB schema, migrations, auth config, tRPC routers
-│   └── trpc/                     # tRPC client setup & React integration
+│   ├── server/                   # Server DB schema, migrations, auth config, ORPC routers
+│   └── rpc/                      # ORPC client setup
 ├── lib/
 │   ├── auth/                     # Auth client, Apple sign-in, session management
 │   ├── config/                   # API origin helpers
