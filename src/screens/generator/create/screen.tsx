@@ -6,19 +6,17 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  ScrollView,
   Text,
   View
 } from 'react-native'
-
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { AiSourcesList } from '@/components/ai-sources-list'
+import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
 import { insertGeneratorSchema } from '@/data/client/validation'
 import { rpcClient } from '@/data/rpc-client'
-import { useKeyboardHeight } from '@/lib/hooks/use-keyboard-height'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -29,9 +27,6 @@ export default function CreateGeneratorScreen() {
   const router = useRouter()
   const localUser = useLocalUser()
   const { selectedOrgId } = useSelectedOrg()
-  const insets = useSafeAreaInsets()
-  const keyboardHeight = useKeyboardHeight()
-
   const [step, setStep] = useState<Step>('basics')
   const [mode, setMode] = useState<Mode>(null)
 
@@ -180,17 +175,16 @@ export default function CreateGeneratorScreen() {
     router.back()
   }
 
-  const contentPaddingBottom =
-    keyboardHeight > 0 ? keyboardHeight + 8 : Math.max(insets.bottom, 16)
-
   if (step === 'basics')
     return (
-      <ScrollView
+      <>
+      <KeyboardAwareScrollView
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="px-5 pt-6"
-        contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
+        contentContainerClassName="px-5 pt-6 pb-6"
         keyboardShouldPersistTaps="handled"
+        bottomOffset={16}
+        extraKeyboardSpace={42}
       >
         <View className="mx-auto w-full max-w-[600px] gap-7">
           <View className="gap-2">
@@ -248,17 +242,21 @@ export default function CreateGeneratorScreen() {
             Next
           </Button>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
+      <KeyboardToolbar />
+      </>
     )
 
   // Step 2: Details
   return (
-    <ScrollView
+    <>
+    <KeyboardAwareScrollView
       className="bg-background flex-1"
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerClassName="px-5 pt-6"
-      contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
+      contentContainerClassName="px-5 pt-6 pb-6"
       keyboardShouldPersistTaps="handled"
+      bottomOffset={16}
+        extraKeyboardSpace={42}
     >
       <View className="mx-auto w-full max-w-[600px] gap-7">
         <View className="gap-2">
@@ -406,6 +404,8 @@ export default function CreateGeneratorScreen() {
           </>
         ) : null}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
+    <KeyboardToolbar />
+    </>
   )
 }

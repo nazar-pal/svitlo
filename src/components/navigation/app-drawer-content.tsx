@@ -3,10 +3,10 @@ import { useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { Avatar, Button, ListGroup, Separator } from 'heroui-native'
 import { Alert, ScrollView, Text, View } from 'react-native'
-import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context'
-import { useCSSVariable, withUniwind } from 'uniwind'
+import { useCSSVariable } from 'uniwind'
 
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
+import { SafeAreaView } from '@/components/uniwind'
 import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
 import {
   getAllOrganizations,
@@ -18,8 +18,6 @@ import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
-
-const SafeAreaView = withUniwind(RNSafeAreaView)
 
 function getInitials(name: string | null | undefined): string {
   if (!name) return '?'

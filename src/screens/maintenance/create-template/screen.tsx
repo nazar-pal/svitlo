@@ -1,13 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Button, Description, Input, Label, TextField } from 'heroui-native'
 import { useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
+import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-
+import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createMaintenanceTemplate } from '@/data/client/mutations'
 import { insertMaintenanceTemplateSchema } from '@/data/client/validation'
-import { useKeyboardHeight } from '@/lib/hooks/use-keyboard-height'
 import { useLocalUser } from '@/lib/powersync'
 
 const TRIGGER_TYPES = ['hours', 'calendar', 'whichever_first'] as const
@@ -31,9 +30,6 @@ export default function CreateMaintenanceTemplateScreen() {
   const [calendarDays, setCalendarDays] = useState('')
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const insets = useSafeAreaInsets()
-  const keyboardHeight = useKeyboardHeight()
-
   const showHours = triggerType === 'hours' || triggerType === 'whichever_first'
   const showCalendar =
     triggerType === 'calendar' || triggerType === 'whichever_first'
@@ -75,16 +71,15 @@ export default function CreateMaintenanceTemplateScreen() {
     router.back()
   }
 
-  const contentPaddingBottom =
-    keyboardHeight > 0 ? keyboardHeight + 8 : Math.max(insets.bottom, 16)
-
   return (
-    <ScrollView
+    <>
+    <KeyboardAwareScrollView
       className="bg-background flex-1"
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerClassName="px-5 pt-6"
-      contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
+      contentContainerClassName="px-5 pt-6 pb-6"
       keyboardShouldPersistTaps="handled"
+      bottomOffset={16}
+      extraKeyboardSpace={42}
     >
       <View className="mx-auto w-full max-w-[600px] gap-7">
         <View className="gap-2">
@@ -198,6 +193,8 @@ export default function CreateMaintenanceTemplateScreen() {
           Create Task
         </Button>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
+    <KeyboardToolbar />
+    </>
   )
 }

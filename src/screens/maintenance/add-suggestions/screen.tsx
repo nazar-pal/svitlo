@@ -1,9 +1,11 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Button } from 'heroui-native'
 import { useState } from 'react'
-import { Alert, ScrollView, Text, View } from 'react-native'
+import { Alert, Text, View } from 'react-native'
+import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { AiSourcesList } from '@/components/ai-sources-list'
+import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { createManyMaintenanceTemplates } from '@/data/client/mutations'
 import type { InsertMaintenanceTemplateInput } from '@/data/client/validation'
@@ -69,10 +71,13 @@ export default function AddSuggestionsScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'AI Suggestions' }} />
-      <ScrollView
+      <KeyboardAwareScrollView
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"
         contentContainerClassName="px-5 pb-10 pt-6"
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={16}
+        extraKeyboardSpace={42}
       >
         <View className="mx-auto w-full max-w-[600px] gap-4">
           <View className="gap-1">
@@ -105,7 +110,8 @@ export default function AddSuggestionsScreen() {
                 : `Save ${selectedCount} ${selectedCount === 1 ? 'item' : 'items'}`}
           </Button>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
+      <KeyboardToolbar />
     </>
   )
 }

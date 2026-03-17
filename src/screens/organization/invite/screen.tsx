@@ -1,8 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Button, Description, Input, Label, TextField } from 'heroui-native'
 import { useState } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
+import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createInvitation } from '@/data/client/mutations'
 import { insertInvitationSchema } from '@/data/client/validation'
 import { useLocalUser } from '@/lib/powersync'
@@ -40,10 +41,12 @@ export default function InviteMemberScreen() {
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       className="bg-background flex-1"
       contentInsetAdjustmentBehavior="automatic"
       contentContainerClassName="px-5 pb-10 pt-6"
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={16}
     >
       <View className="mx-auto w-full max-w-[600px] gap-7">
         <View className="gap-2">
@@ -77,6 +80,6 @@ export default function InviteMemberScreen() {
           Send Invitation
         </Button>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   )
 }

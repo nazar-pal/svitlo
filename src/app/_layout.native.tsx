@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar'
 import { HeroUINativeProvider } from 'heroui-native'
 import React, { useEffect } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { useCSSVariable, useUniwind } from 'uniwind'
 
 export default function RootLayout() {
@@ -27,15 +28,17 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <HeroUINativeProvider>
-        <ThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
-          <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-          <AnimatedSplashOverlay />
-          <LocalIdentityProvider>
-            <AuthGate />
-          </LocalIdentityProvider>
-        </ThemeProvider>
-      </HeroUINativeProvider>
+      <KeyboardProvider>
+        <HeroUINativeProvider>
+          <ThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
+            <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+            <AnimatedSplashOverlay />
+            <LocalIdentityProvider>
+              <AuthGate />
+            </LocalIdentityProvider>
+          </ThemeProvider>
+        </HeroUINativeProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   )
 }
