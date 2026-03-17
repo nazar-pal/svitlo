@@ -1,12 +1,13 @@
-import { Link } from 'expo-router'
+import { Link, useRouter } from 'expo-router'
 import React from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View } from 'react-native'
 
 import { AnimatedIcon } from '@/components/animated-icon'
 import { AppleSignInButton } from '@/components/apple-sign-in-button'
 import { useAppleSignIn } from '@/lib/auth/use-apple-sign-in'
 
 export default function SignInScreen() {
+  const router = useRouter()
   const { isSigningIn, error, signIn } = useAppleSignIn()
 
   return (
@@ -35,16 +36,24 @@ export default function SignInScreen() {
           onPress={signIn}
         />
 
-        <Text className="text-muted text-center text-sm leading-6">
-          By continuing, you agree to the{' '}
-          <Link
-            href="/privacy-policy"
-            className="text-foreground font-semibold"
-          >
-            Privacy Policy
-          </Link>
-          .
-        </Text>
+        <View className="gap-3">
+          <Text className="text-muted text-center text-sm leading-6">
+            By continuing, you agree to the{' '}
+            <Link
+              href="/privacy-policy"
+              className="text-foreground font-semibold"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </Text>
+
+          <Pressable onPress={() => router.push('/(auth)/email-auth')}>
+            <Text className="text-muted text-center text-xs">
+              Use email instead
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </ScrollView>
   )

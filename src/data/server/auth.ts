@@ -50,6 +50,12 @@ export const auth = betterAuth({
     },
     deferSessionRefresh: true
   },
+  emailAndPassword: {
+    enabled: true,
+    autoSignIn: true,
+    minPasswordLength: 8,
+    maxPasswordLength: 128
+  },
   account: {
     skipStateCookieCheck: true
   },
