@@ -1,6 +1,7 @@
 Review the overall project structure and file organization of the codebase. Look for inconsistencies, misplaced files, and areas where the structure could be improved to make the codebase clearer and easier to maintain.
 
 Focus on identifying opportunities to:
+
 - Rename files, folders, functions, or components when the current names do not clearly describe their purpose.
 - Reorganize files or folders if related logic is currently scattered or placed in unintuitive locations.
 - Standardize patterns when the same kind of functionality is implemented or organized in different ways across the project.
