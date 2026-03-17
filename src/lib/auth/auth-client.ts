@@ -3,7 +3,7 @@ import { createAuthClient } from 'better-auth/react'
 import * as SecureStore from 'expo-secure-store'
 
 import { getPublicApiOrigin } from '@/lib/config/api-origin'
-import { AUTH_STORAGE_PREFIX } from '@/lib/const'
+import { AUTH_STORAGE_PREFIX } from '@/lib/config/const'
 import { APP_SCHEME } from '../../../app.config'
 
 const baseURL = new URL('/api/auth', getPublicApiOrigin()).toString()

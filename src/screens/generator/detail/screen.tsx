@@ -19,28 +19,29 @@ import {
   getMaintenanceTemplates,
   getOrgMembers
 } from '@/data/client/queries'
-import { rpcClient } from '@/data/rpc/client'
-import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import {
-  formatHours,
-  useElapsedHours,
-  useElapsedTime
-} from '@/lib/hooks/use-elapsed-time'
+import { rpcClient } from '@/data/rpc-client'
 import {
   computeGeneratorStatus,
   computeLifetimeHours
-} from '@/lib/hooks/use-generator-status'
-import { useRestCountdown } from '@/lib/hooks/use-rest-countdown'
+} from '@/lib/generator/status'
+import {
+  useElapsedHours,
+  useElapsedTime
+} from '@/lib/generator/use-elapsed-time'
+import { useRestCountdown } from '@/lib/generator/use-rest-countdown'
+import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
+import { getUserName } from '@/lib/utils/get-user-name'
+import { formatHours } from '@/lib/utils/time'
 
 import { AssignedEmployeesSection } from './components/assigned-employees-section'
 import { ConfigurationSection } from './components/configuration-section'
 import { MaintenanceSection } from './components/maintenance-section'
-import type { ActivityItem } from './components/recent-activity-section'
+import type { ActivityItem } from '@/lib/generator/activity-item'
 import { RecentActivitySection } from './components/recent-activity-section'
 import type { StatusCardProps } from './components/status-card'
 import { StatusCard } from './components/status-card'
-import { setPendingSuggestions } from '@/lib/maintenance-suggestions-store'
+import { setPendingSuggestions } from '@/lib/maintenance/suggestions-store'
 
 export default function GeneratorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -131,9 +132,7 @@ export default function GeneratorDetailScreen() {
 
   // --- Handlers ---
 
-  function getUserName(uid: string): string {
-    return users.find(u => u.id === uid)?.name || 'Unknown'
-  }
+  const resolveUserName = (uid: string) => getUserName(users, uid)
 
   async function handleStartSession() {
     const result = await startSession(userId, id)
@@ -247,7 +246,7 @@ export default function GeneratorDetailScreen() {
         {/* Recent Activity */}
         <RecentActivitySection
           items={activityItems}
-          getUserName={getUserName}
+          getUserName={resolveUserName}
           onViewAll={() => router.push(`/generator/activity?generatorId=${id}`)}
         />
 
@@ -274,7 +273,7 @@ export default function GeneratorDetailScreen() {
           <AssignedEmployeesSection
             assignments={assignments}
             unassignedMembers={unassignedMembers}
-            getUserName={getUserName}
+            getUserName={resolveUserName}
             onAssign={handleAssign}
             onUnassign={handleUnassign}
           />

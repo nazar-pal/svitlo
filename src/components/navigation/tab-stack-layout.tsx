@@ -1,4 +1,4 @@
-import { DrawerTriggerButton } from '@/components/drawer-trigger-button'
+import { DrawerTriggerButton } from './drawer-trigger-button'
 import { isLiquidGlassAvailable } from 'expo-glass-effect'
 import { Stack } from 'expo-router'
 import { useCSSVariable } from 'uniwind'

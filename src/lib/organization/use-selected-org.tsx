@@ -1,7 +1,7 @@
 import { createContext, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { useUserOrgs } from '@/lib/hooks/use-user-orgs'
+import { useUserOrgs } from './use-user-orgs'
 import { storage } from '@/lib/storage'
 
 interface SelectedOrgContextValue {

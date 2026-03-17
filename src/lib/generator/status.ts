@@ -1,7 +1,7 @@
 import { addHours, compareDesc, isFuture, parseISO } from 'date-fns'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
-import { hoursBetween } from '@/lib/time'
+import { hoursBetween } from '@/lib/utils/time'
 
 type GeneratorStatus = 'running' | 'resting' | 'available'
 
@@ -109,4 +109,13 @@ export function computeLifetimeHours(sessions: GeneratorSession[]): number {
     total += hoursBetween(session.startedAt, end)
   }
   return total
+}
+
+export function progressColor(
+  progress: number,
+  warningFraction: number
+): string {
+  if (progress >= 1) return 'bg-red-500'
+  if (progress >= warningFraction) return 'bg-orange-500'
+  return 'bg-green-500'
 }

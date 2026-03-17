@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
 import type { Generator } from '@/data/client/db-schema'
-import { formatRestRemaining } from '@/lib/time'
+import { formatRestRemaining } from '@/lib/utils/time'
 
 interface RestingGeneratorItemProps {
   generator: Generator

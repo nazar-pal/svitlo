@@ -3,7 +3,7 @@ import React from 'react'
 
 import { ReAuthBanner } from '@/components/re-auth-banner'
 import { useLocalIdentity } from '@/lib/auth/local-identity-context'
-import { SelectedOrgProvider } from '@/lib/hooks/use-selected-org'
+import { SelectedOrgProvider } from '@/lib/organization/use-selected-org'
 import { PowerSyncProvider } from '@/lib/powersync'
 
 export default function ProtectedLayout() {

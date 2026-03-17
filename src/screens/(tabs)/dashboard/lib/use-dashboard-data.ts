@@ -1,66 +1,43 @@
 import {
   getAllGeneratorSessions,
-  getAllMaintenanceRecords,
-  getAllMaintenanceTemplates,
   getAllUsers,
-  getGeneratorsByOrg,
   getUserAssignments
 } from '@/data/client/queries'
+import { computeGeneratorStatus } from '@/lib/generator/status'
+import { useGeneratorListData } from '@/lib/generator/use-generator-list-data'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
-import { useUserOrgs } from '@/lib/hooks/use-user-orgs'
+import type { NextMaintenanceCardInfo } from '@/lib/maintenance/due'
+import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
-import { groupBy } from '@/lib/group-by'
-import { computeGeneratorStatus } from '@/lib/hooks/use-generator-status'
-import {
-  computeNextMaintenance,
-  type NextMaintenanceCardInfo
-} from '@/lib/hooks/use-maintenance-due'
-import { hoursBetween } from '@/lib/time'
+import { hoursBetween } from '@/lib/utils/time'
 
 export function useDashboardData() {
   const localUser = useLocalUser()
   const userId = localUser?.id ?? ''
   const { userOrgs } = useUserOrgs()
-  const { selectedOrgId } = useSelectedOrg()
 
-  const { data: allGenerators } = useDrizzleQuery(
-    selectedOrgId ? getGeneratorsByOrg(selectedOrgId) : undefined
-  )
+  const {
+    generators: allGenerators,
+    sessionsByGenerator,
+    nextMaintenanceByGenerator
+  } = useGeneratorListData()
+
   const { data: allSessions } = useDrizzleQuery(getAllGeneratorSessions())
-  const { data: allTemplates } = useDrizzleQuery(getAllMaintenanceTemplates())
-  const { data: allRecords } = useDrizzleQuery(getAllMaintenanceRecords())
   const { data: allUsers } = useDrizzleQuery(getAllUsers())
   const { data: myAssignments } = useDrizzleQuery(
     userId ? getUserAssignments(userId) : undefined
   )
 
-  // Pre-index
-  const sessionsByGenerator = groupBy(allSessions, s => s.generatorId)
-  const templatesByGenerator = groupBy(allTemplates, t => t.generatorId)
-  const recordsByGenerator = groupBy(allRecords, r => r.generatorId)
   const usersById = new Map(allUsers.map(u => [u.id, u]))
 
-  // Per-generator status and next maintenance
+  // Per-generator status
   const statusByGenerator = new Map<
     string,
     ReturnType<typeof computeGeneratorStatus>
   >()
-  const nextMaintenanceByGenerator = new Map<
-    string,
-    NextMaintenanceCardInfo | null
-  >()
   for (const gen of allGenerators) {
     const sessions = sessionsByGenerator.get(gen.id) ?? []
     statusByGenerator.set(gen.id, computeGeneratorStatus(gen, sessions))
-    nextMaintenanceByGenerator.set(
-      gen.id,
-      computeNextMaintenance(
-        templatesByGenerator.get(gen.id) ?? [],
-        recordsByGenerator.get(gen.id) ?? [],
-        sessions
-      )
-    )
   }
 
   // My active session

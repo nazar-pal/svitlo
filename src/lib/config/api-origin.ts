@@ -2,7 +2,7 @@ import Constants from 'expo-constants'
 import { Platform } from 'react-native'
 
 import { env } from '@/env'
-import { DEFAULT_LOCAL_API_URL } from '../const'
+import { DEFAULT_LOCAL_API_URL } from './const'
 
 function normalizeApiOrigin(value: string) {
   return value.endsWith('/') ? value.slice(0, -1) : value

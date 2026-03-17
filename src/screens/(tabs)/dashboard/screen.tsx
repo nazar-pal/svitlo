@@ -1,24 +1,17 @@
 import { Stack, useRouter } from 'expo-router'
-import { ScrollView, Text, View } from 'react-native'
+import { ScrollView, View } from 'react-native'
 
 import { EmptyState } from '@/components/empty-state'
+import { GeneratorCard } from '@/components/generator-card'
+import { SectionHeader } from '@/components/section-header'
 
 import { ActiveSessionCard } from './components/active-session-card'
 import { AllClearCard } from './components/all-clear-card'
-import { MyGeneratorCard } from './components/my-generator-card'
 import { OverdueMaintenanceItem } from './components/overdue-maintenance-item'
 import { RestingGeneratorItem } from './components/resting-generator-item'
 import { UpcomingMaintenanceItem } from './components/upcoming-maintenance-item'
 import { WarningGeneratorItem } from './components/warning-generator-item'
 import { useDashboardData } from './lib/use-dashboard-data'
-
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <Text className="text-muted mb-2 ml-1 text-xs font-semibold tracking-wide uppercase">
-      {title}
-    </Text>
-  )
-}
 
 export default function DashboardScreen() {
   const router = useRouter()
@@ -80,8 +73,9 @@ export default function DashboardScreen() {
               <SectionHeader title="My Generators" />
               <View className="gap-3">
                 {myGenerators.map(gen => (
-                  <MyGeneratorCard
+                  <GeneratorCard
                     key={gen.id}
+                    variant="compact"
                     generator={gen}
                     sessions={sessionsByGenerator.get(gen.id) ?? []}
                     nextMaintenance={

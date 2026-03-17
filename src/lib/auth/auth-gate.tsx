@@ -3,13 +3,13 @@ import { Stack } from 'expo-router'
 import React, { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
 
-import { authClient } from '../lib/auth/auth-client'
-import { useLocalIdentity } from '../lib/auth/local-identity-context'
-import { persistLocalIdentity } from '../lib/auth/offline-identity'
+import { authClient } from './auth-client'
+import { useLocalIdentity } from './local-identity-context'
+import { persistLocalIdentity } from './offline-identity'
 import {
   SessionStatusProvider,
   useSessionStatus
-} from '../lib/auth/session-status-context'
+} from './session-status-context'
 import { AuthBootstrapScreen } from './auth-bootstrap-screen'
 
 function AuthGateInner() {

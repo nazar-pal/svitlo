@@ -1,7 +1,7 @@
 import { Drawer } from 'expo-router/drawer'
 import { useCSSVariable } from 'uniwind'
 
-import { AppDrawerContent } from '@/components/app-drawer-content'
+import { AppDrawerContent } from '@/components/navigation/app-drawer-content'
 
 export default function DrawerLayout() {
   const backgroundColor = useCSSVariable('--color-background') as string

@@ -19,7 +19,8 @@ import {
   getMaintenanceRecords,
   getMaintenanceTemplateSummaries
 } from '@/data/client/queries'
-import { formatDuration } from '@/lib/hooks/use-elapsed-time'
+import { getUserName } from '@/lib/utils/get-user-name'
+import { formatDuration } from '@/lib/utils/time'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -32,7 +33,7 @@ const FILTER_LABELS: Record<Filter, string> = {
   maintenance: 'Maintenance'
 }
 
-type ActivityItem =
+type ActivityListItem =
   | {
       type: 'session'
       id: string
@@ -52,10 +53,10 @@ function buildActivityItems(
   records: MaintenanceRecord[],
   templates: { id: string; taskName: string }[],
   filter: Filter
-): ActivityItem[] {
+): ActivityListItem[] {
   const templateMap = new Map(templates.map(t => [t.id, t.taskName]))
 
-  const items: ActivityItem[] = []
+  const items: ActivityListItem[] = []
 
   if (filter !== 'maintenance')
     for (const session of sessions)
@@ -116,9 +117,7 @@ export default function ActivityScreen() {
     : undefined
   const isAdmin = org?.adminUserId === userId
 
-  function getUserName(uid: string): string {
-    return users.find(u => u.id === uid)?.name || 'Unknown'
-  }
+  const resolveUserName = (uid: string) => getUserName(users, uid)
 
   function canDeleteSession(session: GeneratorSession): boolean {
     if (!session.stoppedAt) return false
@@ -241,7 +240,7 @@ export default function ActivityScreen() {
                       {format(parseISO(session.startedAt), 'MMM d, HH:mm')}
                     </ListGroup.ItemTitle>
                     <ListGroup.ItemDescription>
-                      {getUserName(session.startedByUserId)} · {duration}
+                      {resolveUserName(session.startedByUserId)} · {duration}
                     </ListGroup.ItemDescription>
                   </ListGroup.ItemContent>
                   <Text
@@ -277,7 +276,7 @@ export default function ActivityScreen() {
                     {format(parseISO(record.performedAt), 'MMM d, HH:mm')}
                   </ListGroup.ItemTitle>
                   <ListGroup.ItemDescription>
-                    {getUserName(record.performedByUserId)} · {templateName}
+                    {resolveUserName(record.performedByUserId)} · {templateName}
                     {record.notes ? ` · ${record.notes}` : ''}
                   </ListGroup.ItemDescription>
                 </ListGroup.ItemContent>

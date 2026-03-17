@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
 
-import {
-  differenceInMilliseconds,
-  intervalToDuration,
-  parseISO
-} from 'date-fns'
+import { differenceInMilliseconds, parseISO } from 'date-fns'
+
+import { formatDuration } from '@/lib/utils/time'
 
 /**
  * Returns live fractional hours elapsed since startedAt.
@@ -45,22 +43,4 @@ export function useElapsedTime(startedAt: string | null): string {
     differenceInMilliseconds(now, parseISO(startedAt))
   )
   return formatDuration(elapsed)
-}
-
-export function formatDuration(ms: number): string {
-  const {
-    hours = 0,
-    minutes = 0,
-    seconds = 0
-  } = intervalToDuration({
-    start: 0,
-    end: ms
-  })
-  return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-}
-
-export function formatHours(hours: number): string {
-  if (hours < 1) return `${Math.round(hours * 60)}m`
-  if (hours < 10) return `${hours.toFixed(1)}h`
-  return `${Math.round(hours)}h`
 }

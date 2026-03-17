@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store'
 
-import { AUTH_STORAGE_PREFIX } from '@/lib/const'
+import { AUTH_STORAGE_PREFIX } from '@/lib/config/const'
 
 // Bump to invalidate all stored identities (e.g. after a breaking format change).
 // On next launch the revalidation cycle re-persists a fresh identity.

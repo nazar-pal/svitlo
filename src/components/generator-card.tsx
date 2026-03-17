@@ -5,23 +5,24 @@ import { useCSSVariable } from 'uniwind'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
 import { startSession, stopSession } from '@/data/client/mutations'
+import { GeneratorStatusBadge } from '@/components/generator-status-badge'
+import { confirmRestingStart } from '@/lib/generator/confirm-resting-start'
 import {
   computeGeneratorStatus,
-  computeLifetimeHours
-} from '@/lib/hooks/use-generator-status'
+  computeLifetimeHours,
+  progressColor
+} from '@/lib/generator/status'
 import {
   useElapsedHours,
-  useElapsedTime,
-  formatHours
-} from '@/lib/hooks/use-elapsed-time'
-import type {
-  NextMaintenanceCardInfo,
-  MaintenanceUrgency
-} from '@/lib/hooks/use-maintenance-due'
-import { useRestCountdown } from '@/lib/hooks/use-rest-countdown'
-import { formatRestRemaining } from '@/lib/time'
-
-import { GeneratorStatusBadge } from '@/components/generator-status-badge'
+  useElapsedTime
+} from '@/lib/generator/use-elapsed-time'
+import { useRestCountdown } from '@/lib/generator/use-rest-countdown'
+import {
+  formatMaintenanceLabel,
+  type MaintenanceUrgency,
+  type NextMaintenanceCardInfo
+} from '@/lib/maintenance/due'
+import { formatHours, formatRestRemaining } from '@/lib/utils/time'
 
 interface GeneratorCardProps {
   generator: Generator
@@ -29,21 +30,7 @@ interface GeneratorCardProps {
   nextMaintenance: NextMaintenanceCardInfo | null
   userId: string
   onPress: () => void
-}
-
-function maintenanceLabel(info: NextMaintenanceCardInfo): string {
-  if (info.urgency === 'overdue') return 'overdue'
-  const { hoursRemaining, daysRemaining } = info
-  if (hoursRemaining !== null && daysRemaining !== null) {
-    // whichever_first — show the more urgent (smaller) dimension
-    const daysAsHours = daysRemaining * 24
-    return hoursRemaining <= daysAsHours
-      ? `in ${formatHours(hoursRemaining)}`
-      : `in ${Math.round(daysRemaining)}d`
-  }
-  if (hoursRemaining !== null) return `in ${formatHours(hoursRemaining)}`
-  if (daysRemaining !== null) return `in ${Math.round(daysRemaining)}d`
-  return ''
+  variant?: 'compact' | 'detailed'
 }
 
 function maintenanceLabelColor(urgency: MaintenanceUrgency): string {
@@ -52,38 +39,43 @@ function maintenanceLabelColor(urgency: MaintenanceUrgency): string {
   return 'text-muted'
 }
 
+function maintenanceLabelText(info: NextMaintenanceCardInfo): string {
+  if (info.urgency === 'overdue') return 'overdue'
+  return formatMaintenanceLabel(info)
+}
+
 export function GeneratorCard({
   generator,
   sessions,
   nextMaintenance,
   userId,
-  onPress
+  onPress,
+  variant = 'detailed'
 }: GeneratorCardProps) {
   const mutedColor = useCSSVariable('--color-muted') as string | undefined
   const { status, openSession, restEndsAt, consecutiveRunHours } =
     computeGeneratorStatus(generator, sessions)
-  const lifetimeHours = computeLifetimeHours(sessions)
 
   const startedAt =
     status === 'running' ? (openSession?.startedAt ?? null) : null
   const elapsedHours = useElapsedHours(startedAt)
-  const elapsedTimeStr = useElapsedTime(startedAt)
+  const elapsedTimeStr = useElapsedTime(
+    variant === 'detailed' ? startedAt : null
+  )
 
   const totalRunHours = consecutiveRunHours + elapsedHours
   const maxHours = generator.maxConsecutiveRunHours
   const progress = Math.min(totalRunHours / maxHours, 1)
   const warningFraction = generator.runWarningThresholdPct / 100
-  const progressColor =
-    progress >= 1
-      ? 'bg-red-500'
-      : progress >= warningFraction
-        ? 'bg-orange-500'
-        : 'bg-green-500'
+  const barColor = progressColor(progress, warningFraction)
 
   const restCountdown = useRestCountdown(
     restEndsAt,
     generator.requiredRestHours
   )
+
+  const lifetimeHours =
+    variant === 'detailed' ? computeLifetimeHours(sessions) : 0
 
   async function handleStart() {
     const result = await startSession(userId, generator.id)
@@ -117,35 +109,56 @@ export function GeneratorCard({
             <GeneratorStatusBadge status={status} />
           </View>
 
-          <View className="flex-row items-center gap-2">
-            <Text className="text-muted text-[13px]">
-              {formatHours(lifetimeHours)} total
-            </Text>
-            {status === 'resting' && restEndsAt ? (
-              <>
-                <Text className="text-muted text-[11px]">·</Text>
-                <Text className="text-muted text-[13px]">
-                  rests {formatRestRemaining(restEndsAt)}
-                </Text>
-              </>
-            ) : null}
-          </View>
+          {variant === 'compact' ? (
+            <Text className="text-muted text-[13px]">{generator.model}</Text>
+          ) : (
+            <View className="flex-row items-center gap-2">
+              <Text className="text-muted text-[13px]">
+                {formatHours(lifetimeHours)} total
+              </Text>
+              {status === 'resting' && restEndsAt ? (
+                <>
+                  <Text className="text-muted text-[11px]">·</Text>
+                  <Text className="text-muted text-[13px]">
+                    rests {formatRestRemaining(restEndsAt)}
+                  </Text>
+                </>
+              ) : null}
+            </View>
+          )}
         </View>
+
+        {variant === 'compact' ? (
+          <SymbolView name="chevron.right" size={14} tintColor={mutedColor} />
+        ) : null}
       </View>
 
       {status === 'running' ? (
         <View className="mt-3 gap-1.5">
           <View className="bg-default h-1.5 overflow-hidden rounded-full">
             <View
-              className={`h-full rounded-full ${progressColor}`}
+              className={`h-full rounded-full ${barColor}`}
               style={{ width: `${progress * 100}%` }}
             />
           </View>
           <View className="flex-row justify-between">
-            <Text className="text-muted text-[12px]">{elapsedTimeStr}</Text>
-            <Text className="text-muted text-[12px]">
-              {formatHours(totalRunHours)} / {formatHours(maxHours)}
-            </Text>
+            {variant === 'compact' ? (
+              <>
+                <Text className="text-muted text-[12px]">
+                  {formatHours(totalRunHours)} elapsed
+                </Text>
+                <Text className="text-muted text-[12px]">
+                  {formatHours(maxHours)} max
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text className="text-muted text-[12px]">{elapsedTimeStr}</Text>
+                <Text className="text-muted text-[12px]">
+                  {formatHours(totalRunHours)} / {formatHours(maxHours)}
+                </Text>
+              </>
+            )}
           </View>
         </View>
       ) : null}
@@ -176,7 +189,7 @@ export function GeneratorCard({
             {nextMaintenance.taskName}
             {' · '}
             <Text className={maintenanceLabelColor(nextMaintenance.urgency)}>
-              {maintenanceLabel(nextMaintenance)}
+              {maintenanceLabelText(nextMaintenance)}
             </Text>
           </Text>
         </View>
@@ -205,20 +218,7 @@ export function GeneratorCard({
           variant="ghost"
           size="md"
           className="mt-3"
-          onPress={() =>
-            Alert.alert(
-              'Generator is Resting',
-              'It\u2019s recommended to let the generator rest before starting again. Starting now may reduce its lifespan.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Start Anyway',
-                  style: 'destructive',
-                  onPress: handleStart
-                }
-              ]
-            )
-          }
+          onPress={() => confirmRestingStart(handleStart)}
         >
           Start
         </Button>

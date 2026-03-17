@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Button, Description, Input, Label, TextField } from 'heroui-native'
-import { useEffect, useState } from 'react'
-import { Keyboard, Pressable, ScrollView, Text, View } from 'react-native'
+import { useState } from 'react'
+import { Pressable, ScrollView, Text, View } from 'react-native'
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { createMaintenanceTemplate } from '@/data/client/mutations'
 import { insertMaintenanceTemplateSchema } from '@/data/client/validation'
+import { useKeyboardHeight } from '@/lib/hooks/use-keyboard-height'
 import { useLocalUser } from '@/lib/powersync'
 
 const TRIGGER_TYPES = ['hours', 'calendar', 'whichever_first'] as const
@@ -31,20 +32,7 @@ export default function CreateMaintenanceTemplateScreen() {
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const insets = useSafeAreaInsets()
-  const [keyboardHeight, setKeyboardHeight] = useState(0)
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardWillShow', e =>
-      setKeyboardHeight(e.endCoordinates.height)
-    )
-    const hideSub = Keyboard.addListener('keyboardWillHide', () =>
-      setKeyboardHeight(0)
-    )
-    return () => {
-      showSub.remove()
-      hideSub.remove()
-    }
-  }, [])
+  const keyboardHeight = useKeyboardHeight()
 
   const showHours = triggerType === 'hours' || triggerType === 'whichever_first'
   const showCalendar =

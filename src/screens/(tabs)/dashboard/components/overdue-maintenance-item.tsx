@@ -2,7 +2,7 @@ import { SymbolView } from 'expo-symbols'
 import { Pressable, Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
-import { formatHours } from '@/lib/hooks/use-elapsed-time'
+import { formatHours } from '@/lib/utils/time'
 
 interface OverdueMaintenanceItemProps {
   generatorTitle: string

@@ -5,7 +5,7 @@ import type {
   MaintenanceRecord,
   MaintenanceTemplate
 } from '@/data/client/db-schema/maintenance'
-import { hoursBetween } from '@/lib/time'
+import { formatHours, hoursBetween } from '@/lib/utils/time'
 
 export type MaintenanceUrgency = 'overdue' | 'due_soon' | 'ok'
 
@@ -231,4 +231,17 @@ export function computeNextMaintenance(
     hoursRemaining: best.hoursRemaining,
     daysRemaining: best.daysRemaining
   }
+}
+
+export function formatMaintenanceLabel(
+  info: Pick<NextMaintenanceCardInfo, 'hoursRemaining' | 'daysRemaining'>
+): string {
+  const { hoursRemaining, daysRemaining } = info
+  if (hoursRemaining !== null && daysRemaining !== null)
+    return hoursRemaining <= daysRemaining * 24
+      ? `in ${formatHours(hoursRemaining)}`
+      : `in ${Math.round(daysRemaining)}d`
+  if (hoursRemaining !== null) return `in ${formatHours(hoursRemaining)}`
+  if (daysRemaining !== null) return `in ${Math.round(daysRemaining)}d`
+  return ''
 }

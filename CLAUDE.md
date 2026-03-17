@@ -2,7 +2,7 @@
 
 - Prefer `interface` over `type`
 - Never use `enum`; use `as const` instead
-- Don't add unnecessary `try`/`catch` blocks — use `tryCatch` or `asyncTryCatch` utilities
+- Don't add unnecessary `try`/`catch` blocks
 - Don't cast to `any`. Avoid `as` unless absolutely necessary
 - Only create abstractions when actually needed
 - Prefer clear function/variable names over inline comments

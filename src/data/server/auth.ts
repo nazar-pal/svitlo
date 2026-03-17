@@ -1,7 +1,7 @@
 import { db } from '@/data/server'
 import * as schema from '@/data/server/db-schema'
 import { env } from '@/env'
-import { DEFAULT_LOCAL_API_URL } from '@/lib/const'
+import { DEFAULT_LOCAL_API_URL } from '@/lib/config/const'
 import { expo } from '@better-auth/expo'
 import { type DynamicBaseURLConfig, betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'

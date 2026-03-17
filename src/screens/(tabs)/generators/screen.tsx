@@ -1,20 +1,9 @@
 import { EmptyState } from '@/components/empty-state'
-import { GeneratorCard } from './components/generator-card'
-import {
-  getAllGeneratorSessions,
-  getAllMaintenanceRecords,
-  getAllMaintenanceTemplates,
-  getGeneratorsByOrg
-} from '@/data/client/queries'
-import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import {
-  computeNextMaintenance,
-  type NextMaintenanceCardInfo
-} from '@/lib/hooks/use-maintenance-due'
-import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
-import { useUserOrgs } from '@/lib/hooks/use-user-orgs'
+import { GeneratorCard } from '@/components/generator-card'
+import { useGeneratorListData } from '@/lib/generator/use-generator-list-data'
+import { useSelectedOrg } from '@/lib/organization/use-selected-org'
+import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { usePowerSync } from '@/lib/powersync'
-import { groupBy } from '@/lib/group-by'
 import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 import { Stack, useRouter } from 'expo-router'
@@ -28,34 +17,11 @@ export default function GeneratorsScreen() {
 
   const admin = isAdmin(selectedOrgId)
 
-  const { data: orgGenerators } = useDrizzleQuery(
-    selectedOrgId ? getGeneratorsByOrg(selectedOrgId) : undefined
-  )
-
-  const { data: allSessions } = useDrizzleQuery(getAllGeneratorSessions())
-
-  const { data: allTemplates } = useDrizzleQuery(getAllMaintenanceTemplates())
-
-  const { data: allRecords } = useDrizzleQuery(getAllMaintenanceRecords())
-
-  const sessionsByGenerator = groupBy(allSessions, s => s.generatorId)
-  const templatesByGenerator = groupBy(allTemplates, t => t.generatorId)
-  const recordsByGenerator = groupBy(allRecords, r => r.generatorId)
-
-  const nextMaintenanceByGenerator = new Map<
-    string,
-    NextMaintenanceCardInfo | null
-  >()
-  for (const gen of orgGenerators ?? []) {
-    nextMaintenanceByGenerator.set(
-      gen.id,
-      computeNextMaintenance(
-        templatesByGenerator.get(gen.id) ?? [],
-        recordsByGenerator.get(gen.id) ?? [],
-        sessionsByGenerator.get(gen.id) ?? []
-      )
-    )
-  }
+  const {
+    generators: orgGenerators,
+    sessionsByGenerator,
+    nextMaintenanceByGenerator
+  } = useGeneratorListData()
 
   if (userOrgs.length === 0)
     return (

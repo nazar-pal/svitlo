@@ -2,9 +2,10 @@ import { SymbolView } from 'expo-symbols'
 import { Pressable, Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
-import type { NextMaintenanceCardInfo } from '@/lib/hooks/use-maintenance-due'
-
-import { formatUpcoming } from '../lib/helpers'
+import {
+  formatMaintenanceLabel,
+  type NextMaintenanceCardInfo
+} from '@/lib/maintenance/due'
 
 interface UpcomingMaintenanceItemProps {
   generatorTitle: string
@@ -42,7 +43,7 @@ export function UpcomingMaintenanceItem({
           <Text className="text-muted text-[13px]" numberOfLines={1}>
             {generatorTitle}
             {' · '}
-            <Text className={labelColor}>{formatUpcoming(info)}</Text>
+            <Text className={labelColor}>{formatMaintenanceLabel(info)}</Text>
           </Text>
         </View>
         <SymbolView name="chevron.right" size={14} tintColor={mutedColor} />

@@ -3,7 +3,7 @@ import { setBackgroundColorAsync } from 'expo-system-ui'
 import '../global.css'
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon'
-import { AuthGate } from '@/components/auth-gate'
+import { AuthGate } from '@/lib/auth/auth-gate'
 import { LocalIdentityProvider } from '@/lib/auth/local-identity-context'
 import {
   DarkTheme,

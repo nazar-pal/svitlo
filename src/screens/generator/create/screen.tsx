@@ -1,12 +1,10 @@
 import * as Network from 'expo-network'
 import { useRouter } from 'expo-router'
 import { Button, Description, Input, Label, TextField } from 'heroui-native'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
-  Keyboard,
-  Linking,
   Pressable,
   ScrollView,
   Text,
@@ -15,11 +13,13 @@ import {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { AiSourcesList } from '@/components/ai-sources-list'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
 import { insertGeneratorSchema } from '@/data/client/validation'
-import { rpcClient } from '@/data/rpc/client'
-import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
+import { rpcClient } from '@/data/rpc-client'
+import { useKeyboardHeight } from '@/lib/hooks/use-keyboard-height'
+import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useLocalUser } from '@/lib/powersync'
 
 type Step = 'basics' | 'details'
@@ -30,20 +30,7 @@ export default function CreateGeneratorScreen() {
   const localUser = useLocalUser()
   const { selectedOrgId } = useSelectedOrg()
   const insets = useSafeAreaInsets()
-  const [keyboardHeight, setKeyboardHeight] = useState(0)
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardWillShow', e =>
-      setKeyboardHeight(e.endCoordinates.height)
-    )
-    const hideSub = Keyboard.addListener('keyboardWillHide', () =>
-      setKeyboardHeight(0)
-    )
-    return () => {
-      showSub.remove()
-      hideSub.remove()
-    }
-  }, [])
+  const keyboardHeight = useKeyboardHeight()
 
   const [step, setStep] = useState<Step>('basics')
   const [mode, setMode] = useState<Mode>(null)
@@ -405,24 +392,7 @@ export default function CreateGeneratorScreen() {
               </Button>
             ) : null}
 
-            {aiSources.length > 0 ? (
-              <View className="gap-1">
-                <Text className="text-muted text-xs font-medium uppercase">
-                  Sources
-                </Text>
-                {aiSources.map((source, i) => (
-                  <Pressable
-                    key={i}
-                    onPress={() => Linking.openURL(source)}
-                    className="active:opacity-70"
-                  >
-                    <Text className="text-xs text-blue-500" numberOfLines={1}>
-                      {source}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
+            <AiSourcesList sources={aiSources} />
 
             {error ? (
               <Text className="bg-danger/10 text-danger rounded-2xl px-4 py-3 text-sm">

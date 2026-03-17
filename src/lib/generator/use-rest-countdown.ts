@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { differenceInMilliseconds } from 'date-fns'
 
-import { formatDuration } from '@/lib/hooks/use-elapsed-time'
+import { formatDuration } from '@/lib/utils/time'
 
 export interface RestCountdown {
   remainingMs: number
@@ -12,7 +12,7 @@ export interface RestCountdown {
 
 /**
  * Returns a live countdown for generator rest period.
- * `progress` is the fraction of rest completed (0 → 1).
+ * `progress` is the fraction of rest completed (0 -> 1).
  */
 export function useRestCountdown(
   restEndsAt: Date | null,

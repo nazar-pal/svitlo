@@ -6,7 +6,7 @@ import type {
 import { UpdateType } from '@powersync/react-native'
 import { ORPCError } from '@orpc/client'
 
-import { rpcClient } from '@/data/rpc/client'
+import { rpcClient } from '@/data/rpc-client'
 
 import { addRejection } from './sync-rejections'
 

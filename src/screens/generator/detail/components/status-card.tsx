@@ -1,8 +1,10 @@
-import { Alert, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { Button } from 'heroui-native'
 
-import { formatHours } from '@/lib/hooks/use-elapsed-time'
-import type { RestCountdown } from '@/lib/hooks/use-rest-countdown'
+import { confirmRestingStart } from '@/lib/generator/confirm-resting-start'
+import { progressColor } from '@/lib/generator/status'
+import type { RestCountdown } from '@/lib/generator/use-rest-countdown'
+import { formatHours } from '@/lib/utils/time'
 
 interface AvailableStatusCardProps {
   status: 'available'
@@ -62,12 +64,7 @@ function RunningCard({
   const totalRunHours = consecutiveRunHours + elapsedHours
   const progress = Math.min(totalRunHours / maxConsecutiveRunHours, 1)
   const warningFraction = warningThresholdPct / 100
-  const progressColor =
-    progress >= 1
-      ? 'bg-red-500'
-      : progress >= warningFraction
-        ? 'bg-orange-500'
-        : 'bg-green-500'
+  const barColor = progressColor(progress, warningFraction)
   const timeColor =
     progress >= 1
       ? 'text-red-600'
@@ -87,7 +84,7 @@ function RunningCard({
       <View className="gap-1.5">
         <View className="bg-default h-2 overflow-hidden rounded-full">
           <View
-            className={`h-full rounded-full ${progressColor}`}
+            className={`h-full rounded-full ${barColor}`}
             style={{ width: `${progress * 100}%` }}
           />
         </View>
@@ -114,7 +111,7 @@ function RestingCard({
   onStart
 }: RestingStatusCardProps) {
   const restedHours = requiredRestHours * countdown.progress
-  const progressColor =
+  const restBarColor =
     countdown.progress >= 1 ? 'bg-green-500' : 'bg-orange-500'
 
   return (
@@ -129,7 +126,7 @@ function RestingCard({
       <View className="gap-1.5">
         <View className="bg-default h-2 overflow-hidden rounded-full">
           <View
-            className={`h-full rounded-full ${progressColor}`}
+            className={`h-full rounded-full ${restBarColor}`}
             style={{ width: `${countdown.progress * 100}%` }}
           />
         </View>
@@ -151,16 +148,5 @@ function RestingCard({
         Start Generator
       </Button>
     </View>
-  )
-}
-
-function confirmRestingStart(onStart: () => void) {
-  Alert.alert(
-    'Generator is Resting',
-    "It's recommended to let the generator rest before starting again. Starting now may reduce its lifespan.",
-    [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Start Anyway', style: 'destructive', onPress: onStart }
-    ]
   )
 }

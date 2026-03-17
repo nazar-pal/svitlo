@@ -1,4 +1,4 @@
-import { TabStackLayout } from '@/components/tab-stack-layout'
+import { TabStackLayout } from '@/components/navigation/tab-stack-layout'
 
 export default function GeneratorsLayout() {
   return <TabStackLayout title="Settings" />

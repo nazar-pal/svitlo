@@ -4,6 +4,7 @@ import { Button, ListGroup, Separator } from 'heroui-native'
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
+import { SectionHeader } from '@/components/section-header'
 import { cancelInvitation, removeMember } from '@/data/client/mutations'
 import {
   getAllUsers,
@@ -12,8 +13,9 @@ import {
   getOrgMembers
 } from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useSelectedOrg } from '@/lib/hooks/use-selected-org'
-import { useUserOrgs } from '@/lib/hooks/use-user-orgs'
+import { useSelectedOrg } from '@/lib/organization/use-selected-org'
+import { getUserName } from '@/lib/utils/get-user-name'
+import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 
 export default function SettingsScreen() {
   const router = useRouter()
@@ -47,8 +49,10 @@ export default function SettingsScreen() {
   const adminUser = users.find(u => u.id === org?.adminUserId)
 
   function getUserInfo(uid: string) {
-    const u = users.find(usr => usr.id === uid)
-    return { name: u?.name || 'Unknown', email: u?.email || '' }
+    return {
+      name: getUserName(users, uid),
+      email: users.find(u => u.id === uid)?.email || ''
+    }
   }
 
   async function handleRemoveMember(memberId: string) {
@@ -85,9 +89,7 @@ export default function SettingsScreen() {
       <View className="mx-auto w-full max-w-[600px] gap-7">
         {/* Administrator */}
         <View className="gap-2">
-          <Text className="text-muted ml-4 text-xs uppercase">
-            Administrator
-          </Text>
+          <SectionHeader title="Administrator" />
           <ListGroup>
             <ListGroup.Item>
               <ListGroup.ItemPrefix>
@@ -111,9 +113,7 @@ export default function SettingsScreen() {
 
         {/* Members */}
         <View className="gap-2">
-          <Text className="text-muted ml-4 text-xs uppercase">
-            Members ({members.length})
-          </Text>
+          <SectionHeader title={`Members (${members.length})`} />
           <ListGroup>
             {members.length === 0 ? (
               <ListGroup.Item>
@@ -161,9 +161,7 @@ export default function SettingsScreen() {
         {/* Pending Org Invitations (Admin only) */}
         {isAdmin && orgInvitations.length > 0 ? (
           <View className="gap-2">
-            <Text className="text-muted ml-4 text-xs uppercase">
-              Pending Invitations
-            </Text>
+            <SectionHeader title="Pending Invitations" />
             <ListGroup>
               {orgInvitations.map((inv, index) => (
                 <View key={inv.id}>

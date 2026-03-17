@@ -4,12 +4,12 @@ import { Alert, Text, View } from 'react-native'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
 import { stopSession } from '@/data/client/mutations'
+import { computeGeneratorStatus, progressColor } from '@/lib/generator/status'
 import {
   useElapsedHours,
-  useElapsedTime,
-  formatHours
-} from '@/lib/hooks/use-elapsed-time'
-import { computeGeneratorStatus } from '@/lib/hooks/use-generator-status'
+  useElapsedTime
+} from '@/lib/generator/use-elapsed-time'
+import { formatHours } from '@/lib/utils/time'
 
 interface ActiveSessionCardProps {
   generator: Generator
@@ -32,12 +32,7 @@ export function ActiveSessionCard({
   const maxHours = generator.maxConsecutiveRunHours
   const progress = Math.min(totalRunHours / maxHours, 1)
   const warningFraction = generator.runWarningThresholdPct / 100
-  const progressColor =
-    progress >= 1
-      ? 'bg-red-500'
-      : progress >= warningFraction
-        ? 'bg-orange-500'
-        : 'bg-green-500'
+  const barColor = progressColor(progress, warningFraction)
 
   async function handleStop() {
     const result = await stopSession(userId, session.id)
@@ -73,7 +68,7 @@ export function ActiveSessionCard({
       <View className="gap-1.5">
         <View className="bg-default h-2 overflow-hidden rounded-full">
           <View
-            className={`h-full rounded-full ${progressColor}`}
+            className={`h-full rounded-full ${barColor}`}
             style={{ width: `${progress * 100}%` }}
           />
         </View>

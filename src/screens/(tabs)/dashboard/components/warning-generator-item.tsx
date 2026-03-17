@@ -3,8 +3,9 @@ import { Pressable, Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
-import { useElapsedHours, formatHours } from '@/lib/hooks/use-elapsed-time'
-import { computeGeneratorStatus } from '@/lib/hooks/use-generator-status'
+import { computeGeneratorStatus, progressColor } from '@/lib/generator/status'
+import { useElapsedHours } from '@/lib/generator/use-elapsed-time'
+import { formatHours } from '@/lib/utils/time'
 
 interface WarningGeneratorItemProps {
   generator: Generator
@@ -28,7 +29,7 @@ export function WarningGeneratorItem({
   const totalRunHours = consecutiveRunHours + elapsedHours
   const maxHours = generator.maxConsecutiveRunHours
   const progress = Math.min(totalRunHours / maxHours, 1)
-  const progressColor = progress >= 1 ? 'bg-red-500' : 'bg-orange-500'
+  const barColor = progressColor(progress, 0)
 
   return (
     <Pressable
@@ -59,7 +60,7 @@ export function WarningGeneratorItem({
       <View className="mt-3 gap-1.5">
         <View className="bg-default h-1.5 overflow-hidden rounded-full">
           <View
-            className={`h-full rounded-full ${progressColor}`}
+            className={`h-full rounded-full ${barColor}`}
             style={{ width: `${progress * 100}%` }}
           />
         </View>

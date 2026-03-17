@@ -2,28 +2,12 @@ import { differenceInMilliseconds, format, parseISO } from 'date-fns'
 import { Pressable, Text, View } from 'react-native'
 import { ListGroup, Separator } from 'heroui-native'
 
-import { formatDuration } from '@/lib/hooks/use-elapsed-time'
-
-interface SessionActivity {
-  type: 'session'
-  id: string
-  timestamp: string
-  startedByUserId: string
-  startedAt: string
-  stoppedAt: string | null
-}
-
-interface MaintenanceActivity {
-  type: 'maintenance'
-  id: string
-  timestamp: string
-  performedByUserId: string
-  performedAt: string
-  templateName: string
-  notes: string | null
-}
-
-export type ActivityItem = SessionActivity | MaintenanceActivity
+import type {
+  ActivityItem,
+  MaintenanceActivity,
+  SessionActivity
+} from '@/lib/generator/activity-item'
+import { formatDuration } from '@/lib/utils/time'
 
 interface RecentActivitySectionProps {
   items: ActivityItem[]

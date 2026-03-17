@@ -1,13 +1,14 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Button } from 'heroui-native'
 import { useState } from 'react'
-import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native'
+import { Alert, ScrollView, Text, View } from 'react-native'
 
+import { AiSourcesList } from '@/components/ai-sources-list'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { createManyMaintenanceTemplates } from '@/data/client/mutations'
 import type { InsertMaintenanceTemplateInput } from '@/data/client/validation'
 import { useLocalUser } from '@/lib/powersync'
-import { consumePendingSuggestions } from '@/lib/maintenance-suggestions-store'
+import { consumePendingSuggestions } from '@/lib/maintenance/suggestions-store'
 
 export default function AddSuggestionsScreen() {
   const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
@@ -90,24 +91,7 @@ export default function AddSuggestionsScreen() {
             />
           ))}
 
-          {data.sources.length > 0 ? (
-            <View className="mt-2 gap-1">
-              <Text className="text-muted text-xs font-medium uppercase">
-                Sources
-              </Text>
-              {data.sources.map((source, i) => (
-                <Pressable
-                  key={i}
-                  onPress={() => Linking.openURL(source)}
-                  className="active:opacity-70"
-                >
-                  <Text className="text-xs text-blue-500" numberOfLines={1}>
-                    {source}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
+          <AiSourcesList sources={data.sources} className="mt-2" />
 
           <Button
             variant="primary"
