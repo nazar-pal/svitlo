@@ -1,3 +1,10 @@
+## Platform Architecture
+
+This is an Expo project with two completely separate platform targets:
+
+- **iOS** — the actual application. Uses `_layout.native.tsx` at the root, goes through AuthGate, and renders the full app (auth, drawer, tabs, etc.)
+- **Web** — a minimal website only. Uses `_layout.tsx` at the root and only serves the landing page, privacy policy, and API routes (`src/app/api/`). Web never shows the iOS app UI
+
 ## TypeScript
 
 - Prefer `interface` over `type`

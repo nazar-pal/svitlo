@@ -97,7 +97,7 @@ src/
 ├── app/                          # Expo Router file-based routes
 │   ├── (auth)/                   # Auth screens (sign-in)
 │   ├── (protected)/(tabs)/       # Authenticated tab navigator
-│   ├── (public)/                 # Public screens (privacy policy)
+│   ├── (web)/                    # Web screens (privacy policy and landing page)
 │   └── api/                      # Expo API routes (auth, ORPC)
 ├── components/                   # Shared UI components
 ├── data/

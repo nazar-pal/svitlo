@@ -4,6 +4,10 @@ import React from 'react'
 import { DynamicColorIOS } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
+export const unstable_settings = {
+  initialRouteName: '(dashboard)'
+}
+
 export default function AppTabs() {
   const [accentColor, blackColor, whiteColor, accentSoftColor] = useCSSVariable(
     ['--color-accent', '--color-black', '--color-white', '--color-accent-soft']
@@ -34,7 +38,7 @@ export default function AppTabs() {
       indicatorColor={accentColor + '25'}
       disableTransparentOnScrollEdge={true} // Used to prevent transparent background on iOS 18 and older
     >
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger name="(dashboard)">
         <NativeTabs.Trigger.Label selectedStyle={{ color: accentColor }}>
           Dashboard
         </NativeTabs.Trigger.Label>

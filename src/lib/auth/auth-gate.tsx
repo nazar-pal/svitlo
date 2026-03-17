@@ -3,6 +3,7 @@ import { Stack } from 'expo-router'
 import React, { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
 
+import { AuthBootstrapScreen } from './auth-bootstrap-screen'
 import { authClient } from './auth-client'
 import { useLocalIdentity } from './local-identity-context'
 import { persistLocalIdentity } from './offline-identity'
@@ -10,7 +11,6 @@ import {
   SessionStatusProvider,
   useSessionStatus
 } from './session-status-context'
-import { AuthBootstrapScreen } from './auth-bootstrap-screen'
 
 function AuthGateInner() {
   const { data: session, isPending } = authClient.useSession()
@@ -112,7 +112,6 @@ function AuthGateInner() {
       <Stack.Protected guard={isAuthenticated}>
         <Stack.Screen name="(protected)" />
       </Stack.Protected>
-      <Stack.Screen name="(public)" />
     </Stack>
   )
 }

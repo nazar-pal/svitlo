@@ -2,13 +2,7 @@ import * as Network from 'expo-network'
 import { useRouter } from 'expo-router'
 import { Button, Description, Input, Label, TextField } from 'heroui-native'
 import { useState } from 'react'
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  Text,
-  View
-} from 'react-native'
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { AiSourcesList } from '@/components/ai-sources-list'
@@ -178,6 +172,78 @@ export default function CreateGeneratorScreen() {
   if (step === 'basics')
     return (
       <>
+        <KeyboardAwareScrollView
+          className="bg-background flex-1"
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerClassName="px-5 pt-6 pb-6"
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={16}
+          extraKeyboardSpace={42}
+        >
+          <View className="mx-auto w-full max-w-[600px] gap-7">
+            <View className="gap-2">
+              <Text className="text-foreground text-3xl font-bold">
+                New Generator
+              </Text>
+              <Text className="text-muted text-[15px] leading-[22px]">
+                Add a generator to start tracking its usage and maintenance.
+              </Text>
+            </View>
+
+            <View className="gap-5">
+              <TextField isInvalid={!!fieldErrors.title}>
+                <Label>Title</Label>
+                <Input
+                  placeholder='e.g. "Back Yard Generator"'
+                  value={title}
+                  onChangeText={setTitle}
+                  autoFocus
+                />
+                {fieldErrors.title ? (
+                  <Description className="text-danger">
+                    {fieldErrors.title}
+                  </Description>
+                ) : null}
+              </TextField>
+
+              <TextField isInvalid={!!fieldErrors.model}>
+                <Label>Model</Label>
+                <Input
+                  placeholder='e.g. "Honda EU2200i"'
+                  value={model}
+                  onChangeText={setModel}
+                />
+                {fieldErrors.model ? (
+                  <Description className="text-danger">
+                    {fieldErrors.model}
+                  </Description>
+                ) : null}
+              </TextField>
+
+              <TextField>
+                <Label>Description</Label>
+                <Input
+                  placeholder="Location, serial number, notes..."
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                />
+                <Description>Optional</Description>
+              </TextField>
+            </View>
+
+            <Button variant="primary" onPress={handleNext}>
+              Next
+            </Button>
+          </View>
+        </KeyboardAwareScrollView>
+        <KeyboardToolbar />
+      </>
+    )
+
+  // Step 2: Details
+  return (
+    <>
       <KeyboardAwareScrollView
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"
@@ -188,224 +254,152 @@ export default function CreateGeneratorScreen() {
       >
         <View className="mx-auto w-full max-w-[600px] gap-7">
           <View className="gap-2">
+            <Pressable onPress={() => setStep('basics')}>
+              <Text className="text-sm text-blue-500">← Back</Text>
+            </Pressable>
             <Text className="text-foreground text-3xl font-bold">
-              New Generator
+              Generator Details
             </Text>
             <Text className="text-muted text-[15px] leading-[22px]">
-              Add a generator to start tracking its usage and maintenance.
+              {model} — configure specs and maintenance schedule.
             </Text>
           </View>
 
-          <View className="gap-5">
-            <TextField isInvalid={!!fieldErrors.title}>
-              <Label>Title</Label>
-              <Input
-                placeholder='e.g. "Back Yard Generator"'
-                value={title}
-                onChangeText={setTitle}
-                autoFocus
-              />
-              {fieldErrors.title ? (
-                <Description className="text-danger">
-                  {fieldErrors.title}
-                </Description>
+          {mode === null ? (
+            <View className="gap-3">
+              <Pressable
+                onPress={handleAIMode}
+                className="bg-surface-secondary rounded-2xl p-5"
+              >
+                <Text className="text-foreground text-base font-semibold">
+                  Auto-fill with AI
+                </Text>
+                <Text className="text-muted mt-1 text-sm leading-[20px]">
+                  Research your generator model and suggest specs and
+                  maintenance tasks automatically.
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleManualMode}
+                className="bg-surface-secondary rounded-2xl p-5"
+              >
+                <Text className="text-foreground text-base font-semibold">
+                  Enter manually
+                </Text>
+                <Text className="text-muted mt-1 text-sm leading-[20px]">
+                  Set up generator specs and maintenance tasks yourself.
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {isLoadingAI ? (
+            <View className="items-center gap-3 py-10">
+              <ActivityIndicator />
+              <Text className="text-muted text-sm">Researching {model}...</Text>
+            </View>
+          ) : null}
+
+          {mode !== null && !isLoadingAI ? (
+            <>
+              <View className="gap-5">
+                <View className="flex-row gap-3">
+                  <View className="flex-1">
+                    <TextField isInvalid={!!fieldErrors.maxConsecutiveRunHours}>
+                      <Label>Max Run Hours</Label>
+                      <Input
+                        placeholder="8"
+                        value={maxRunHours}
+                        onChangeText={setMaxRunHours}
+                        keyboardType="decimal-pad"
+                      />
+                      {fieldErrors.maxConsecutiveRunHours ? (
+                        <Description className="text-danger">
+                          {fieldErrors.maxConsecutiveRunHours}
+                        </Description>
+                      ) : null}
+                    </TextField>
+                  </View>
+                  <View className="flex-1">
+                    <TextField isInvalid={!!fieldErrors.requiredRestHours}>
+                      <Label>Rest Hours</Label>
+                      <Input
+                        placeholder="4"
+                        value={restHours}
+                        onChangeText={setRestHours}
+                        keyboardType="decimal-pad"
+                      />
+                      {fieldErrors.requiredRestHours ? (
+                        <Description className="text-danger">
+                          {fieldErrors.requiredRestHours}
+                        </Description>
+                      ) : null}
+                    </TextField>
+                  </View>
+                </View>
+
+                <TextField isInvalid={!!fieldErrors.runWarningThresholdPct}>
+                  <Label>Warning Threshold %</Label>
+                  <Input
+                    placeholder="80"
+                    value={warningPct}
+                    onChangeText={setWarningPct}
+                    keyboardType="number-pad"
+                  />
+                  <Description>
+                    Warning appears at this percentage of max run hours
+                  </Description>
+                  {fieldErrors.runWarningThresholdPct ? (
+                    <Description className="text-danger">
+                      {fieldErrors.runWarningThresholdPct}
+                    </Description>
+                  ) : null}
+                </TextField>
+              </View>
+
+              {maintenanceItems.length > 0 ? (
+                <View className="gap-2">
+                  <Text className="text-foreground text-lg font-semibold">
+                    Maintenance Tasks
+                  </Text>
+                  {aiModelInfo ? (
+                    <Text className="text-muted text-xs">{aiModelInfo}</Text>
+                  ) : null}
+                  {maintenanceItems.map((item, index) => (
+                    <SuggestionCard
+                      key={index}
+                      item={item}
+                      onToggle={() =>
+                        updateItem(index, { selected: !item.selected })
+                      }
+                      onUpdate={update => updateItem(index, update)}
+                    />
+                  ))}
+                </View>
               ) : null}
-            </TextField>
 
-            <TextField isInvalid={!!fieldErrors.model}>
-              <Label>Model</Label>
-              <Input
-                placeholder='e.g. "Honda EU2200i"'
-                value={model}
-                onChangeText={setModel}
-              />
-              {fieldErrors.model ? (
-                <Description className="text-danger">
-                  {fieldErrors.model}
-                </Description>
+              {mode === 'manual' ? (
+                <Button variant="secondary" onPress={addEmptyMaintenanceItem}>
+                  Add Maintenance Task
+                </Button>
               ) : null}
-            </TextField>
 
-            <TextField>
-              <Label>Description</Label>
-              <Input
-                placeholder="Location, serial number, notes..."
-                value={description}
-                onChangeText={setDescription}
-                multiline
-              />
-              <Description>Optional</Description>
-            </TextField>
-          </View>
+              <AiSourcesList sources={aiSources} />
 
-          <Button variant="primary" onPress={handleNext}>
-            Next
-          </Button>
+              {error ? (
+                <Text className="bg-danger/10 text-danger rounded-2xl px-4 py-3 text-sm">
+                  {error}
+                </Text>
+              ) : null}
+
+              <Button variant="primary" onPress={handleCreate}>
+                Create Generator
+              </Button>
+            </>
+          ) : null}
         </View>
       </KeyboardAwareScrollView>
       <KeyboardToolbar />
-      </>
-    )
-
-  // Step 2: Details
-  return (
-    <>
-    <KeyboardAwareScrollView
-      className="bg-background flex-1"
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerClassName="px-5 pt-6 pb-6"
-      keyboardShouldPersistTaps="handled"
-      bottomOffset={16}
-        extraKeyboardSpace={42}
-    >
-      <View className="mx-auto w-full max-w-[600px] gap-7">
-        <View className="gap-2">
-          <Pressable onPress={() => setStep('basics')}>
-            <Text className="text-sm text-blue-500">← Back</Text>
-          </Pressable>
-          <Text className="text-foreground text-3xl font-bold">
-            Generator Details
-          </Text>
-          <Text className="text-muted text-[15px] leading-[22px]">
-            {model} — configure specs and maintenance schedule.
-          </Text>
-        </View>
-
-        {mode === null ? (
-          <View className="gap-3">
-            <Pressable
-              onPress={handleAIMode}
-              className="bg-surface-secondary rounded-2xl p-5"
-            >
-              <Text className="text-foreground text-base font-semibold">
-                Auto-fill with AI
-              </Text>
-              <Text className="text-muted mt-1 text-sm leading-[20px]">
-                Research your generator model and suggest specs and maintenance
-                tasks automatically.
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={handleManualMode}
-              className="bg-surface-secondary rounded-2xl p-5"
-            >
-              <Text className="text-foreground text-base font-semibold">
-                Enter manually
-              </Text>
-              <Text className="text-muted mt-1 text-sm leading-[20px]">
-                Set up generator specs and maintenance tasks yourself.
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        {isLoadingAI ? (
-          <View className="items-center gap-3 py-10">
-            <ActivityIndicator />
-            <Text className="text-muted text-sm">Researching {model}...</Text>
-          </View>
-        ) : null}
-
-        {mode !== null && !isLoadingAI ? (
-          <>
-            <View className="gap-5">
-              <View className="flex-row gap-3">
-                <View className="flex-1">
-                  <TextField isInvalid={!!fieldErrors.maxConsecutiveRunHours}>
-                    <Label>Max Run Hours</Label>
-                    <Input
-                      placeholder="8"
-                      value={maxRunHours}
-                      onChangeText={setMaxRunHours}
-                      keyboardType="decimal-pad"
-                    />
-                    {fieldErrors.maxConsecutiveRunHours ? (
-                      <Description className="text-danger">
-                        {fieldErrors.maxConsecutiveRunHours}
-                      </Description>
-                    ) : null}
-                  </TextField>
-                </View>
-                <View className="flex-1">
-                  <TextField isInvalid={!!fieldErrors.requiredRestHours}>
-                    <Label>Rest Hours</Label>
-                    <Input
-                      placeholder="4"
-                      value={restHours}
-                      onChangeText={setRestHours}
-                      keyboardType="decimal-pad"
-                    />
-                    {fieldErrors.requiredRestHours ? (
-                      <Description className="text-danger">
-                        {fieldErrors.requiredRestHours}
-                      </Description>
-                    ) : null}
-                  </TextField>
-                </View>
-              </View>
-
-              <TextField isInvalid={!!fieldErrors.runWarningThresholdPct}>
-                <Label>Warning Threshold %</Label>
-                <Input
-                  placeholder="80"
-                  value={warningPct}
-                  onChangeText={setWarningPct}
-                  keyboardType="number-pad"
-                />
-                <Description>
-                  Warning appears at this percentage of max run hours
-                </Description>
-                {fieldErrors.runWarningThresholdPct ? (
-                  <Description className="text-danger">
-                    {fieldErrors.runWarningThresholdPct}
-                  </Description>
-                ) : null}
-              </TextField>
-            </View>
-
-            {maintenanceItems.length > 0 ? (
-              <View className="gap-2">
-                <Text className="text-foreground text-lg font-semibold">
-                  Maintenance Tasks
-                </Text>
-                {aiModelInfo ? (
-                  <Text className="text-muted text-xs">{aiModelInfo}</Text>
-                ) : null}
-                {maintenanceItems.map((item, index) => (
-                  <SuggestionCard
-                    key={index}
-                    item={item}
-                    onToggle={() =>
-                      updateItem(index, { selected: !item.selected })
-                    }
-                    onUpdate={update => updateItem(index, update)}
-                  />
-                ))}
-              </View>
-            ) : null}
-
-            {mode === 'manual' ? (
-              <Button variant="secondary" onPress={addEmptyMaintenanceItem}>
-                Add Maintenance Task
-              </Button>
-            ) : null}
-
-            <AiSourcesList sources={aiSources} />
-
-            {error ? (
-              <Text className="bg-danger/10 text-danger rounded-2xl px-4 py-3 text-sm">
-                {error}
-              </Text>
-            ) : null}
-
-            <Button variant="primary" onPress={handleCreate}>
-              Create Generator
-            </Button>
-          </>
-        ) : null}
-      </View>
-    </KeyboardAwareScrollView>
-    <KeyboardToolbar />
     </>
   )
 }
