@@ -1,0 +1,1 @@
+Generate a conventional commit message summarizing all currently staged changes. Only return the commit message—do not perform the commit or include anything else.
