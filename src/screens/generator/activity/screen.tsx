@@ -1,9 +1,9 @@
 import { differenceInMilliseconds, format, parseISO } from 'date-fns'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import { ListGroup, Separator } from 'heroui-native'
+import { Button, Chip, ListGroup, Separator, Tabs } from 'heroui-native'
 import { useRef, useState } from 'react'
-import { Alert, FlatList, Pressable, Text, View } from 'react-native'
+import { Alert, FlatList, Text, View } from 'react-native'
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import { useCSSVariable } from 'uniwind'
 
@@ -87,7 +87,10 @@ export default function ActivityScreen() {
   const [filter, setFilter] = useState<Filter>('all')
   const openRowRef = useRef<SwipeableMethods | null>(null)
   const localUser = useLocalUser()
-  const mutedColor = useCSSVariable('--color-muted') as string | undefined
+  const [mutedColor, successColor] = useCSSVariable([
+    '--color-muted',
+    '--color-success'
+  ]) as string[]
 
   const userId = localUser?.id ?? ''
 
@@ -174,16 +177,15 @@ export default function ActivityScreen() {
         options={{
           title: 'Activity',
           headerRight: () => (
-            <Pressable
+            <Button
+              size="sm"
+              variant="ghost"
               onPress={() =>
                 router.push(`/generator/log-session?generatorId=${generatorId}`)
               }
-              className="active:opacity-70"
             >
-              <Text className="text-[15px] font-medium text-blue-500">
-                Log Past Run
-              </Text>
-            </Pressable>
+              Log Past Run
+            </Button>
           )
         }}
       />
@@ -232,7 +234,7 @@ export default function ActivityScreen() {
                     <SymbolView
                       name="bolt.fill"
                       size={16}
-                      tintColor={isInProgress ? '#22c55e' : mutedColor}
+                      tintColor={isInProgress ? successColor : mutedColor}
                     />
                   </View>
                   <ListGroup.ItemContent>
@@ -243,11 +245,13 @@ export default function ActivityScreen() {
                       {resolveUserName(session.startedByUserId)} · {duration}
                     </ListGroup.ItemDescription>
                   </ListGroup.ItemContent>
-                  <Text
-                    className={`text-xs font-medium ${isInProgress ? 'text-green-500' : 'text-muted'}`}
+                  <Chip
+                    size="sm"
+                    variant="soft"
+                    color={isInProgress ? 'success' : undefined}
                   >
                     {isInProgress ? 'Active' : 'Session'}
-                  </Text>
+                  </Chip>
                 </ListGroup.Item>
               </SwipeableRow>
             )
@@ -280,9 +284,9 @@ export default function ActivityScreen() {
                     {record.notes ? ` · ${record.notes}` : ''}
                   </ListGroup.ItemDescription>
                 </ListGroup.ItemContent>
-                <Text className="text-muted text-xs font-medium">
+                <Chip size="sm" variant="soft">
                   Maintenance
-                </Text>
+                </Chip>
               </ListGroup.Item>
             </SwipeableRow>
           )
@@ -300,20 +304,17 @@ function FilterBar({
   onFilterChange: (f: Filter) => void
 }) {
   return (
-    <View className="bg-surface-secondary mb-3 flex-row rounded-xl p-1">
-      {FILTERS.map(f => (
-        <Pressable
-          key={f}
-          onPress={() => onFilterChange(f)}
-          className={`flex-1 items-center rounded-lg py-2 ${filter === f ? 'bg-background' : ''}`}
-        >
-          <Text
-            className={`text-sm font-medium ${filter === f ? 'text-foreground' : 'text-muted'}`}
-          >
-            {FILTER_LABELS[f]}
-          </Text>
-        </Pressable>
-      ))}
+    <View className="mb-3">
+      <Tabs value={filter} onValueChange={v => onFilterChange(v as Filter)}>
+        <Tabs.List>
+          <Tabs.Indicator />
+          {FILTERS.map(f => (
+            <Tabs.Trigger key={f} value={f}>
+              <Tabs.Label>{FILTER_LABELS[f]}</Tabs.Label>
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+      </Tabs>
     </View>
   )
 }

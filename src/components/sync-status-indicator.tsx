@@ -1,6 +1,7 @@
 import { useStatus } from '@powersync/react-native'
 import { SymbolView } from 'expo-symbols'
-import { ActivityIndicator, Text, View } from 'react-native'
+import { Spinner } from 'heroui-native'
+import { Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
 import { useSyncRejections } from '@/lib/powersync/sync-rejections'
@@ -72,7 +73,7 @@ export function SyncStatusIndicator() {
   return (
     <View className="flex-row items-center gap-1.5">
       {loading ? (
-        <ActivityIndicator size={12} color={mutedColor} />
+        <Spinner size="sm" />
       ) : icon ? (
         <SymbolView name={icon} size={12} tintColor={iconTint} />
       ) : null}

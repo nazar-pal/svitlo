@@ -37,7 +37,7 @@ export function StatusCard(props: StatusCardProps) {
   switch (props.status) {
     case 'available':
       return (
-        <View className="gap-4 rounded-2xl pt-4 pb-4">
+        <View className="gap-4 py-4">
           <Text className="text-muted text-center text-sm">Ready to run</Text>
           <Button variant="primary" size="lg" onPress={props.onStart}>
             Start Generator
@@ -67,13 +67,13 @@ function RunningCard({
   const barColor = progressColor(progress, warningFraction)
   const timeColor =
     progress >= 1
-      ? 'text-red-600'
+      ? 'text-danger'
       : progress >= warningFraction
-        ? 'text-orange-600'
-        : 'text-green-600'
+        ? 'text-warning'
+        : 'text-success'
 
   return (
-    <View className="gap-4 rounded-2xl pt-4 pb-4">
+    <View className="gap-4 py-4">
       <Text
         className={`text-center text-[44px] leading-none font-semibold ${timeColor}`}
         style={{ fontVariant: ['tabular-nums'] }}
@@ -111,13 +111,12 @@ function RestingCard({
   onStart
 }: RestingStatusCardProps) {
   const restedHours = requiredRestHours * countdown.progress
-  const restBarColor =
-    countdown.progress >= 1 ? 'bg-green-500' : 'bg-orange-500'
+  const restBarColor = countdown.progress >= 1 ? 'bg-success' : 'bg-warning'
 
   return (
-    <View className="gap-4 rounded-2xl pt-4 pb-4">
+    <View className="gap-4 py-4">
       <Text
-        className="text-center text-[44px] leading-none font-semibold text-orange-600"
+        className="text-warning text-center text-[44px] leading-none font-semibold"
         style={{ fontVariant: ['tabular-nums'] }}
       >
         {countdown.remainingFormatted}

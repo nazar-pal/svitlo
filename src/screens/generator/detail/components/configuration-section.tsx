@@ -1,5 +1,7 @@
-import { Text, View } from 'react-native'
 import { ListGroup, Separator } from 'heroui-native'
+import { Text, View } from 'react-native'
+
+import { SectionHeader } from '@/components/section-header'
 
 interface ConfigurationSectionProps {
   maxConsecutiveRunHours: number
@@ -14,33 +16,39 @@ export function ConfigurationSection({
 }: ConfigurationSectionProps) {
   return (
     <View className="gap-2">
-      <Text className="text-muted ml-4 text-xs uppercase">Configuration</Text>
+      <SectionHeader title="Configuration" />
       <ListGroup>
         <ListGroup.Item>
           <ListGroup.ItemContent>
             <ListGroup.ItemTitle>Max Run Hours</ListGroup.ItemTitle>
           </ListGroup.ItemContent>
-          <Text className="text-foreground text-[15px]">
-            {maxConsecutiveRunHours}h
-          </Text>
+          <ListGroup.ItemSuffix>
+            <Text className="text-foreground text-[15px]">
+              {maxConsecutiveRunHours}h
+            </Text>
+          </ListGroup.ItemSuffix>
         </ListGroup.Item>
         <Separator className="mx-4" />
         <ListGroup.Item>
           <ListGroup.ItemContent>
             <ListGroup.ItemTitle>Rest Hours</ListGroup.ItemTitle>
           </ListGroup.ItemContent>
-          <Text className="text-foreground text-[15px]">
-            {requiredRestHours}h
-          </Text>
+          <ListGroup.ItemSuffix>
+            <Text className="text-foreground text-[15px]">
+              {requiredRestHours}h
+            </Text>
+          </ListGroup.ItemSuffix>
         </ListGroup.Item>
         <Separator className="mx-4" />
         <ListGroup.Item>
           <ListGroup.ItemContent>
             <ListGroup.ItemTitle>Warning Threshold</ListGroup.ItemTitle>
           </ListGroup.ItemContent>
-          <Text className="text-foreground text-[15px]">
-            {runWarningThresholdPct}%
-          </Text>
+          <ListGroup.ItemSuffix>
+            <Text className="text-foreground text-[15px]">
+              {runWarningThresholdPct}%
+            </Text>
+          </ListGroup.ItemSuffix>
         </ListGroup.Item>
       </ListGroup>
     </View>

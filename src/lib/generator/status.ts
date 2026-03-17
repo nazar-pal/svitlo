@@ -115,7 +115,7 @@ export function progressColor(
   progress: number,
   warningFraction: number
 ): string {
-  if (progress >= 1) return 'bg-red-500'
-  if (progress >= warningFraction) return 'bg-orange-500'
-  return 'bg-green-500'
+  if (progress >= 1) return 'bg-danger'
+  if (progress >= warningFraction) return 'bg-warning'
+  return 'bg-success'
 }

@@ -1,5 +1,6 @@
 import { SymbolView } from 'expo-symbols'
-import { Pressable, Text, View } from 'react-native'
+import { PressableFeedback, Surface } from 'heroui-native'
+import { Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
 import {
@@ -21,33 +22,31 @@ export function UpcomingMaintenanceItem({
   onPress
 }: UpcomingMaintenanceItemProps) {
   const mutedColor = useCSSVariable('--color-muted') as string | undefined
-  const labelColor =
-    info.urgency === 'due_soon' ? 'text-orange-500' : 'text-muted'
+  const labelColor = info.urgency === 'due_soon' ? 'text-warning' : 'text-muted'
 
   return (
-    <Pressable
-      onPress={onPress}
-      className="bg-surface-secondary rounded-2xl px-4 py-3.5 active:opacity-80"
-    >
-      <View className="flex-row items-center gap-3">
-        <View className="bg-default size-10 items-center justify-center rounded-xl">
-          <SymbolView name="wrench.fill" size={20} tintColor={mutedColor} />
+    <PressableFeedback onPress={onPress}>
+      <Surface variant="secondary">
+        <View className="flex-row items-center gap-3">
+          <View className="bg-default size-10 items-center justify-center rounded-xl">
+            <SymbolView name="wrench.fill" size={20} tintColor={mutedColor} />
+          </View>
+          <View className="flex-1 gap-0.5">
+            <Text
+              className="text-foreground text-[17px] font-semibold"
+              numberOfLines={1}
+            >
+              {taskName}
+            </Text>
+            <Text className="text-muted text-[13px]" numberOfLines={1}>
+              {generatorTitle}
+              {' · '}
+              <Text className={labelColor}>{formatMaintenanceLabel(info)}</Text>
+            </Text>
+          </View>
+          <SymbolView name="chevron.right" size={14} tintColor={mutedColor} />
         </View>
-        <View className="flex-1 gap-0.5">
-          <Text
-            className="text-foreground text-[17px] font-semibold"
-            numberOfLines={1}
-          >
-            {taskName}
-          </Text>
-          <Text className="text-muted text-[13px]" numberOfLines={1}>
-            {generatorTitle}
-            {' · '}
-            <Text className={labelColor}>{formatMaintenanceLabel(info)}</Text>
-          </Text>
-        </View>
-        <SymbolView name="chevron.right" size={14} tintColor={mutedColor} />
-      </View>
-    </Pressable>
+      </Surface>
+    </PressableFeedback>
   )
 }

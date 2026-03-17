@@ -1,8 +1,9 @@
 import { SymbolView } from 'expo-symbols'
-import { Pressable, Text, View } from 'react-native'
-import { ListGroup, Separator } from 'heroui-native'
+import { Button, ListGroup, Separator } from 'heroui-native'
+import { View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
+import { SectionHeader } from '@/components/section-header'
 import type {
   GeneratorUserAssignment,
   OrganizationMember
@@ -29,9 +30,7 @@ export function AssignedEmployeesSection({
 
   return (
     <View className="gap-2">
-      <Text className="text-muted ml-4 text-xs uppercase">
-        Assigned Employees
-      </Text>
+      <SectionHeader title="Assigned Employees" />
       <ListGroup>
         {assignments.map((assignment, index) => (
           <View key={assignment.id}>
@@ -49,9 +48,13 @@ export function AssignedEmployeesSection({
                   {getUserName(assignment.userId)}
                 </ListGroup.ItemTitle>
               </ListGroup.ItemContent>
-              <Pressable onPress={() => onUnassign(assignment.userId)}>
-                <Text className="text-danger text-sm">Remove</Text>
-              </Pressable>
+              <Button
+                size="sm"
+                variant="danger-soft"
+                onPress={() => onUnassign(assignment.userId)}
+              >
+                Remove
+              </Button>
             </ListGroup.Item>
           </View>
         ))}

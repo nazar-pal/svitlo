@@ -14,10 +14,12 @@ function RightAction({ onDelete }: { onDelete: () => void }) {
   return (
     <Pressable
       onPress={onDelete}
-      className="w-[75px] items-center justify-center bg-red-500"
+      className="bg-danger w-[75px] items-center justify-center"
     >
       <View className="items-center gap-1">
-        <Text className="text-xs font-medium text-white">Delete</Text>
+        <Text className="text-danger-foreground text-xs font-medium">
+          Delete
+        </Text>
       </View>
     </Pressable>
   )

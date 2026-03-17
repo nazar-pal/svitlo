@@ -1,4 +1,11 @@
-import { Checkbox, Description, Input, Label, TextField } from 'heroui-native'
+import {
+  Checkbox,
+  Description,
+  Input,
+  Label,
+  Tabs,
+  TextField
+} from 'heroui-native'
 import { Pressable, Text, View } from 'react-native'
 
 export interface EditableItem {
@@ -69,27 +76,19 @@ export function SuggestionCard({
             <Text className="text-foreground text-sm font-medium">
               Trigger Type
             </Text>
-            <View className="bg-surface-secondary flex-row rounded-xl p-1">
-              {TRIGGER_TYPES.map(type => (
-                <Pressable
-                  key={type}
-                  onPress={() => onUpdate({ triggerType: type })}
-                  className={`flex-1 items-center rounded-lg py-2 ${
-                    item.triggerType === type ? 'bg-background' : ''
-                  }`}
-                >
-                  <Text
-                    className={`text-[13px] font-medium ${
-                      item.triggerType === type
-                        ? 'text-foreground'
-                        : 'text-muted'
-                    }`}
-                  >
-                    {TRIGGER_LABELS[type]}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            <Tabs
+              value={item.triggerType}
+              onValueChange={v => onUpdate({ triggerType: v as TriggerType })}
+            >
+              <Tabs.List>
+                <Tabs.Indicator />
+                {TRIGGER_TYPES.map(type => (
+                  <Tabs.Trigger key={type} value={type}>
+                    <Tabs.Label>{TRIGGER_LABELS[type]}</Tabs.Label>
+                  </Tabs.Trigger>
+                ))}
+              </Tabs.List>
+            </Tabs>
           </View>
 
           {showHours ? (

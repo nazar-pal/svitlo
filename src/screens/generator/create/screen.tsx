@@ -1,8 +1,19 @@
 import * as Network from 'expo-network'
 import { useRouter } from 'expo-router'
-import { Button, Description, Input, Label, TextField } from 'heroui-native'
+import {
+  Alert as HeroAlert,
+  Button,
+  Card,
+  Description,
+  FieldError,
+  Input,
+  Label,
+  PressableFeedback,
+  Spinner,
+  TextField
+} from 'heroui-native'
 import { useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native'
+import { Alert as RNAlert, Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { AiSourcesList } from '@/components/ai-sources-list'
@@ -56,7 +67,7 @@ export default function CreateGeneratorScreen() {
 
     const networkState = await Network.getNetworkStateAsync()
     if (!networkState.isConnected || !networkState.isInternetReachable) {
-      Alert.alert(
+      RNAlert.alert(
         'Offline',
         'Internet connection is required for AI suggestions.'
       )
@@ -71,7 +82,7 @@ export default function CreateGeneratorScreen() {
         description: description || undefined
       })
       .catch((err: unknown) => {
-        Alert.alert(
+        RNAlert.alert(
           'Error',
           err instanceof Error ? err.message : 'Failed to get suggestions'
         )
@@ -199,11 +210,7 @@ export default function CreateGeneratorScreen() {
                   onChangeText={setTitle}
                   autoFocus
                 />
-                {fieldErrors.title ? (
-                  <Description className="text-danger">
-                    {fieldErrors.title}
-                  </Description>
-                ) : null}
+                <FieldError>{fieldErrors.title}</FieldError>
               </TextField>
 
               <TextField isInvalid={!!fieldErrors.model}>
@@ -213,11 +220,7 @@ export default function CreateGeneratorScreen() {
                   value={model}
                   onChangeText={setModel}
                 />
-                {fieldErrors.model ? (
-                  <Description className="text-danger">
-                    {fieldErrors.model}
-                  </Description>
-                ) : null}
+                <FieldError>{fieldErrors.model}</FieldError>
               </TextField>
 
               <TextField>
@@ -254,9 +257,9 @@ export default function CreateGeneratorScreen() {
       >
         <View className="mx-auto w-full max-w-[600px] gap-7">
           <View className="gap-2">
-            <Pressable onPress={() => setStep('basics')}>
-              <Text className="text-sm text-blue-500">← Back</Text>
-            </Pressable>
+            <Button size="sm" variant="ghost" onPress={() => setStep('basics')}>
+              ← Back
+            </Button>
             <Text className="text-foreground text-3xl font-bold">
               Generator Details
             </Text>
@@ -267,35 +270,33 @@ export default function CreateGeneratorScreen() {
 
           {mode === null ? (
             <View className="gap-3">
-              <Pressable
-                onPress={handleAIMode}
-                className="bg-surface-secondary rounded-2xl p-5"
-              >
-                <Text className="text-foreground text-base font-semibold">
-                  Auto-fill with AI
-                </Text>
-                <Text className="text-muted mt-1 text-sm leading-[20px]">
-                  Research your generator model and suggest specs and
-                  maintenance tasks automatically.
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={handleManualMode}
-                className="bg-surface-secondary rounded-2xl p-5"
-              >
-                <Text className="text-foreground text-base font-semibold">
-                  Enter manually
-                </Text>
-                <Text className="text-muted mt-1 text-sm leading-[20px]">
-                  Set up generator specs and maintenance tasks yourself.
-                </Text>
-              </Pressable>
+              <PressableFeedback onPress={handleAIMode}>
+                <Card>
+                  <Card.Body>
+                    <Card.Title>Auto-fill with AI</Card.Title>
+                    <Card.Description>
+                      Research your generator model and suggest specs and
+                      maintenance tasks automatically.
+                    </Card.Description>
+                  </Card.Body>
+                </Card>
+              </PressableFeedback>
+              <PressableFeedback onPress={handleManualMode}>
+                <Card>
+                  <Card.Body>
+                    <Card.Title>Enter manually</Card.Title>
+                    <Card.Description>
+                      Set up generator specs and maintenance tasks yourself.
+                    </Card.Description>
+                  </Card.Body>
+                </Card>
+              </PressableFeedback>
             </View>
           ) : null}
 
           {isLoadingAI ? (
             <View className="items-center gap-3 py-10">
-              <ActivityIndicator />
+              <Spinner />
               <Text className="text-muted text-sm">Researching {model}...</Text>
             </View>
           ) : null}
@@ -313,11 +314,9 @@ export default function CreateGeneratorScreen() {
                         onChangeText={setMaxRunHours}
                         keyboardType="decimal-pad"
                       />
-                      {fieldErrors.maxConsecutiveRunHours ? (
-                        <Description className="text-danger">
-                          {fieldErrors.maxConsecutiveRunHours}
-                        </Description>
-                      ) : null}
+                      <FieldError>
+                        {fieldErrors.maxConsecutiveRunHours}
+                      </FieldError>
                     </TextField>
                   </View>
                   <View className="flex-1">
@@ -329,11 +328,7 @@ export default function CreateGeneratorScreen() {
                         onChangeText={setRestHours}
                         keyboardType="decimal-pad"
                       />
-                      {fieldErrors.requiredRestHours ? (
-                        <Description className="text-danger">
-                          {fieldErrors.requiredRestHours}
-                        </Description>
-                      ) : null}
+                      <FieldError>{fieldErrors.requiredRestHours}</FieldError>
                     </TextField>
                   </View>
                 </View>
@@ -349,11 +344,7 @@ export default function CreateGeneratorScreen() {
                   <Description>
                     Warning appears at this percentage of max run hours
                   </Description>
-                  {fieldErrors.runWarningThresholdPct ? (
-                    <Description className="text-danger">
-                      {fieldErrors.runWarningThresholdPct}
-                    </Description>
-                  ) : null}
+                  <FieldError>{fieldErrors.runWarningThresholdPct}</FieldError>
                 </TextField>
               </View>
 
@@ -387,9 +378,12 @@ export default function CreateGeneratorScreen() {
               <AiSourcesList sources={aiSources} />
 
               {error ? (
-                <Text className="bg-danger/10 text-danger rounded-2xl px-4 py-3 text-sm">
-                  {error}
-                </Text>
+                <HeroAlert status="danger">
+                  <HeroAlert.Indicator />
+                  <HeroAlert.Content>
+                    <HeroAlert.Description>{error}</HeroAlert.Description>
+                  </HeroAlert.Content>
+                </HeroAlert>
               ) : null}
 
               <Button variant="primary" onPress={handleCreate}>

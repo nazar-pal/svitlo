@@ -1,6 +1,8 @@
 import { differenceInMilliseconds, format, parseISO } from 'date-fns'
-import { Pressable, Text, View } from 'react-native'
-import { ListGroup, Separator } from 'heroui-native'
+import { Button, Chip, ListGroup, Separator, Surface } from 'heroui-native'
+import { Text, View } from 'react-native'
+
+import { SectionHeader } from '@/components/section-header'
 
 import type {
   ActivityItem,
@@ -23,17 +25,15 @@ export function RecentActivitySection({
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
-        <Text className="text-muted ml-4 text-xs uppercase">
-          Recent Activity
-        </Text>
-        <Pressable onPress={onViewAll} className="active:opacity-70">
-          <Text className="text-sm font-medium text-blue-500">View All</Text>
-        </Pressable>
+        <SectionHeader title="Recent Activity" />
+        <Button size="sm" variant="ghost" onPress={onViewAll}>
+          View All
+        </Button>
       </View>
       {items.length === 0 ? (
-        <View className="bg-surface-secondary items-center rounded-2xl py-6">
+        <Surface variant="secondary" className="items-center py-6">
           <Text className="text-muted text-sm">No activity recorded</Text>
-        </View>
+        </Surface>
       ) : (
         <ListGroup>
           {items.map((item, index) => (
@@ -78,7 +78,9 @@ function SessionItem({
           {getUserName(item.startedByUserId)} · {duration}
         </ListGroup.ItemDescription>
       </ListGroup.ItemContent>
-      <Text className="text-muted text-xs">Session</Text>
+      <Chip size="sm" variant="soft">
+        Session
+      </Chip>
     </ListGroup.Item>
   )
 }
@@ -100,7 +102,9 @@ function MaintenanceItem({
           {getUserName(item.performedByUserId)} · {item.templateName}
         </ListGroup.ItemDescription>
       </ListGroup.ItemContent>
-      <Text className="text-muted text-xs">Maintenance</Text>
+      <Chip size="sm" variant="soft">
+        Maintenance
+      </Chip>
     </ListGroup.Item>
   )
 }

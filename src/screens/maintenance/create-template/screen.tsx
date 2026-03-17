@@ -1,7 +1,16 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Button, Description, Input, Label, TextField } from 'heroui-native'
+import {
+  Alert as HeroAlert,
+  Button,
+  Description,
+  FieldError,
+  Input,
+  Label,
+  Tabs,
+  TextField
+} from 'heroui-native'
 import { useState } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { KeyboardAwareScrollView } from '@/components/uniwind'
@@ -100,11 +109,7 @@ export default function CreateMaintenanceTemplateScreen() {
                 onChangeText={setTaskName}
                 autoFocus
               />
-              {fieldErrors.taskName ? (
-                <Description className="text-danger">
-                  {fieldErrors.taskName}
-                </Description>
-              ) : null}
+              <FieldError>{fieldErrors.taskName}</FieldError>
             </TextField>
 
             <TextField>
@@ -123,25 +128,19 @@ export default function CreateMaintenanceTemplateScreen() {
               <Text className="text-foreground text-sm font-medium">
                 Trigger Type
               </Text>
-              <View className="bg-surface-secondary flex-row rounded-xl p-1">
-                {TRIGGER_TYPES.map(type => (
-                  <Pressable
-                    key={type}
-                    onPress={() => setTriggerType(type)}
-                    className={`flex-1 items-center rounded-lg py-2 ${
-                      triggerType === type ? 'bg-background' : ''
-                    }`}
-                  >
-                    <Text
-                      className={`text-[13px] font-medium ${
-                        triggerType === type ? 'text-foreground' : 'text-muted'
-                      }`}
-                    >
-                      {TRIGGER_LABELS[type]}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+              <Tabs
+                value={triggerType}
+                onValueChange={v => setTriggerType(v as TriggerType)}
+              >
+                <Tabs.List>
+                  <Tabs.Indicator />
+                  {TRIGGER_TYPES.map(type => (
+                    <Tabs.Trigger key={type} value={type}>
+                      <Tabs.Label>{TRIGGER_LABELS[type]}</Tabs.Label>
+                    </Tabs.Trigger>
+                  ))}
+                </Tabs.List>
+              </Tabs>
             </View>
 
             {showHours ? (
@@ -156,11 +155,7 @@ export default function CreateMaintenanceTemplateScreen() {
                 <Description>
                   Maintenance due after this many run hours
                 </Description>
-                {fieldErrors.triggerHoursInterval ? (
-                  <Description className="text-danger">
-                    {fieldErrors.triggerHoursInterval}
-                  </Description>
-                ) : null}
+                <FieldError>{fieldErrors.triggerHoursInterval}</FieldError>
               </TextField>
             ) : null}
 
@@ -174,19 +169,18 @@ export default function CreateMaintenanceTemplateScreen() {
                   keyboardType="number-pad"
                 />
                 <Description>Maintenance due after this many days</Description>
-                {fieldErrors.triggerCalendarDays ? (
-                  <Description className="text-danger">
-                    {fieldErrors.triggerCalendarDays}
-                  </Description>
-                ) : null}
+                <FieldError>{fieldErrors.triggerCalendarDays}</FieldError>
               </TextField>
             ) : null}
           </View>
 
           {error ? (
-            <Text className="bg-danger/10 text-danger rounded-2xl px-4 py-3 text-sm">
-              {error}
-            </Text>
+            <HeroAlert status="danger">
+              <HeroAlert.Indicator />
+              <HeroAlert.Content>
+                <HeroAlert.Description>{error}</HeroAlert.Description>
+              </HeroAlert.Content>
+            </HeroAlert>
           ) : null}
 
           <Button variant="primary" onPress={handleCreate}>

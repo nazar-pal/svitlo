@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
-import { Button } from 'heroui-native'
+import { Alert as HeroAlert, Button, Card } from 'heroui-native'
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 import { DatePicker, Host } from '@expo/ui/swift-ui'
@@ -64,14 +64,12 @@ export default function LogSessionScreen() {
           </View>
 
           {/* Generator info */}
-          <View className="bg-surface-secondary gap-1 rounded-2xl px-4 py-3">
-            <Text className="text-foreground text-[17px] font-semibold">
-              {generator?.title ?? 'Loading...'}
-            </Text>
-            <Text className="text-muted text-[13px]">
-              {generator?.model ?? ''}
-            </Text>
-          </View>
+          <Card>
+            <Card.Body>
+              <Card.Title>{generator?.title ?? 'Loading...'}</Card.Title>
+              <Card.Description>{generator?.model ?? ''}</Card.Description>
+            </Card.Body>
+          </Card>
 
           {/* Start time */}
           <View className="gap-2">
@@ -104,9 +102,12 @@ export default function LogSessionScreen() {
           </View>
 
           {error ? (
-            <Text className="bg-danger/10 text-danger rounded-2xl px-4 py-3 text-sm">
-              {error}
-            </Text>
+            <HeroAlert status="danger">
+              <HeroAlert.Indicator />
+              <HeroAlert.Content>
+                <HeroAlert.Description>{error}</HeroAlert.Description>
+              </HeroAlert.Content>
+            </HeroAlert>
           ) : null}
 
           <Button variant="primary" onPress={handleSubmit}>

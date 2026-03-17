@@ -1,5 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Button, Description, Input, Label, TextField } from 'heroui-native'
+import {
+  Button,
+  Description,
+  FieldError,
+  Input,
+  Label,
+  TextField
+} from 'heroui-native'
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 
@@ -58,7 +65,7 @@ export default function InviteMemberScreen() {
           </Text>
         </View>
 
-        <TextField>
+        <TextField isInvalid={!!error}>
           <Label>Email Address</Label>
           <Input
             placeholder="employee@example.com"
@@ -71,9 +78,7 @@ export default function InviteMemberScreen() {
           <Description>
             The invitation will appear when they sign in with this email
           </Description>
-          {error ? (
-            <Description className="text-danger">{error}</Description>
-          ) : null}
+          <FieldError>{error}</FieldError>
         </TextField>
 
         <Button variant="primary" onPress={handleInvite}>

@@ -5,6 +5,7 @@ import { Avatar, Button, ListGroup, Separator } from 'heroui-native'
 import { Alert, ScrollView, Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
+import { SectionHeader } from '@/components/section-header'
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
 import { SafeAreaView } from '@/components/uniwind'
 import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
@@ -96,9 +97,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
       >
         {/* Organization */}
         <View className="gap-2">
-          <Text className="text-muted ml-4 text-xs uppercase">
-            Organization
-          </Text>
+          <SectionHeader title="Organization" />
           <ListGroup>
             {userOrgs.map((org, index) => (
               <View key={org.id}>
@@ -141,9 +140,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
         {/* Invitations */}
         {pendingInvitations.length > 0 ? (
           <View className="gap-2">
-            <Text className="text-muted ml-4 text-xs uppercase">
-              Invitations
-            </Text>
+            <SectionHeader title="Invitations" />
             <ListGroup>
               {pendingInvitations.map((inv, index) => (
                 <View key={inv.id}>
@@ -190,7 +187,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
 
       {/* Footer — Sign Out */}
       <View className="px-5 pt-2 pb-4">
-        <Button variant="ghost" className="text-danger" onPress={handleSignOut}>
+        <Button variant="danger-soft" onPress={handleSignOut}>
           Sign Out
         </Button>
       </View>

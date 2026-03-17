@@ -17,7 +17,7 @@ export function AiSourcesList({ sources, className }: AiSourcesListProps) {
           onPress={() => Linking.openURL(source)}
           className="active:opacity-70"
         >
-          <Text className="text-xs text-blue-500" numberOfLines={1}>
+          <Text className="text-accent text-xs" numberOfLines={1}>
             {source}
           </Text>
         </Pressable>

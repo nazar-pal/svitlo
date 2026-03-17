@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router'
-import { Button, Description, Input, Label, TextField } from 'heroui-native'
+import { Button, FieldError, Input, Label, TextField } from 'heroui-native'
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 
@@ -51,7 +51,7 @@ export default function CreateOrganizationScreen() {
           </Text>
         </View>
 
-        <TextField>
+        <TextField isInvalid={!!error}>
           <Label>Organization Name</Label>
           <Input
             placeholder="e.g. My Workshop"
@@ -59,9 +59,7 @@ export default function CreateOrganizationScreen() {
             onChangeText={setName}
             autoFocus
           />
-          {error ? (
-            <Description className="text-danger">{error}</Description>
-          ) : null}
+          <FieldError>{error}</FieldError>
         </TextField>
 
         <Button variant="primary" onPress={handleCreate}>

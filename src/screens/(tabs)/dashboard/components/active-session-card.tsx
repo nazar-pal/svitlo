@@ -1,6 +1,7 @@
 import { SymbolView } from 'expo-symbols'
-import { Button } from 'heroui-native'
+import { Button, Surface } from 'heroui-native'
 import { Alert, Text, View } from 'react-native'
+import { useCSSVariable } from 'uniwind'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
 import { stopSession } from '@/data/client/mutations'
@@ -24,6 +25,7 @@ export function ActiveSessionCard({
   sessions,
   userId
 }: ActiveSessionCardProps) {
+  const successColor = useCSSVariable('--color-success') as string | undefined
   const { consecutiveRunHours } = computeGeneratorStatus(generator, sessions)
   const elapsedHours = useElapsedHours(session.startedAt)
   const elapsedTimeStr = useElapsedTime(session.startedAt)
@@ -40,12 +42,12 @@ export function ActiveSessionCard({
   }
 
   return (
-    <View className="bg-surface-secondary gap-4 rounded-2xl px-4 pt-3.5 pb-4">
+    <Surface variant="secondary" className="gap-4">
       <View className="flex-row items-center gap-2">
-        <View className="size-7 items-center justify-center rounded-lg bg-green-500/15">
-          <SymbolView name="bolt.fill" size={14} tintColor="#22c55e" />
+        <View className="bg-success/15 size-7 items-center justify-center rounded-lg">
+          <SymbolView name="bolt.fill" size={14} tintColor={successColor} />
         </View>
-        <Text className="text-xs font-semibold tracking-wide text-green-600 uppercase">
+        <Text className="text-success text-xs font-semibold tracking-wide uppercase">
           My Active Session
         </Text>
       </View>
@@ -58,7 +60,7 @@ export function ActiveSessionCard({
           {generator.title}
         </Text>
         <Text
-          className="text-[52px] leading-none font-semibold text-green-600"
+          className="text-success text-[52px] leading-none font-semibold"
           style={{ fontVariant: ['tabular-nums'] }}
         >
           {elapsedTimeStr}
@@ -85,6 +87,6 @@ export function ActiveSessionCard({
       <Button variant="danger" size="lg" onPress={handleStop}>
         Stop Generator
       </Button>
-    </View>
+    </Surface>
   )
 }

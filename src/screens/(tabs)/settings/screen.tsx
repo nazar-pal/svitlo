@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { Button, ListGroup, Separator } from 'heroui-native'
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
+import { Alert, ScrollView, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
 import { SectionHeader } from '@/components/section-header'
@@ -144,11 +144,13 @@ export default function SettingsScreen() {
                         </ListGroup.ItemDescription>
                       </ListGroup.ItemContent>
                       {isAdmin ? (
-                        <Pressable
+                        <Button
+                          size="sm"
+                          variant="danger-soft"
                           onPress={() => handleRemoveMember(member.id)}
                         >
-                          <Text className="text-danger text-sm">Remove</Text>
-                        </Pressable>
+                          Remove
+                        </Button>
                       ) : null}
                     </ListGroup.Item>
                   </View>
@@ -179,9 +181,13 @@ export default function SettingsScreen() {
                         {inv.inviteeEmail}
                       </ListGroup.ItemTitle>
                     </ListGroup.ItemContent>
-                    <Pressable onPress={() => handleCancelInvitation(inv.id)}>
-                      <Text className="text-danger text-sm">Cancel</Text>
-                    </Pressable>
+                    <Button
+                      size="sm"
+                      variant="danger-soft"
+                      onPress={() => handleCancelInvitation(inv.id)}
+                    >
+                      Cancel
+                    </Button>
                   </ListGroup.Item>
                 </View>
               ))}

@@ -1,9 +1,16 @@
 import { format, parseISO } from 'date-fns'
 import { SymbolView } from 'expo-symbols'
-import { ActivityIndicator, Pressable, Text, View } from 'react-native'
-import { ListGroup, Separator } from 'heroui-native'
+import {
+  ListGroup,
+  PressableFeedback,
+  Separator,
+  Spinner,
+  Surface
+} from 'heroui-native'
+import { Text, View } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
+import { SectionHeader } from '@/components/section-header'
 import type {
   MaintenanceRecord,
   MaintenanceTemplate
@@ -42,35 +49,35 @@ export function MaintenanceSection({
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
-        <Text className="text-muted ml-4 text-xs uppercase">Maintenance</Text>
+        <SectionHeader title="Maintenance" />
         {isAdmin ? (
           <View className="flex-row items-center gap-3">
             {isSuggesting ? (
-              <ActivityIndicator size="small" />
+              <Spinner size="sm" />
             ) : (
-              <Pressable onPress={onSuggest} className="active:opacity-70">
+              <PressableFeedback onPress={onSuggest}>
                 <SymbolView
                   name="sparkles"
                   size={20}
                   tintColor={foregroundColor}
                 />
-              </Pressable>
+              </PressableFeedback>
             )}
-            <Pressable onPress={onAddTemplate} className="active:opacity-70">
+            <PressableFeedback onPress={onAddTemplate}>
               <SymbolView
                 name="plus.circle.fill"
                 size={22}
                 tintColor={foregroundColor}
               />
-            </Pressable>
+            </PressableFeedback>
           </View>
         ) : null}
       </View>
 
       {templates.length === 0 ? (
-        <View className="bg-surface-secondary items-center rounded-2xl py-6">
+        <Surface variant="secondary" className="items-center py-6">
           <Text className="text-muted text-sm">No maintenance templates</Text>
-        </View>
+        </Surface>
       ) : (
         <ListGroup>
           {templates.map((template, index) => {

@@ -1,6 +1,7 @@
 import * as AppleAuthentication from 'expo-apple-authentication'
+import { Alert as HeroAlert, Spinner } from 'heroui-native'
 import React from 'react'
-import { ActivityIndicator, Text, View } from 'react-native'
+import { View } from 'react-native'
 
 interface AppleSignInButtonProps {
   isSigningIn: boolean
@@ -27,15 +28,18 @@ export function AppleSignInButton({
         />
         {isSigningIn && (
           <View className="absolute inset-0 items-center justify-center rounded-[14px] bg-black/60">
-            <ActivityIndicator color="white" />
+            <Spinner color="white" />
           </View>
         )}
       </View>
 
       {error ? (
-        <Text className="bg-danger/10 text-danger rounded-2xl px-4 py-3 text-sm leading-5">
-          {error}
-        </Text>
+        <HeroAlert status="danger">
+          <HeroAlert.Indicator />
+          <HeroAlert.Content>
+            <HeroAlert.Description>{error}</HeroAlert.Description>
+          </HeroAlert.Content>
+        </HeroAlert>
       ) : null}
     </View>
   )
