@@ -1,7 +1,7 @@
 {
   "name": "svitlo",
   "main": "expo-router/entry",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "scripts": {
     "start": "expo start",
     "dev": "EXPO_PUBLIC_APP_VARIANT=development npx expo start",
@@ -26,7 +26,7 @@
     "@gorhom/bottom-sheet": "^5.2.8",
     "@mastra/core": "^1.13.2",
     "@neondatabase/serverless": "^1.0.2",
-    "@op-engineering/op-sqlite": "^15.2.6",
+    "@op-engineering/op-sqlite": "^15.2.7",
     "@orpc/client": "^1.13.7",
     "@orpc/server": "^1.13.7",
     "@powersync/drizzle-driver": "^0.7.3",
@@ -67,7 +67,7 @@
     "react-dom": "19.2.0",
     "react-native": "0.83.2",
     "react-native-gesture-handler": "~2.30.0",
-    "react-native-keyboard-controller": "^1.20.7",
+    "react-native-keyboard-controller": "1.20.7",
     "react-native-mmkv": "^4.2.0",
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.2",
@@ -80,12 +80,12 @@
     "tailwindcss": "^4.2.1",
     "uniwind": "^1.5.0",
     "zod": "^4.3.6",
-    "zustand": "^5.0.11"
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@babel/plugin-transform-async-generator-functions": "^7.29.0",
     "@types/react": "~19.2.2",
-    "drizzle-kit": "^0.31.9",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.4",
     "eslint-config-expo": "^55.0.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
