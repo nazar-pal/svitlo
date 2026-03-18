@@ -17,6 +17,7 @@ import { SwipeableRow } from './components/swipeable-row'
 import type { GeneratorSession } from '@/data/client/db-schema/generators'
 import type { MaintenanceRecord } from '@/data/client/db-schema/maintenance'
 import { deleteMaintenanceRecord, deleteSession } from '@/data/client/mutations'
+import { notifyWarning, selection } from '@/lib/haptics'
 import {
   getAllOrganizations,
   getAllUsers,
@@ -147,7 +148,8 @@ export default function ActivityScreen() {
           style: 'destructive',
           onPress: async () => {
             const result = await deleteSession(userId, sessionId)
-            if (!result.ok) Alert.alert('Error', result.error)
+            if (!result.ok) return Alert.alert('Error', result.error)
+            notifyWarning()
           }
         }
       ]
@@ -165,7 +167,8 @@ export default function ActivityScreen() {
           style: 'destructive',
           onPress: async () => {
             const result = await deleteMaintenanceRecord(userId, recordId)
-            if (!result.ok) Alert.alert('Error', result.error)
+            if (!result.ok) return Alert.alert('Error', result.error)
+            notifyWarning()
           }
         }
       ]
@@ -308,7 +311,13 @@ function FilterBar({
 }) {
   return (
     <View className="mb-3">
-      <Tabs value={filter} onValueChange={v => onFilterChange(v as Filter)}>
+      <Tabs
+        value={filter}
+        onValueChange={v => {
+          selection()
+          onFilterChange(v as Filter)
+        }}
+      >
         <Tabs.List>
           <Tabs.Indicator />
           {FILTERS.map(f => (

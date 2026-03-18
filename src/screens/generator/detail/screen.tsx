@@ -9,6 +9,7 @@ import {
   stopSession,
   unassignUserFromGenerator
 } from '@/data/client/mutations'
+import { notifySuccess, notifyWarning } from '@/lib/haptics'
 import {
   getAllOrganizations,
   getAllUsers,
@@ -139,18 +140,21 @@ export default function GeneratorDetailScreen() {
 
   async function handleStartSession() {
     const result = await startSession(userId, id)
-    if (!result.ok) Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert('Error', result.error)
+    notifySuccess()
   }
 
   async function handleStopSession() {
     if (!statusInfo?.openSession) return
     const result = await stopSession(userId, statusInfo.openSession.id)
-    if (!result.ok) Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert('Error', result.error)
+    notifySuccess()
   }
 
   async function handleAssign(targetUserId: string) {
     const result = await assignUserToGenerator(userId, id, targetUserId)
-    if (!result.ok) Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert('Error', result.error)
+    notifySuccess()
   }
 
   function handleUnassign(targetUserId: string) {
@@ -165,7 +169,8 @@ export default function GeneratorDetailScreen() {
             id,
             targetUserId
           )
-          if (!result.ok) Alert.alert('Error', result.error)
+          if (!result.ok) return Alert.alert('Error', result.error)
+          notifyWarning()
         }
       }
     ])

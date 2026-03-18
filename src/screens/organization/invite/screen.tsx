@@ -12,6 +12,7 @@ import { Text, View } from 'react-native'
 
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createInvitation } from '@/data/client/mutations'
+import { notifySuccess } from '@/lib/haptics'
 import { insertInvitationSchema } from '@/data/client/validation'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -44,6 +45,7 @@ export default function InviteMemberScreen() {
       return
     }
 
+    notifySuccess()
     router.back()
   }
 

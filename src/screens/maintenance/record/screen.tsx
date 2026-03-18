@@ -13,6 +13,7 @@ import { Text, View } from 'react-native'
 
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { recordMaintenance } from '@/data/client/mutations'
+import { notifySuccess } from '@/lib/haptics'
 import { getGenerator, getMaintenanceTemplate } from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
@@ -55,6 +56,7 @@ export default function RecordMaintenanceScreen() {
       return
     }
 
+    notifySuccess()
     router.back()
   }
 

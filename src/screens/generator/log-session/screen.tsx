@@ -5,6 +5,7 @@ import { ScrollView, Text, View } from 'react-native'
 import { DatePicker, Host } from '@expo/ui/swift-ui'
 
 import { logManualSession } from '@/data/client/mutations'
+import { notifySuccess } from '@/lib/haptics'
 import { getGenerator } from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
@@ -41,6 +42,7 @@ export default function LogSessionScreen() {
       return
     }
 
+    notifySuccess()
     router.back()
   }
 

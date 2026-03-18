@@ -20,6 +20,7 @@ import { AiSourcesList } from '@/components/ai-sources-list'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
+import { notifySuccess } from '@/lib/haptics'
 import { insertGeneratorSchema } from '@/data/client/validation'
 import { rpcClient } from '@/data/rpc-client'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
@@ -177,6 +178,7 @@ export default function CreateGeneratorScreen() {
       return
     }
 
+    notifySuccess()
     router.back()
   }
 

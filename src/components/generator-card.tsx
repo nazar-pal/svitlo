@@ -8,6 +8,7 @@ import {
 import { Alert, Text, View } from 'react-native'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
+import { notifySuccess } from '@/lib/haptics'
 import { startSession, stopSession } from '@/data/client/mutations'
 import { GeneratorStatusBadge } from '@/components/generator-status-badge'
 import { confirmRestingStart } from '@/lib/generator/confirm-resting-start'
@@ -83,13 +84,15 @@ export function GeneratorCard({
 
   async function handleStart() {
     const result = await startSession(userId, generator.id)
-    if (!result.ok) Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert('Error', result.error)
+    notifySuccess()
   }
 
   async function handleStop() {
     if (!openSession) return
     const result = await stopSession(userId, openSession.id)
-    if (!result.ok) Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert('Error', result.error)
+    notifySuccess()
   }
 
   return (

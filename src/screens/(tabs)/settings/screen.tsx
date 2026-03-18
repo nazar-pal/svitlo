@@ -5,6 +5,7 @@ import { Alert, ScrollView, View } from 'react-native'
 
 import { SectionHeader } from '@/components/section-header'
 import { cancelInvitation, removeMember } from '@/data/client/mutations'
+import { notifyWarning } from '@/lib/haptics'
 import {
   getAllUsers,
   getOrganization,
@@ -63,7 +64,8 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             const result = await removeMember(userId, memberId)
-            if (!result.ok) Alert.alert('Error', result.error)
+            if (!result.ok) return Alert.alert('Error', result.error)
+            notifyWarning()
           }
         }
       ]
@@ -72,7 +74,8 @@ export default function SettingsScreen() {
 
   async function handleCancelInvitation(invitationId: string) {
     const result = await cancelInvitation(userId, invitationId)
-    if (!result.ok) Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert('Error', result.error)
+    notifyWarning()
   }
 
   if (!org) return null

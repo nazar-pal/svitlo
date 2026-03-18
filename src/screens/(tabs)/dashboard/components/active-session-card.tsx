@@ -3,6 +3,7 @@ import { Button, Surface, useThemeColor } from 'heroui-native'
 import { Alert, Text, View } from 'react-native'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
+import { notifySuccess } from '@/lib/haptics'
 import { stopSession } from '@/data/client/mutations'
 import { computeGeneratorStatus, progressColor } from '@/lib/generator/status'
 import {
@@ -37,7 +38,8 @@ export function ActiveSessionCard({
 
   async function handleStop() {
     const result = await stopSession(userId, session.id)
-    if (!result.ok) Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert('Error', result.error)
+    notifySuccess()
   }
 
   return (

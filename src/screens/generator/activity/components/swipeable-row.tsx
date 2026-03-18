@@ -4,6 +4,8 @@ import ReanimatedSwipeable, {
   type SwipeableMethods
 } from 'react-native-gesture-handler/ReanimatedSwipeable'
 
+import { impactMedium } from '@/lib/haptics'
+
 interface SwipeableRowProps {
   children: React.ReactNode
   onDelete?: () => void
@@ -41,6 +43,7 @@ export function SwipeableRow({
       rightThreshold={40}
       renderRightActions={() => <RightAction onDelete={onDelete} />}
       onSwipeableWillOpen={() => {
+        impactMedium()
         if (openRowRef?.current && openRowRef.current !== swipeableRef.current)
           openRowRef.current.close()
         if (openRowRef) openRowRef.current = swipeableRef.current

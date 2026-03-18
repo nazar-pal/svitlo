@@ -8,6 +8,7 @@ import { AiSourcesList } from '@/components/ai-sources-list'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { createManyMaintenanceTemplates } from '@/data/client/mutations'
+import { notifySuccess } from '@/lib/haptics'
 import type { InsertMaintenanceTemplateInput } from '@/data/client/validation'
 import { useLocalUser } from '@/lib/powersync'
 import { consumePendingSuggestions } from '@/lib/maintenance/suggestions-store'
@@ -65,6 +66,7 @@ export default function AddSuggestionsScreen() {
       return
     }
 
+    notifySuccess()
     router.back()
   }
 

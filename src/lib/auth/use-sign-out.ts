@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { Alert } from 'react-native'
 
+import { notifyWarning } from '@/lib/haptics'
 import { powersync } from '@/lib/powersync/database'
 
 import { clearCredentialCache } from '../powersync/connector'
@@ -17,7 +18,10 @@ function confirmDestructiveSignOut(pendingCount: number): Promise<boolean> {
         {
           text: 'Sign out anyway',
           style: 'destructive',
-          onPress: () => resolve(true)
+          onPress: () => {
+            notifyWarning()
+            resolve(true)
+          }
         }
       ]
     )
@@ -36,6 +40,8 @@ export function useSignOut() {
     if (count > 0) {
       const confirmed = await confirmDestructiveSignOut(count)
       if (!confirmed) return
+    } else {
+      notifyWarning()
     }
 
     // 1. Disconnect PowerSync and wipe local SQLite data while still mounted

@@ -14,6 +14,7 @@ import { SectionHeader } from '@/components/section-header'
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
 import { SafeAreaView } from '@/components/uniwind'
 import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
+import { notifySuccess, notifyWarning, selection } from '@/lib/haptics'
 import {
   getAllOrganizations,
   getAllUsers,
@@ -67,12 +68,14 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
 
   async function handleAccept(invitationId: string) {
     const result = await acceptInvitation(userId, userEmail, invitationId)
-    if (!result.ok) Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert('Error', result.error)
+    notifySuccess()
   }
 
   async function handleDecline(invitationId: string) {
     const result = await declineInvitation(userEmail, invitationId)
-    if (!result.ok) Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert('Error', result.error)
+    notifyWarning()
   }
 
   return (
@@ -105,7 +108,12 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
             {userOrgs.map((org, index) => (
               <View key={org.id}>
                 {index > 0 ? <Separator className="mx-4" /> : null}
-                <ListGroup.Item onPress={() => setSelectedOrgId(org.id)}>
+                <ListGroup.Item
+                  onPress={() => {
+                    selection()
+                    setSelectedOrgId(org.id)
+                  }}
+                >
                   <ListGroup.ItemPrefix>
                     <SymbolView
                       name="building.2.fill"

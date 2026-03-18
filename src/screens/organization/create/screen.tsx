@@ -5,6 +5,7 @@ import { Text, View } from 'react-native'
 
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createOrganization } from '@/data/client/mutations'
+import { notifySuccess } from '@/lib/haptics'
 import { insertOrganizationSchema } from '@/data/client/validation'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -30,6 +31,7 @@ export default function CreateOrganizationScreen() {
       return
     }
 
+    notifySuccess()
     router.back()
   }
 

@@ -8,6 +8,8 @@ import {
 } from 'heroui-native'
 import { Pressable, Text, View } from 'react-native'
 
+import { selection } from '@/lib/haptics'
+
 export interface EditableItem {
   taskName: string
   description: string
@@ -43,8 +45,14 @@ export function SuggestionCard({
 
   return (
     <View className={`py-3 ${!item.selected ? 'opacity-40' : ''}`}>
-      <Pressable onPress={onToggle} className="flex-row items-center gap-3">
-        <Checkbox isSelected={item.selected} onSelectedChange={onToggle} />
+      <Pressable
+        onPress={() => {
+          selection()
+          onToggle()
+        }}
+        className="flex-row items-center gap-3"
+      >
+        <Checkbox isSelected={item.selected} />
         <Text
           className="text-foreground text-3.75 flex-1 font-medium"
           numberOfLines={item.selected ? undefined : 1}
@@ -78,7 +86,10 @@ export function SuggestionCard({
             </Text>
             <Tabs
               value={item.triggerType}
-              onValueChange={v => onUpdate({ triggerType: v as TriggerType })}
+              onValueChange={v => {
+                selection()
+                onUpdate({ triggerType: v as TriggerType })
+              }}
             >
               <Tabs.List>
                 <Tabs.Indicator />
@@ -120,13 +131,13 @@ export function SuggestionCard({
           ) : null}
 
           <Pressable
-            onPress={() => onUpdate({ isOneTime: !item.isOneTime })}
+            onPress={() => {
+              selection()
+              onUpdate({ isOneTime: !item.isOneTime })
+            }}
             className="flex-row items-center gap-3"
           >
-            <Checkbox
-              isSelected={item.isOneTime}
-              onSelectedChange={() => onUpdate({ isOneTime: !item.isOneTime })}
-            />
+            <Checkbox isSelected={item.isOneTime} />
             <Text className="text-foreground text-sm">One-time task</Text>
           </Pressable>
         </View>

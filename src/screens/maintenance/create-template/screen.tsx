@@ -15,6 +15,7 @@ import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createMaintenanceTemplate } from '@/data/client/mutations'
+import { notifySuccess, selection } from '@/lib/haptics'
 import { insertMaintenanceTemplateSchema } from '@/data/client/validation'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -77,6 +78,7 @@ export default function CreateMaintenanceTemplateScreen() {
       return
     }
 
+    notifySuccess()
     router.back()
   }
 
@@ -130,7 +132,10 @@ export default function CreateMaintenanceTemplateScreen() {
               </Text>
               <Tabs
                 value={triggerType}
-                onValueChange={v => setTriggerType(v as TriggerType)}
+                onValueChange={v => {
+                  selection()
+                  setTriggerType(v as TriggerType)
+                }}
               >
                 <Tabs.List>
                   <Tabs.Indicator />
