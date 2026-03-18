@@ -1,17 +1,17 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
-import { Button } from 'heroui-native'
 import { useState } from 'react'
 import { Alert, Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { AiSourcesList } from '@/components/ai-sources-list'
-import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
+import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createManyMaintenanceTemplates } from '@/data/client/mutations'
-import { notifySuccess } from '@/lib/haptics'
 import type { InsertMaintenanceTemplateInput } from '@/data/client/validation'
-import { useLocalUser } from '@/lib/powersync'
+import { notifySuccess } from '@/lib/haptics'
 import { consumePendingSuggestions } from '@/lib/maintenance/suggestions-store'
+import { useLocalUser } from '@/lib/powersync'
 
 export default function AddSuggestionsScreen() {
   const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
@@ -72,7 +72,16 @@ export default function AddSuggestionsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'AI Suggestions' }} />
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <HeaderSubmitButton
+              onPress={handleSave}
+              isDisabled={selectedCount === 0 || isSaving}
+            />
+          )
+        }}
+      />
       <KeyboardAwareScrollView
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"
@@ -82,12 +91,7 @@ export default function AddSuggestionsScreen() {
         extraKeyboardSpace={42}
       >
         <View className="mx-auto w-full max-w-150 gap-4">
-          <View className="gap-1">
-            <Text className="text-foreground text-3xl font-bold">
-              AI Suggestions
-            </Text>
-            <Text className="text-muted text-xs">{data.modelInfo}</Text>
-          </View>
+          <Text className="text-muted text-xs">{data.modelInfo}</Text>
 
           {items.map((item, index) => (
             <SuggestionCard
@@ -99,18 +103,6 @@ export default function AddSuggestionsScreen() {
           ))}
 
           <AiSourcesList sources={data.sources} className="mt-2" />
-
-          <Button
-            variant="primary"
-            isDisabled={selectedCount === 0 || isSaving}
-            onPress={handleSave}
-          >
-            {isSaving
-              ? 'Saving...'
-              : selectedCount === 0
-                ? 'Select items to save'
-                : `Save ${selectedCount} ${selectedCount === 1 ? 'item' : 'items'}`}
-          </Button>
         </View>
       </KeyboardAwareScrollView>
       <KeyboardToolbar />

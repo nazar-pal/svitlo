@@ -1,24 +1,16 @@
 import { differenceInMilliseconds, format, parseISO } from 'date-fns'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import {
-  Button,
-  Chip,
-  ListGroup,
-  Separator,
-  Tabs,
-  useThemeColor
-} from 'heroui-native'
+import { Chip, ListGroup, Separator, Tabs, useThemeColor } from 'heroui-native'
 import { useRef, useState } from 'react'
 import { Alert, Text, View } from 'react-native'
-import Animated, { LinearTransition } from 'react-native-reanimated'
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
+import Animated, { LinearTransition } from 'react-native-reanimated'
 
-import { SwipeableRow } from './components/swipeable-row'
+import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import type { GeneratorSession } from '@/data/client/db-schema/generators'
 import type { MaintenanceRecord } from '@/data/client/db-schema/maintenance'
 import { deleteMaintenanceRecord, deleteSession } from '@/data/client/mutations'
-import { notifyWarning, selection } from '@/lib/haptics'
 import {
   getAllOrganizations,
   getAllUsers,
@@ -27,10 +19,12 @@ import {
   getMaintenanceRecords,
   getMaintenanceTemplateSummaries
 } from '@/data/client/queries'
-import { getUserName } from '@/lib/utils/get-user-name'
-import { formatDuration } from '@/lib/utils/time'
+import { notifyWarning, selection } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
+import { getUserName } from '@/lib/utils/get-user-name'
+import { formatDuration } from '@/lib/utils/time'
+import { SwipeableRow } from './components/swipeable-row'
 
 const FILTERS = ['all', 'sessions', 'maintenance'] as const
 type Filter = (typeof FILTERS)[number]
@@ -184,15 +178,12 @@ export default function ActivityScreen() {
         options={{
           title: 'Activity',
           headerRight: () => (
-            <Button
-              size="sm"
-              variant="ghost"
+            <HeaderSubmitButton
+              systemImage="plus"
               onPress={() =>
                 router.push(`/generator/log-session?generatorId=${generatorId}`)
               }
-            >
-              Log Past Run
-            </Button>
+            />
           )
         }}
       />

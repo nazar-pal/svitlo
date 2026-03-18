@@ -1,13 +1,14 @@
+import { DatePicker, Host } from '@expo/ui/swift-ui'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
-import { Button, Card } from 'heroui-native'
+import { Card } from 'heroui-native'
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
-import { DatePicker, Host } from '@expo/ui/swift-ui'
 
 import { FormError } from '@/components/form-error'
+import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { logManualSession } from '@/data/client/mutations'
-import { notifySuccess } from '@/lib/haptics'
 import { getGenerator } from '@/data/client/queries'
+import { notifySuccess } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -49,24 +50,22 @@ export default function LogSessionScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Log Past Run' }} />
+      <Stack.Screen
+        options={{
+          headerRight: () => <HeaderSubmitButton onPress={handleSubmit} />
+        }}
+      />
       <ScrollView
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"
         contentContainerClassName="px-5 pb-10 pt-6"
       >
         <View className="mx-auto w-full max-w-150 gap-7">
-          <View className="gap-2">
-            <Text className="text-foreground text-3xl font-bold">
-              Log Past Run
-            </Text>
-            <Text className="text-muted text-3.75 leading-5.5">
-              Retroactively record a generator run by specifying the start and
-              end times.
-            </Text>
-          </View>
+          <Text className="text-muted text-3.75 leading-5.5">
+            Retroactively record a generator run by specifying the start and end
+            times.
+          </Text>
 
-          {/* Generator info */}
           <Card>
             <Card.Body>
               <Card.Title>{generator?.title ?? 'Loading...'}</Card.Title>
@@ -74,7 +73,6 @@ export default function LogSessionScreen() {
             </Card.Body>
           </Card>
 
-          {/* Start time */}
           <View className="gap-2">
             <Text className="text-muted ml-1 text-sm font-medium">
               Start Time
@@ -89,7 +87,6 @@ export default function LogSessionScreen() {
             </Host>
           </View>
 
-          {/* End time */}
           <View className="gap-2">
             <Text className="text-muted ml-1 text-sm font-medium">
               End Time
@@ -105,10 +102,6 @@ export default function LogSessionScreen() {
           </View>
 
           <FormError message={error} />
-
-          <Button variant="primary" onPress={handleSubmit}>
-            Log Session
-          </Button>
         </View>
       </ScrollView>
     </>

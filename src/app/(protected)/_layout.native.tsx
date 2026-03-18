@@ -1,10 +1,24 @@
-import { Stack } from 'expo-router'
+import { isLiquidGlassAvailable } from 'expo-glass-effect'
+import { Stack, type StackScreenProps } from 'expo-router'
 import React from 'react'
 
+import { ModalCloseButton } from '@/components/navigation/modal-close-button'
 import { ReAuthBanner } from '@/components/re-auth-banner'
 import { useLocalIdentity } from '@/lib/auth/local-identity-context'
 import { SelectedOrgProvider } from '@/lib/organization/use-selected-org'
 import { PowerSyncProvider } from '@/lib/powersync'
+
+const glassAvailable = isLiquidGlassAvailable()
+
+const formSheetOptions = {
+  presentation: 'formSheet',
+  sheetGrabberVisible: true,
+  headerShown: true,
+  ...(glassAvailable
+    ? { headerTransparent: true }
+    : { headerBlurEffect: 'systemMaterial' }),
+  headerLeft: () => <ModalCloseButton />
+} satisfies StackScreenProps['options']
 
 export default function ProtectedLayout() {
   const { identity } = useLocalIdentity()
@@ -36,32 +50,51 @@ export default function ProtectedLayout() {
               sheetAllowedDetents: [0.5, 1.0],
               sheetExpandsWhenScrolledToEdge: true,
               headerShown: true,
+              ...(glassAvailable
+                ? { headerTransparent: true }
+                : { headerBlurEffect: 'systemMaterial' }),
               title: 'Activity'
             }}
           />
           <Stack.Screen
             name="generator/create"
-            options={{ presentation: 'modal' }}
+            options={{ ...formSheetOptions, title: 'New Generator' }}
+          />
+          <Stack.Screen
+            name="generator/log-session"
+            options={{
+              ...formSheetOptions,
+              title: 'Log Past Run'
+            }}
           />
           <Stack.Screen
             name="maintenance/create-template"
-            options={{ presentation: 'modal' }}
+            options={{ ...formSheetOptions, title: 'New Task' }}
           />
           <Stack.Screen
             name="maintenance/add-suggestions"
-            options={{ presentation: 'modal' }}
+            options={{ ...formSheetOptions, title: 'AI Suggestions' }}
           />
           <Stack.Screen
             name="maintenance/record"
-            options={{ presentation: 'modal' }}
+            options={{
+              ...formSheetOptions,
+              title: 'Record Maintenance'
+            }}
           />
           <Stack.Screen
             name="organization/create"
-            options={{ presentation: 'modal' }}
+            options={{
+              ...formSheetOptions,
+              title: 'New Organization'
+            }}
           />
           <Stack.Screen
             name="organization/[id]/invite"
-            options={{ presentation: 'modal' }}
+            options={{
+              ...formSheetOptions,
+              title: 'Invite Member'
+            }}
           />
         </Stack>
       </SelectedOrgProvider>

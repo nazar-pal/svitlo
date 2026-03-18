@@ -1,6 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import {
-  Button,
   Description,
   FieldError,
   Input,
@@ -13,6 +12,7 @@ import { Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { FormError } from '@/components/form-error'
+import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createMaintenanceTemplate } from '@/data/client/mutations'
 import {
@@ -86,6 +86,11 @@ export default function CreateMaintenanceTemplateScreen() {
 
   return (
     <>
+      <Stack.Screen
+        options={{
+          headerRight: () => <HeaderSubmitButton onPress={handleCreate} />
+        }}
+      />
       <KeyboardAwareScrollView
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"
@@ -95,14 +100,9 @@ export default function CreateMaintenanceTemplateScreen() {
         extraKeyboardSpace={42}
       >
         <View className="mx-auto w-full max-w-150 gap-7">
-          <View className="gap-2">
-            <Text className="text-foreground text-3xl font-bold">
-              New Maintenance Task
-            </Text>
-            <Text className="text-muted text-3.75 leading-5.5">
-              Define a recurring maintenance task for this generator.
-            </Text>
-          </View>
+          <Text className="text-muted text-3.75 leading-5.5">
+            Define a recurring maintenance task for this generator.
+          </Text>
 
           <View className="gap-5">
             <TextField isInvalid={!!fieldErrors.taskName}>
@@ -178,10 +178,6 @@ export default function CreateMaintenanceTemplateScreen() {
           </View>
 
           <FormError message={error} />
-
-          <Button variant="primary" onPress={handleCreate}>
-            Create Task
-          </Button>
         </View>
       </KeyboardAwareScrollView>
       <KeyboardToolbar />

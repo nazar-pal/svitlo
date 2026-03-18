@@ -1,5 +1,7 @@
+import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
+import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 import * as Network from 'expo-network'
-import { useRouter } from 'expo-router'
+import { Stack, useRouter } from 'expo-router'
 import {
   Button,
   Card,
@@ -17,6 +19,7 @@ import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { AiSourcesList } from '@/components/ai-sources-list'
 import { FormError } from '@/components/form-error'
+import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
@@ -186,6 +189,17 @@ export default function CreateGeneratorScreen() {
   if (step === 'basics')
     return (
       <>
+        <Stack.Screen
+          options={{
+            title: 'New Generator',
+            headerRight: () => (
+              <HeaderSubmitButton
+                systemImage="arrow.right"
+                onPress={handleNext}
+              />
+            )
+          }}
+        />
         <KeyboardAwareScrollView
           className="bg-background flex-1"
           contentInsetAdjustmentBehavior="automatic"
@@ -195,14 +209,9 @@ export default function CreateGeneratorScreen() {
           extraKeyboardSpace={42}
         >
           <View className="mx-auto w-full max-w-150 gap-7">
-            <View className="gap-2">
-              <Text className="text-foreground text-3xl font-bold">
-                New Generator
-              </Text>
-              <Text className="text-muted text-3.75 leading-5.5">
-                Add a generator to start tracking its usage and maintenance.
-              </Text>
-            </View>
+            <Text className="text-muted text-3.75 leading-5.5">
+              Add a generator to start tracking its usage and maintenance.
+            </Text>
 
             <View className="gap-5">
               <TextField isInvalid={!!fieldErrors.title}>
@@ -231,10 +240,6 @@ export default function CreateGeneratorScreen() {
                 <Description>Optional</Description>
               </TextField>
             </View>
-
-            <Button variant="primary" onPress={handleNext}>
-              Next
-            </Button>
           </View>
         </KeyboardAwareScrollView>
         <KeyboardToolbar />
@@ -244,6 +249,22 @@ export default function CreateGeneratorScreen() {
   // Step 2: Details
   return (
     <>
+      <Stack.Screen
+        options={{
+          title: 'Generator Details',
+          headerLeft: () => (
+            <Host matchContents>
+              <SwiftButton
+                label="Back"
+                systemImage="chevron.left"
+                onPress={() => setStep('basics')}
+                modifiers={[labelStyle('iconOnly')]}
+              />
+            </Host>
+          ),
+          headerRight: () => <HeaderSubmitButton onPress={handleCreate} />
+        }}
+      />
       <KeyboardAwareScrollView
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"
@@ -253,17 +274,9 @@ export default function CreateGeneratorScreen() {
         extraKeyboardSpace={42}
       >
         <View className="mx-auto w-full max-w-150 gap-7">
-          <View className="gap-2">
-            <Button size="sm" variant="ghost" onPress={() => setStep('basics')}>
-              ← Back
-            </Button>
-            <Text className="text-foreground text-3xl font-bold">
-              Generator Details
-            </Text>
-            <Text className="text-muted text-3.75 leading-5.5">
-              {values.model} — configure specs and maintenance schedule.
-            </Text>
-          </View>
+          <Text className="text-muted text-3.75 leading-5.5">
+            {values.model} — configure specs and maintenance schedule.
+          </Text>
 
           {mode === null ? (
             <View className="gap-3">
@@ -374,10 +387,6 @@ export default function CreateGeneratorScreen() {
               <AiSourcesList sources={aiSources} />
 
               <FormError message={error} />
-
-              <Button variant="primary" onPress={handleCreate}>
-                Create Generator
-              </Button>
             </>
           ) : null}
         </View>
