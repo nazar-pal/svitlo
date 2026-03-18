@@ -38,14 +38,14 @@ export function useSignOut() {
       if (!confirmed) return
     }
 
-    // 1. Clear identity first so the protected layout hides instantly
-    applyIdentity(null)
-
-    // 2. Disconnect PowerSync and wipe local SQLite data
+    // 1. Disconnect PowerSync and wipe local SQLite data while still mounted
     await powersync.disconnectAndClear()
     clearCredentialCache()
 
-    // 3. Sign out from BetterAuth + clear SecureStore identity
+    // 2. Sign out from BetterAuth + clear SecureStore identity
     await signOut()
+
+    // 3. Clear identity last so the protected layout unmounts cleanly
+    applyIdentity(null)
   }, [applyIdentity])
 }

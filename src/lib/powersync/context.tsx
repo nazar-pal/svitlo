@@ -2,6 +2,7 @@ import {
   PowerSyncContext as NativePowerSyncContext,
   useStatus
 } from '@powersync/react-native'
+import { Button } from 'heroui-native'
 import React, {
   createContext,
   useContext,
@@ -11,7 +12,9 @@ import React, {
 } from 'react'
 import { ActivityIndicator, Text, View } from 'react-native'
 
+import { useLocalIdentity } from '@/lib/auth/local-identity-context'
 import { useSessionStatus } from '@/lib/auth/session-status-context'
+import { signOut } from '@/lib/auth/sign-out'
 
 import { Connector, clearCredentialCache } from './connector'
 import { powersync } from './database'
@@ -124,18 +127,51 @@ function InitialSyncScreen({
 }: {
   progress: { downloadedFraction: number } | null
 }) {
+  const { applyIdentity } = useLocalIdentity()
+  const [showEscape, setShowEscape] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowEscape(true), 15_000)
+    return () => clearTimeout(timer)
+  }, [])
+
   const percentage = progress
     ? Math.round(progress.downloadedFraction * 100)
     : null
 
+  async function handleEmergencySignOut() {
+    try {
+      await powersync.disconnectAndClear()
+      clearCredentialCache()
+      await signOut()
+    } finally {
+      applyIdentity(null)
+    }
+  }
+
   return (
-    <View className="bg-background flex-1 items-center justify-center gap-4">
+    <View className="bg-background flex-1 items-center justify-center gap-4 px-8">
       <ActivityIndicator size="small" />
       <Text className="text-muted text-sm">
         {percentage !== null
           ? `Syncing your data… ${percentage}%`
           : 'Syncing your data…'}
       </Text>
+
+      {showEscape ? (
+        <View className="mt-6 items-center gap-2">
+          <Text className="text-muted text-center text-xs">
+            Taking longer than expected?
+          </Text>
+          <Button
+            variant="ghost"
+            size="sm"
+            onPress={handleEmergencySignOut}
+          >
+            Sign Out
+          </Button>
+        </View>
+      ) : null}
     </View>
   )
 }
