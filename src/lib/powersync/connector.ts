@@ -117,7 +117,21 @@ export class Connector implements PowerSyncBackendConnector {
         error
       })
 
-      // Re-throw to block the queue and preserve operation ordering.
+      if (!isRecoverable) {
+        // Advance past the failing transaction so the queue doesn't stall
+        // permanently on errors that will never resolve (e.g. constraint violations).
+        if (lastOp)
+          addRejection({
+            table: lastOp.table,
+            op: lastOp.op,
+            id: lastOp.id,
+            reason: error instanceof Error ? error.message : String(error)
+          })
+        await transaction.complete()
+        return
+      }
+
+      // Re-throw recoverable errors to block the queue and preserve ordering.
       // PowerSync will back off and retry automatically.
       throw error
     }
