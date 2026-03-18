@@ -10,7 +10,8 @@ import {
   useThemeColor
 } from 'heroui-native'
 import { useRef, useState } from 'react'
-import { Alert, FlatList, Text, View } from 'react-native'
+import { Alert, Text, View } from 'react-native'
+import Animated, { LinearTransition } from 'react-native-reanimated'
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 
 import { SwipeableRow } from './components/swipeable-row'
@@ -195,9 +196,10 @@ export default function ActivityScreen() {
           )
         }}
       />
-      <FlatList
+      <Animated.FlatList
         data={items}
         contentInsetAdjustmentBehavior="automatic"
+        itemLayoutAnimation={LinearTransition}
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingBottom: 40,

@@ -163,11 +163,7 @@ function InitialSyncScreen({
           <Text className="text-muted text-center text-xs">
             Taking longer than expected?
           </Text>
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={handleEmergencySignOut}
-          >
+          <Button variant="ghost" size="sm" onPress={handleEmergencySignOut}>
             Sign Out
           </Button>
         </View>

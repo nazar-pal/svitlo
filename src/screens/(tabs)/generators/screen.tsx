@@ -7,7 +7,8 @@ import { usePowerSync } from '@/lib/powersync'
 import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 import { Stack, useRouter } from 'expo-router'
-import { FlatList, View } from 'react-native'
+import { View } from 'react-native'
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated'
 
 export default function GeneratorsScreen() {
   const router = useRouter()
@@ -55,14 +56,15 @@ export default function GeneratorsScreen() {
             ) : null
         }}
       />
-      <FlatList
+      <Animated.FlatList
         className="flex-1"
         contentContainerClassName="px-5 pb-10"
         contentInsetAdjustmentBehavior="automatic"
         data={orgGenerators}
         keyExtractor={item => item.id}
+        itemLayoutAnimation={LinearTransition}
         renderItem={({ item }) => (
-          <View className="mb-3">
+          <Animated.View className="mb-3" entering={FadeIn.duration(200)}>
             <GeneratorCard
               generator={item}
               sessions={sessionsByGenerator.get(item.id) ?? []}
@@ -70,7 +72,7 @@ export default function GeneratorsScreen() {
               userId={userId ?? ''}
               onPress={() => router.push(`/generator/${item.id}`)}
             />
-          </View>
+          </Animated.View>
         )}
         ListEmptyComponent={
           <EmptyState
