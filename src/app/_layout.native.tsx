@@ -3,6 +3,7 @@ import { setBackgroundColorAsync } from 'expo-system-ui'
 import '../global.css'
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon'
+import { UpdateChecker } from '@/components/update-checker'
 import { AuthGate } from '@/lib/auth/auth-gate'
 import { LocalIdentityProvider } from '@/lib/auth/local-identity-context'
 import {
@@ -33,6 +34,7 @@ export default function RootLayout() {
           <ThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
             <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
             <AnimatedSplashOverlay />
+            <UpdateChecker />
             <LocalIdentityProvider>
               <AuthGate />
             </LocalIdentityProvider>

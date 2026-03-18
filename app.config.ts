@@ -71,7 +71,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     reactCompiler: true
   },
   updates: {
-    url: 'https://u.expo.dev/b2d90d72-b3bf-4519-a298-bca139cf9ce9'
+    url: 'https://u.expo.dev/b2d90d72-b3bf-4519-a298-bca139cf9ce9',
+    enableBsdiffPatchSupport: true
   },
   runtimeVersion: {
     policy: 'appVersion'
