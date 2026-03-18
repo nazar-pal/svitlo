@@ -75,6 +75,11 @@
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "computedHash": "2e9088a7333666d8c2833b8ff58bd51b955501c42b4c7244f72b4cbf22dafcc4"
+    },
+    "zod-4": {
+      "source": "prowler-cloud/prowler",
+      "sourceType": "github",
+      "computedHash": "74c140363ea586fcb92644559862ce181af16f4644a41db14722323421bbfc00"
     }
   }
 }
