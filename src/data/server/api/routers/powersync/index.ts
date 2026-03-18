@@ -23,7 +23,7 @@ const SECRET = new TextEncoder().encode(env.POWERSYNC_PRIVATE_KEY)
 // Short-lived token — PowerSync SDK auto-refreshes via fetchCredentials
 const TOKEN_LIFETIME_SECONDS = 5 * 60
 
-export interface SyncRejection {
+interface SyncRejection {
   code: string
   message: string
   constraint?: string

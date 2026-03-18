@@ -1,5 +1,3 @@
-export { user } from '../../data/client/db-schema'
-export type { User } from '../../data/client/db-schema'
 export { PowerSyncProvider, usePowerSync } from './context'
 export { db, powersync } from './database'
 export { useLocalUser } from './use-local-user'

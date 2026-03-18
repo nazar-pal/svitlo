@@ -21,5 +21,3 @@ export const protectedProcedure = base
     if (!context.session) throw errors.UNAUTHORIZED()
     return next({ context: { session: context.session } })
   })
-
-export type { Context }

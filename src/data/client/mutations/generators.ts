@@ -21,31 +21,6 @@ import {
   type MutationResult
 } from './helpers'
 
-export async function createGenerator(
-  userId: string,
-  input: InsertGeneratorInput
-): Promise<MutationResult> {
-  const parsed = insertGeneratorSchema.safeParse(input)
-  if (!parsed.success) return fail(parsed.error.issues[0].message)
-
-  if (!(await isOrgAdmin(userId, parsed.data.organizationId)))
-    return fail('Only admin can create generators')
-
-  await db.insert(generators).values({
-    id: newId(),
-    organizationId: parsed.data.organizationId,
-    title: parsed.data.title,
-    model: parsed.data.model,
-    description: parsed.data.description ?? null,
-    maxConsecutiveRunHours: parsed.data.maxConsecutiveRunHours,
-    requiredRestHours: parsed.data.requiredRestHours,
-    runWarningThresholdPct: parsed.data.runWarningThresholdPct,
-    createdAt: nowISO()
-  })
-
-  return ok
-}
-
 export async function updateGenerator(
   userId: string,
   generatorId: string,

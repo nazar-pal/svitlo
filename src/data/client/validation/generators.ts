@@ -38,32 +38,3 @@ export const updateGeneratorSchema = z
   })
 
 export type UpdateGeneratorInput = z.input<typeof updateGeneratorSchema>
-
-export const startSessionSchema = z.object({
-  generatorId: z.string()
-})
-
-export type StartSessionInput = z.input<typeof startSessionSchema>
-
-export const stopSessionSchema = z.object({
-  sessionId: z.string()
-})
-
-export type StopSessionInput = z.input<typeof stopSessionSchema>
-
-export const logManualSessionSchema = z
-  .object({
-    generatorId: z.string(),
-    startedAt: z.iso.datetime(),
-    stoppedAt: z.iso.datetime()
-  })
-  .refine(data => data.startedAt < data.stoppedAt, {
-    error: 'Start time must be before end time',
-    path: ['stoppedAt']
-  })
-  .refine(data => new Date(data.stoppedAt) <= new Date(), {
-    error: 'End time cannot be in the future',
-    path: ['stoppedAt']
-  })
-
-export type LogManualSessionInput = z.input<typeof logManualSessionSchema>

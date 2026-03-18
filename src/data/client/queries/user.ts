@@ -20,6 +20,3 @@ export function getUser({ userId }: GetUserParams) {
     }
   })
 }
-
-export type GetUserResult = Awaited<ReturnType<typeof getUser>>
-export type GetUserResultItem = Exclude<GetUserResult, undefined>
