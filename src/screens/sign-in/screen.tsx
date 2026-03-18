@@ -1,9 +1,10 @@
 import { Link, useRouter } from 'expo-router'
 import React from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 
 import { AnimatedIcon } from '@/components/animated-icon'
 import { AppleSignInButton } from '@/components/apple-sign-in-button'
+import { SafeAreaView } from '@/components/uniwind'
 import { useAppleSignIn } from '@/lib/auth/use-apple-sign-in'
 
 export default function SignInScreen() {
@@ -11,11 +12,7 @@ export default function SignInScreen() {
   const { isSigningIn, error, signIn } = useAppleSignIn()
 
   return (
-    <ScrollView
-      className="bg-background flex-1"
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerClassName="min-h-full px-6 py-10"
-    >
+    <SafeAreaView className="bg-background flex-1 px-6">
       <View className="mx-auto w-full max-w-110 flex-1 justify-center gap-10">
         <View className="items-center gap-6">
           <AnimatedIcon />
@@ -55,6 +52,6 @@ export default function SignInScreen() {
           </Pressable>
         </View>
       </View>
-    </ScrollView>
+    </SafeAreaView>
   )
 }

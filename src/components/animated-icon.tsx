@@ -1,11 +1,62 @@
+import { Canvas, Fill, Shader, Skia, vec } from '@shopify/react-native-skia'
 import { Image } from 'expo-image'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Dimensions, StyleSheet, View } from 'react-native'
-import Animated, { Easing, Keyframe } from 'react-native-reanimated'
+import Animated, {
+  Easing,
+  Keyframe,
+  useDerivedValue,
+  useSharedValue,
+  withRepeat,
+  withTiming
+} from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90
 const DURATION = 600
+const GLOW_SIZE = 201
+
+const glowSource = Skia.RuntimeEffect.Make(`
+  uniform float time;
+  uniform vec2 size;
+
+  half4 main(vec2 fragCoord) {
+    vec2 uv = fragCoord / size;
+    vec2 center = vec2(0.5, 0.5);
+
+    // Rotating peak intensity point
+    float angle = time * 0.8;
+    vec2 offset = vec2(cos(angle), sin(angle)) * 0.12;
+    vec2 glowCenter = center + offset;
+
+    float dist = distance(uv, glowCenter);
+
+    // Soft radial falloff
+    float glow = exp(-dist * dist * 8.0);
+
+    // Secondary, slower-rotating wider glow
+    float angle2 = -time * 0.5;
+    vec2 offset2 = vec2(cos(angle2), sin(angle2)) * 0.08;
+    float dist2 = distance(uv, center + offset2);
+    float glow2 = exp(-dist2 * dist2 * 5.0);
+
+    // Breathing intensity
+    float breath = 0.7 + 0.3 * sin(time * 1.2);
+
+    float combined = (glow * 0.6 + glow2 * 0.4) * breath;
+
+    // App blue palette: #3C9FFE → #0274DF
+    vec3 colorBright = vec3(0.235, 0.624, 0.996);
+    vec3 colorDeep = vec3(0.008, 0.455, 0.875);
+    vec3 color = mix(colorDeep, colorBright, glow);
+
+    // Circular fade to zero before canvas edges
+    float edgeFade = smoothstep(0.5, 0.3, distance(uv, center));
+    combined *= edgeFade;
+
+    return half4(color * combined, combined * 0.85);
+  }
+`)!
 
 export function AnimatedSplashOverlay() {
   const [visible, setVisible] = useState(true)
@@ -71,27 +122,39 @@ const logoKeyframe = new Keyframe({
   }
 })
 
-const glowKeyframe = new Keyframe({
-  0: {
-    transform: [{ rotateZ: '0deg' }]
-  },
-  100: {
-    transform: [{ rotateZ: '7200deg' }]
-  }
-})
+function SkiaGlow() {
+  const time = useSharedValue(0)
+
+  useEffect(() => {
+    time.set(
+      withRepeat(
+        withTiming(Math.PI * 20, {
+          duration: 60_000,
+          easing: Easing.linear
+        }),
+        -1
+      )
+    )
+  }, [time])
+
+  const uniforms = useDerivedValue(() => ({
+    time: time.get(),
+    size: vec(GLOW_SIZE, GLOW_SIZE)
+  }))
+
+  return (
+    <Canvas style={styles.glow}>
+      <Fill>
+        <Shader source={glowSource} uniforms={uniforms} />
+      </Fill>
+    </Canvas>
+  )
+}
 
 export function AnimatedIcon() {
   return (
     <View style={styles.iconContainer}>
-      <Animated.View
-        entering={glowKeyframe.duration(60 * 1000 * 4)}
-        style={styles.glow}
-      >
-        <Image
-          style={styles.glow}
-          source={require('@/assets/images/logo-glow.png')}
-        />
-      </Animated.View>
+      <SkiaGlow />
 
       <Animated.View
         entering={keyframe.duration(DURATION)}
@@ -116,8 +179,8 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   glow: {
-    width: 201,
-    height: 201,
+    width: GLOW_SIZE,
+    height: GLOW_SIZE,
     position: 'absolute'
   },
   iconContainer: {
@@ -140,7 +203,7 @@ const styles = StyleSheet.create({
     position: 'absolute'
   },
   backgroundSolidColor: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#208AEF',
     zIndex: 1000
   }
