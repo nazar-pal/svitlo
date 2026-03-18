@@ -2,10 +2,11 @@ import { SymbolView } from 'expo-symbols'
 import { Button, Surface, useThemeColor } from 'heroui-native'
 import { Alert, Text, View } from 'react-native'
 
+import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
 import { notifySuccess } from '@/lib/haptics'
 import { stopSession } from '@/data/client/mutations'
-import { computeGeneratorStatus, progressColor } from '@/lib/generator/status'
+import { computeGeneratorStatus } from '@/lib/generator/status'
 import {
   useElapsedHours,
   useElapsedTime
@@ -34,7 +35,6 @@ export function ActiveSessionCard({
   const maxHours = generator.maxConsecutiveRunHours
   const progress = Math.min(totalRunHours / maxHours, 1)
   const warningFraction = generator.runWarningThresholdPct / 100
-  const barColor = progressColor(progress, warningFraction)
 
   async function handleStop() {
     const result = await stopSession(userId, session.id)
@@ -70,9 +70,10 @@ export function ActiveSessionCard({
 
       <View className="gap-1.5">
         <View className="bg-default h-2 overflow-hidden rounded-full">
-          <View
-            className={`h-full rounded-full ${barColor}`}
-            style={{ width: `${progress * 100}%` }}
+          <SkiaProgressBar
+            progress={progress}
+            warningFraction={warningFraction}
+            height={8}
           />
         </View>
         <View className="flex-row justify-between">

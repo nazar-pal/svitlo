@@ -2,8 +2,9 @@ import { SymbolView } from 'expo-symbols'
 import { PressableFeedback, Surface, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
 
+import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
-import { computeGeneratorStatus, progressColor } from '@/lib/generator/status'
+import { computeGeneratorStatus } from '@/lib/generator/status'
 import { useElapsedHours } from '@/lib/generator/use-elapsed-time'
 import { formatHours } from '@/lib/utils/time'
 
@@ -29,7 +30,6 @@ export function WarningGeneratorItem({
   const totalRunHours = consecutiveRunHours + elapsedHours
   const maxHours = generator.maxConsecutiveRunHours
   const progress = Math.min(totalRunHours / maxHours, 1)
-  const barColor = progressColor(progress, 0)
 
   return (
     <PressableFeedback onPress={onPress}>
@@ -57,9 +57,10 @@ export function WarningGeneratorItem({
         </View>
         <View className="mt-3 gap-1.5">
           <View className="bg-default h-1.5 overflow-hidden rounded-full">
-            <View
-              className={`h-full rounded-full ${barColor}`}
-              style={{ width: `${progress * 100}%` }}
+            <SkiaProgressBar
+              progress={progress}
+              warningFraction={0}
+              height={6}
             />
           </View>
           <View className="flex-row justify-between">

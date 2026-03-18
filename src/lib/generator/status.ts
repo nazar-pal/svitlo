@@ -110,12 +110,3 @@ export function computeLifetimeHours(sessions: GeneratorSession[]): number {
   }
   return total
 }
-
-export function progressColor(
-  progress: number,
-  warningFraction: number
-): string {
-  if (progress >= 1) return 'bg-danger'
-  if (progress >= warningFraction) return 'bg-warning'
-  return 'bg-success'
-}

@@ -11,11 +11,11 @@ import type { Generator, GeneratorSession } from '@/data/client/db-schema'
 import { notifySuccess } from '@/lib/haptics'
 import { startSession, stopSession } from '@/data/client/mutations'
 import { GeneratorStatusBadge } from '@/components/generator-status-badge'
+import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import { confirmRestingStart } from '@/lib/generator/confirm-resting-start'
 import {
   computeGeneratorStatus,
-  computeLifetimeHours,
-  progressColor
+  computeLifetimeHours
 } from '@/lib/generator/status'
 import {
   useElapsedHours,
@@ -72,7 +72,6 @@ export function GeneratorCard({
   const maxHours = generator.maxConsecutiveRunHours
   const progress = Math.min(totalRunHours / maxHours, 1)
   const warningFraction = generator.runWarningThresholdPct / 100
-  const barColor = progressColor(progress, warningFraction)
 
   const restCountdown = useRestCountdown(
     restEndsAt,
@@ -141,9 +140,10 @@ export function GeneratorCard({
         {status === 'running' ? (
           <View className="mt-3 gap-1.5">
             <View className="bg-default h-1.5 overflow-hidden rounded-full">
-              <View
-                className={`h-full rounded-full ${barColor}`}
-                style={{ width: `${progress * 100}%` }}
+              <SkiaProgressBar
+                progress={progress}
+                warningFraction={warningFraction}
+                height={6}
               />
             </View>
             <View className="flex-row justify-between">
@@ -171,9 +171,11 @@ export function GeneratorCard({
         {status === 'resting' && restEndsAt ? (
           <View className="mt-3 gap-1.5">
             <View className="bg-default h-1.5 overflow-hidden rounded-full">
-              <View
-                className="bg-warning h-full rounded-full"
-                style={{ width: `${restCountdown.progress * 100}%` }}
+              <SkiaProgressBar
+                progress={restCountdown.progress}
+                warningFraction={1}
+                height={6}
+                mode="resting"
               />
             </View>
             <View className="flex-row justify-between">

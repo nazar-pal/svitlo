@@ -1,8 +1,9 @@
 import { Text, View } from 'react-native'
 import { Button } from 'heroui-native'
 
+import { SkiaProgressBar } from '@/components/skia-progress-bar'
+
 import { confirmRestingStart } from '@/lib/generator/confirm-resting-start'
-import { progressColor } from '@/lib/generator/status'
 import type { RestCountdown } from '@/lib/generator/use-rest-countdown'
 import { formatHours } from '@/lib/utils/time'
 
@@ -64,7 +65,6 @@ function RunningCard({
   const totalRunHours = consecutiveRunHours + elapsedHours
   const progress = Math.min(totalRunHours / maxConsecutiveRunHours, 1)
   const warningFraction = warningThresholdPct / 100
-  const barColor = progressColor(progress, warningFraction)
   const timeColor =
     progress >= 1
       ? 'text-danger'
@@ -83,9 +83,10 @@ function RunningCard({
 
       <View className="gap-1.5">
         <View className="bg-default h-2 overflow-hidden rounded-full">
-          <View
-            className={`h-full rounded-full ${barColor}`}
-            style={{ width: `${progress * 100}%` }}
+          <SkiaProgressBar
+            progress={progress}
+            warningFraction={warningFraction}
+            height={8}
           />
         </View>
         <View className="flex-row justify-between">
@@ -111,7 +112,6 @@ function RestingCard({
   onStart
 }: RestingStatusCardProps) {
   const restedHours = requiredRestHours * countdown.progress
-  const restBarColor = countdown.progress >= 1 ? 'bg-success' : 'bg-warning'
 
   return (
     <View className="gap-4 py-4">
@@ -124,9 +124,11 @@ function RestingCard({
 
       <View className="gap-1.5">
         <View className="bg-default h-2 overflow-hidden rounded-full">
-          <View
-            className={`h-full rounded-full ${restBarColor}`}
-            style={{ width: `${countdown.progress * 100}%` }}
+          <SkiaProgressBar
+            progress={countdown.progress}
+            warningFraction={1}
+            height={8}
+            mode="resting"
           />
         </View>
         <View className="flex-row justify-between">
