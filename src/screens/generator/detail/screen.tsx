@@ -240,14 +240,14 @@ export default function GeneratorDetailScreen() {
           }
         }}
       />
-      <View className="mx-auto w-full max-w-[600px] gap-6">
+      <View className="mx-auto w-full max-w-150 gap-6">
         {/* Generator Info */}
         <View className="items-center gap-1 pt-4">
-          <Text className="text-muted text-center text-[15px]">
+          <Text className="text-muted text-3.75 text-center">
             {generator.model}
             {generator.description ? ` · ${generator.description}` : ''}
           </Text>
-          <Text className="text-muted text-[13px]">
+          <Text className="text-muted text-3.25">
             {formatHours(lifetimeHours)} lifetime hours
           </Text>
         </View>

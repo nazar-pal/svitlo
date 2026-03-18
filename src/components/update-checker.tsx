@@ -6,7 +6,8 @@ import { useToast } from 'heroui-native'
 export function UpdateChecker() {
   const { toast } = useToast()
   const toastShownRef = useRef(false)
-  const { isUpdateAvailable, isUpdatePending, isDownloading } = Updates.useUpdates()
+  const { isUpdateAvailable, isUpdatePending, isDownloading } =
+    Updates.useUpdates()
 
   useEffect(() => {
     if (!Updates.isEnabled || !isUpdateAvailable || isDownloading) return
@@ -26,14 +27,14 @@ export function UpdateChecker() {
       onActionPress: ({ hide }) => {
         hide()
         Updates.reloadAsync().catch(console.warn)
-      },
+      }
     })
   }, [isUpdatePending, toast])
 
   useEffect(() => {
     if (!Updates.isEnabled) return
     Updates.checkForUpdateAsync().catch(console.warn)
-    const subscription = AppState.addEventListener('change', (state) => {
+    const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') Updates.checkForUpdateAsync().catch(console.warn)
     })
     return () => subscription.remove()

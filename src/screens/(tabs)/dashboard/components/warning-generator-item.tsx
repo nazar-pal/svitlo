@@ -1,7 +1,6 @@
 import { SymbolView } from 'expo-symbols'
-import { PressableFeedback, Surface } from 'heroui-native'
+import { PressableFeedback, Surface, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
 import { computeGeneratorStatus, progressColor } from '@/lib/generator/status'
@@ -21,10 +20,7 @@ export function WarningGeneratorItem({
   startedByName,
   onPress
 }: WarningGeneratorItemProps) {
-  const [mutedColor, warningColor] = useCSSVariable([
-    '--color-muted',
-    '--color-warning'
-  ]) as string[]
+  const [mutedColor, warningColor] = useThemeColor(['muted', 'warning'])
   const { openSession, consecutiveRunHours } = computeGeneratorStatus(
     generator,
     sessions
@@ -48,12 +44,12 @@ export function WarningGeneratorItem({
           </View>
           <View className="flex-1 gap-0.5">
             <Text
-              className="text-foreground text-[17px] font-semibold"
+              className="text-foreground text-4.25 font-semibold"
               numberOfLines={1}
             >
               {generator.title}
             </Text>
-            <Text className="text-muted text-[13px]">
+            <Text className="text-muted text-3.25">
               Started by {startedByName}
             </Text>
           </View>
@@ -67,10 +63,10 @@ export function WarningGeneratorItem({
             />
           </View>
           <View className="flex-row justify-between">
-            <Text className="text-muted text-[12px]">
+            <Text className="text-muted text-3">
               {formatHours(totalRunHours)} elapsed
             </Text>
-            <Text className="text-warning text-[12px] font-medium">
+            <Text className="text-warning text-3 font-medium">
               {Math.round(progress * 100)}% of {formatHours(maxHours)}
             </Text>
           </View>

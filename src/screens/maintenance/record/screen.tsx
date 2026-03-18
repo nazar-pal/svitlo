@@ -66,12 +66,12 @@ export default function RecordMaintenanceScreen() {
       keyboardShouldPersistTaps="handled"
       bottomOffset={16}
     >
-      <View className="mx-auto w-full max-w-[600px] gap-7">
+      <View className="mx-auto w-full max-w-150 gap-7">
         <View className="gap-2">
           <Text className="text-foreground text-3xl font-bold">
             Record Maintenance
           </Text>
-          <Text className="text-muted text-[15px] leading-[22px]">
+          <Text className="text-muted text-3.75 leading-5.5">
             Log that this maintenance work has been completed.
           </Text>
         </View>

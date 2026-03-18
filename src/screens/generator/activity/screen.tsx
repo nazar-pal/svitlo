@@ -1,11 +1,17 @@
 import { differenceInMilliseconds, format, parseISO } from 'date-fns'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import { Button, Chip, ListGroup, Separator, Tabs } from 'heroui-native'
+import {
+  Button,
+  Chip,
+  ListGroup,
+  Separator,
+  Tabs,
+  useThemeColor
+} from 'heroui-native'
 import { useRef, useState } from 'react'
 import { Alert, FlatList, Text, View } from 'react-native'
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
-import { useCSSVariable } from 'uniwind'
 
 import { SwipeableRow } from './components/swipeable-row'
 import type { GeneratorSession } from '@/data/client/db-schema/generators'
@@ -87,10 +93,7 @@ export default function ActivityScreen() {
   const [filter, setFilter] = useState<Filter>('all')
   const openRowRef = useRef<SwipeableMethods | null>(null)
   const localUser = useLocalUser()
-  const [mutedColor, successColor] = useCSSVariable([
-    '--color-muted',
-    '--color-success'
-  ]) as string[]
+  const [mutedColor, successColor] = useThemeColor(['muted', 'success'])
 
   const userId = localUser?.id ?? ''
 

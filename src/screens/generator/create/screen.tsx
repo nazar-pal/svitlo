@@ -191,12 +191,12 @@ export default function CreateGeneratorScreen() {
           bottomOffset={16}
           extraKeyboardSpace={42}
         >
-          <View className="mx-auto w-full max-w-[600px] gap-7">
+          <View className="mx-auto w-full max-w-150 gap-7">
             <View className="gap-2">
               <Text className="text-foreground text-3xl font-bold">
                 New Generator
               </Text>
-              <Text className="text-muted text-[15px] leading-[22px]">
+              <Text className="text-muted text-3.75 leading-5.5">
                 Add a generator to start tracking its usage and maintenance.
               </Text>
             </View>
@@ -255,7 +255,7 @@ export default function CreateGeneratorScreen() {
         bottomOffset={16}
         extraKeyboardSpace={42}
       >
-        <View className="mx-auto w-full max-w-[600px] gap-7">
+        <View className="mx-auto w-full max-w-150 gap-7">
           <View className="gap-2">
             <Button size="sm" variant="ghost" onPress={() => setStep('basics')}>
               ← Back
@@ -263,7 +263,7 @@ export default function CreateGeneratorScreen() {
             <Text className="text-foreground text-3xl font-bold">
               Generator Details
             </Text>
-            <Text className="text-muted text-[15px] leading-[22px]">
+            <Text className="text-muted text-3.75 leading-5.5">
               {model} — configure specs and maintenance schedule.
             </Text>
           </View>

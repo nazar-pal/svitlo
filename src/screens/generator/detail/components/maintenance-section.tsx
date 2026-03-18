@@ -5,10 +5,10 @@ import {
   PressableFeedback,
   Separator,
   Spinner,
-  Surface
+  Surface,
+  useThemeColor
 } from 'heroui-native'
 import { Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import { SectionHeader } from '@/components/section-header'
 import type {
@@ -37,10 +37,8 @@ export function MaintenanceSection({
   onAddTemplate,
   onRecordMaintenance
 }: MaintenanceSectionProps) {
-  const foregroundColor = useCSSVariable('--color-foreground') as
-    | string
-    | undefined
-  const mutedColor = useCSSVariable('--color-muted') as string | undefined
+  const foregroundColor = useThemeColor('foreground')
+  const mutedColor = useThemeColor('muted')
 
   function getLastRecordForTemplate(templateId: string) {
     return records.find(r => r.templateId === templateId)

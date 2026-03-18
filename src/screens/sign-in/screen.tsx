@@ -16,7 +16,7 @@ export default function SignInScreen() {
       contentInsetAdjustmentBehavior="automatic"
       contentContainerClassName="min-h-full px-6 py-10"
     >
-      <View className="mx-auto w-full max-w-[440px] flex-1 justify-center gap-10">
+      <View className="mx-auto w-full max-w-110 flex-1 justify-center gap-10">
         <View className="items-center gap-6">
           <AnimatedIcon />
 

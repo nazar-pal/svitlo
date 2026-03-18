@@ -1,7 +1,6 @@
 import { SymbolView } from 'expo-symbols'
-import { Button } from 'heroui-native'
+import { Button, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 interface EmptyStateProps {
   icon: string
@@ -18,7 +17,7 @@ export function EmptyState({
   actionLabel,
   onAction
 }: EmptyStateProps) {
-  const mutedColor = useCSSVariable('--color-muted') as string | undefined
+  const mutedColor = useThemeColor('muted')
 
   return (
     <View className="items-center gap-4 py-12">
@@ -28,7 +27,7 @@ export function EmptyState({
           {title}
         </Text>
         {description ? (
-          <Text className="text-muted max-w-[280px] text-center text-[15px] leading-[22px]">
+          <Text className="text-muted text-3.75 max-w-70 text-center leading-5.5">
             {description}
           </Text>
         ) : null}

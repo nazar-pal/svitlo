@@ -100,7 +100,7 @@ export default function EmailAuthScreen() {
       keyboardShouldPersistTaps="handled"
       bottomOffset={16}
     >
-      <View className="mx-auto w-full max-w-[440px] flex-1 justify-center gap-8">
+      <View className="mx-auto w-full max-w-110 flex-1 justify-center gap-8">
         <Text className="text-foreground text-3xl font-bold">
           {isSignUp ? 'Create account' : 'Sign in with email'}
         </Text>

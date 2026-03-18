@@ -14,7 +14,7 @@ function RightAction({ onDelete }: { onDelete: () => void }) {
   return (
     <Pressable
       onPress={onDelete}
-      className="bg-danger w-[75px] items-center justify-center"
+      className="bg-danger w-18.75 items-center justify-center"
     >
       <View className="items-center gap-1">
         <Text className="text-danger-foreground text-xs font-medium">

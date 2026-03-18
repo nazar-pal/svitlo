@@ -1,9 +1,14 @@
 import type { DrawerContentComponentProps } from '@react-navigation/drawer'
 import { useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import { Avatar, Button, ListGroup, Separator } from 'heroui-native'
+import {
+  Avatar,
+  Button,
+  ListGroup,
+  Separator,
+  useThemeColor
+} from 'heroui-native'
 import { Alert, ScrollView, Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import { SectionHeader } from '@/components/section-header'
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
@@ -36,10 +41,8 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
   const handleSignOut = useSignOut()
   const { userOrgs, userId } = useUserOrgs()
   const { selectedOrgId, setSelectedOrgId } = useSelectedOrg()
-  const foregroundColor = useCSSVariable('--color-foreground') as
-    | string
-    | undefined
-  const accentColor = useCSSVariable('--color-accent') as string | undefined
+  const foregroundColor = useThemeColor('foreground')
+  const accentColor = useThemeColor('accent')
 
   const userEmail = localUser?.email ?? ''
   const userName = localUser?.name || 'Unknown'

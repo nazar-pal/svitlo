@@ -79,7 +79,7 @@ export default function AddSuggestionsScreen() {
         bottomOffset={16}
         extraKeyboardSpace={42}
       >
-        <View className="mx-auto w-full max-w-[600px] gap-4">
+        <View className="mx-auto w-full max-w-150 gap-4">
           <View className="gap-1">
             <Text className="text-foreground text-3xl font-bold">
               AI Suggestions

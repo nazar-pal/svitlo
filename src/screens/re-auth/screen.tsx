@@ -93,7 +93,7 @@ export default function ReAuthScreen() {
       keyboardShouldPersistTaps="handled"
       bottomOffset={16}
     >
-      <View className="mx-auto w-full max-w-[440px] flex-1 justify-center gap-6">
+      <View className="mx-auto w-full max-w-110 flex-1 justify-center gap-6">
         <View className="gap-3">
           <Text className="text-foreground text-center text-3xl font-semibold">
             Session expired

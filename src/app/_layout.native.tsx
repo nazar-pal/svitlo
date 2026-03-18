@@ -12,17 +12,17 @@ import {
   ThemeProvider
 } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
-import { HeroUINativeProvider } from 'heroui-native'
+import { HeroUINativeProvider, useThemeColor } from 'heroui-native'
 import React, { useEffect } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
-import { useCSSVariable, useUniwind } from 'uniwind'
+import { useUniwind } from 'uniwind'
 
 export default function RootLayout() {
   const { theme } = useUniwind()
 
   // Keep the root view background color in sync with the current theme
-  const tabBarBackgroundColor = useCSSVariable('--color-background') as string
+  const tabBarBackgroundColor = useThemeColor('background')
   useEffect(() => {
     setBackgroundColorAsync(tabBarBackgroundColor)
   }, [theme, tabBarBackgroundColor])

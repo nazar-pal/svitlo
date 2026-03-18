@@ -1,10 +1,9 @@
 import { SymbolView } from 'expo-symbols'
-import { Surface } from 'heroui-native'
+import { Surface, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 export function AllClearCard() {
-  const successColor = useCSSVariable('--color-success') as string | undefined
+  const successColor = useThemeColor('success')
 
   return (
     <Surface variant="secondary" className="items-center gap-3 py-8">
@@ -14,10 +13,10 @@ export function AllClearCard() {
         tintColor={successColor}
       />
       <View className="items-center gap-1">
-        <Text className="text-foreground text-[17px] font-semibold">
+        <Text className="text-foreground text-4.25 font-semibold">
           All Clear
         </Text>
-        <Text className="text-muted text-center text-[14px]">
+        <Text className="text-muted text-3.5 text-center">
           No attention needed right now
         </Text>
       </View>

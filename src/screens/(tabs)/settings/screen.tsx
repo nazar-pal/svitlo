@@ -1,8 +1,7 @@
 import { useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import { Button, ListGroup, Separator } from 'heroui-native'
+import { Button, ListGroup, Separator, useThemeColor } from 'heroui-native'
 import { Alert, ScrollView, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import { SectionHeader } from '@/components/section-header'
 import { cancelInvitation, removeMember } from '@/data/client/mutations'
@@ -20,9 +19,7 @@ import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 export default function SettingsScreen() {
   const router = useRouter()
   const { selectedOrgId } = useSelectedOrg()
-  const foregroundColor = useCSSVariable('--color-foreground') as
-    | string
-    | undefined
+  const foregroundColor = useThemeColor('foreground')
 
   const { userId } = useUserOrgs()
 
@@ -86,7 +83,7 @@ export default function SettingsScreen() {
       contentInsetAdjustmentBehavior="automatic"
       contentContainerClassName="px-5 pb-10"
     >
-      <View className="mx-auto w-full max-w-[600px] gap-7">
+      <View className="mx-auto w-full max-w-150 gap-7">
         {/* Administrator */}
         <View className="gap-2">
           <SectionHeader title="Administrator" />

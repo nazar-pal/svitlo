@@ -90,12 +90,12 @@ export default function CreateMaintenanceTemplateScreen() {
         bottomOffset={16}
         extraKeyboardSpace={42}
       >
-        <View className="mx-auto w-full max-w-[600px] gap-7">
+        <View className="mx-auto w-full max-w-150 gap-7">
           <View className="gap-2">
             <Text className="text-foreground text-3xl font-bold">
               New Maintenance Task
             </Text>
-            <Text className="text-muted text-[15px] leading-[22px]">
+            <Text className="text-muted text-3.75 leading-5.5">
               Define a recurring maintenance task for this generator.
             </Text>
           </View>

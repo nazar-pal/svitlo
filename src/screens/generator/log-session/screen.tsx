@@ -52,12 +52,12 @@ export default function LogSessionScreen() {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerClassName="px-5 pb-10 pt-6"
       >
-        <View className="mx-auto w-full max-w-[600px] gap-7">
+        <View className="mx-auto w-full max-w-150 gap-7">
           <View className="gap-2">
             <Text className="text-foreground text-3xl font-bold">
               Log Past Run
             </Text>
-            <Text className="text-muted text-[15px] leading-[22px]">
+            <Text className="text-muted text-3.75 leading-5.5">
               Retroactively record a generator run by specifying the start and
               end times.
             </Text>

@@ -1,7 +1,6 @@
 import { SymbolView } from 'expo-symbols'
-import { PressableFeedback, Surface } from 'heroui-native'
+import { PressableFeedback, Surface, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import type { Generator } from '@/data/client/db-schema'
 import { formatRestRemaining } from '@/lib/utils/time'
@@ -17,10 +16,7 @@ export function RestingGeneratorItem({
   restEndsAt,
   onPress
 }: RestingGeneratorItemProps) {
-  const [mutedColor, accentColor] = useCSSVariable([
-    '--color-muted',
-    '--color-accent'
-  ]) as string[]
+  const [mutedColor, accentColor] = useThemeColor(['muted', 'accent'])
 
   return (
     <PressableFeedback onPress={onPress}>
@@ -31,12 +27,12 @@ export function RestingGeneratorItem({
           </View>
           <View className="flex-1 gap-0.5">
             <Text
-              className="text-foreground text-[17px] font-semibold"
+              className="text-foreground text-4.25 font-semibold"
               numberOfLines={1}
             >
               {generator.title}
             </Text>
-            <Text className="text-muted text-[13px]">
+            <Text className="text-muted text-3.25">
               Resting — ready in {formatRestRemaining(restEndsAt)}
             </Text>
           </View>

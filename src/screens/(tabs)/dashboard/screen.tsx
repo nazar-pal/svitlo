@@ -54,7 +54,7 @@ export default function DashboardScreen() {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerClassName="px-5 pb-10 pt-4"
       >
-        <View className="mx-auto w-full max-w-[600px]">
+        <View className="mx-auto w-full max-w-150">
           {/* Section 1 — My Active Session */}
           {myActiveGenerator && myActiveSession ? (
             <View className="mb-6">

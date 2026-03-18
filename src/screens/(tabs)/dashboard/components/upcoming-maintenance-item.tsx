@@ -1,7 +1,6 @@
 import { SymbolView } from 'expo-symbols'
-import { PressableFeedback, Surface } from 'heroui-native'
+import { PressableFeedback, Surface, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import {
   formatMaintenanceLabel,
@@ -21,7 +20,7 @@ export function UpcomingMaintenanceItem({
   info,
   onPress
 }: UpcomingMaintenanceItemProps) {
-  const mutedColor = useCSSVariable('--color-muted') as string | undefined
+  const mutedColor = useThemeColor('muted')
   const labelColor = info.urgency === 'due_soon' ? 'text-warning' : 'text-muted'
 
   return (
@@ -33,12 +32,12 @@ export function UpcomingMaintenanceItem({
           </View>
           <View className="flex-1 gap-0.5">
             <Text
-              className="text-foreground text-[17px] font-semibold"
+              className="text-foreground text-4.25 font-semibold"
               numberOfLines={1}
             >
               {taskName}
             </Text>
-            <Text className="text-muted text-[13px]" numberOfLines={1}>
+            <Text className="text-muted text-3.25" numberOfLines={1}>
               {generatorTitle}
               {' · '}
               <Text className={labelColor}>{formatMaintenanceLabel(info)}</Text>

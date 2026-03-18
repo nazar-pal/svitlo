@@ -1,7 +1,6 @@
 import { SymbolView } from 'expo-symbols'
-import { Button, ListGroup, Separator } from 'heroui-native'
+import { Button, ListGroup, Separator, useThemeColor } from 'heroui-native'
 import { View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import { SectionHeader } from '@/components/section-header'
 import type {
@@ -24,9 +23,7 @@ export function AssignedEmployeesSection({
   onAssign,
   onUnassign
 }: AssignedEmployeesSectionProps) {
-  const foregroundColor = useCSSVariable('--color-foreground') as
-    | string
-    | undefined
+  const foregroundColor = useThemeColor('foreground')
 
   return (
     <View className="gap-2">

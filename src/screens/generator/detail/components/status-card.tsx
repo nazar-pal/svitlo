@@ -75,7 +75,7 @@ function RunningCard({
   return (
     <View className="gap-4 py-4">
       <Text
-        className={`text-center text-[44px] leading-none font-semibold ${timeColor}`}
+        className={`text-11 text-center leading-none font-semibold ${timeColor}`}
         style={{ fontVariant: ['tabular-nums'] }}
       >
         {elapsedTime}
@@ -89,10 +89,10 @@ function RunningCard({
           />
         </View>
         <View className="flex-row justify-between">
-          <Text className="text-muted text-[12px]">
+          <Text className="text-muted text-3">
             {formatHours(totalRunHours)} elapsed
           </Text>
-          <Text className="text-muted text-[12px]">
+          <Text className="text-muted text-3">
             {formatHours(maxConsecutiveRunHours)} max
           </Text>
         </View>
@@ -116,7 +116,7 @@ function RestingCard({
   return (
     <View className="gap-4 py-4">
       <Text
-        className="text-warning text-center text-[44px] leading-none font-semibold"
+        className="text-warning text-11 text-center leading-none font-semibold"
         style={{ fontVariant: ['tabular-nums'] }}
       >
         {countdown.remainingFormatted}
@@ -130,10 +130,10 @@ function RestingCard({
           />
         </View>
         <View className="flex-row justify-between">
-          <Text className="text-muted text-[12px]">
+          <Text className="text-muted text-3">
             {formatHours(restedHours)} rested
           </Text>
-          <Text className="text-muted text-[12px]">
+          <Text className="text-muted text-3">
             {formatHours(requiredRestHours)} required
           </Text>
         </View>

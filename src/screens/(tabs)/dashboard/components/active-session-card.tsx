@@ -1,7 +1,6 @@
 import { SymbolView } from 'expo-symbols'
-import { Button, Surface } from 'heroui-native'
+import { Button, Surface, useThemeColor } from 'heroui-native'
 import { Alert, Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
 import { stopSession } from '@/data/client/mutations'
@@ -25,7 +24,7 @@ export function ActiveSessionCard({
   sessions,
   userId
 }: ActiveSessionCardProps) {
-  const successColor = useCSSVariable('--color-success') as string | undefined
+  const successColor = useThemeColor('success')
   const { consecutiveRunHours } = computeGeneratorStatus(generator, sessions)
   const elapsedHours = useElapsedHours(session.startedAt)
   const elapsedTimeStr = useElapsedTime(session.startedAt)
@@ -54,13 +53,13 @@ export function ActiveSessionCard({
 
       <View className="gap-1">
         <Text
-          className="text-foreground text-[22px] leading-tight font-bold"
+          className="text-foreground text-5.5 leading-tight font-bold"
           numberOfLines={1}
         >
           {generator.title}
         </Text>
         <Text
-          className="text-success text-[52px] leading-none font-semibold"
+          className="text-success text-13 leading-none font-semibold"
           style={{ fontVariant: ['tabular-nums'] }}
         >
           {elapsedTimeStr}
@@ -75,12 +74,10 @@ export function ActiveSessionCard({
           />
         </View>
         <View className="flex-row justify-between">
-          <Text className="text-muted text-[12px]">
+          <Text className="text-muted text-3">
             {formatHours(totalRunHours)} elapsed
           </Text>
-          <Text className="text-muted text-[12px]">
-            {formatHours(maxHours)} max
-          </Text>
+          <Text className="text-muted text-3">{formatHours(maxHours)} max</Text>
         </View>
       </View>
 

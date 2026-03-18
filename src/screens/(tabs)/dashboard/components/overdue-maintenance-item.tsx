@@ -1,7 +1,6 @@
 import { SymbolView } from 'expo-symbols'
-import { PressableFeedback, Surface } from 'heroui-native'
+import { PressableFeedback, Surface, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import { formatHours } from '@/lib/utils/time'
 
@@ -35,10 +34,7 @@ export function OverdueMaintenanceItem({
   daysRemaining,
   onPress
 }: OverdueMaintenanceItemProps) {
-  const [mutedColor, dangerColor] = useCSSVariable([
-    '--color-muted',
-    '--color-danger'
-  ]) as string[]
+  const [mutedColor, dangerColor] = useThemeColor(['muted', 'danger'])
 
   return (
     <PressableFeedback onPress={onPress}>
@@ -49,12 +45,12 @@ export function OverdueMaintenanceItem({
           </View>
           <View className="flex-1 gap-0.5">
             <Text
-              className="text-foreground text-[17px] font-semibold"
+              className="text-foreground text-4.25 font-semibold"
               numberOfLines={1}
             >
               {taskName}
             </Text>
-            <Text className="text-muted text-[13px]" numberOfLines={1}>
+            <Text className="text-muted text-3.25" numberOfLines={1}>
               {generatorTitle}
               {' · '}
               <Text className="text-danger">

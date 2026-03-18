@@ -1,10 +1,10 @@
 import { DrawerTriggerButton } from './drawer-trigger-button'
 import { isLiquidGlassAvailable } from 'expo-glass-effect'
 import { Stack } from 'expo-router'
-import { useCSSVariable } from 'uniwind'
+import { useThemeColor } from 'heroui-native'
 
 export function TabStackLayout({ title }: { title: string }) {
-  const tabBarBackgroundColor = useCSSVariable('--color-background') as string
+  const tabBarBackgroundColor = useThemeColor('background')
 
   return (
     <Stack

@@ -1,10 +1,10 @@
 import { Drawer } from 'expo-router/drawer'
-import { useCSSVariable } from 'uniwind'
+import { useThemeColor } from 'heroui-native'
 
 import { AppDrawerContent } from '@/components/navigation/app-drawer-content'
 
 export default function DrawerLayout() {
-  const backgroundColor = useCSSVariable('--color-background') as string
+  const backgroundColor = useThemeColor('background')
 
   return (
     <Drawer

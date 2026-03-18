@@ -23,7 +23,7 @@ export function ConfigurationSection({
             <ListGroup.ItemTitle>Max Run Hours</ListGroup.ItemTitle>
           </ListGroup.ItemContent>
           <ListGroup.ItemSuffix>
-            <Text className="text-foreground text-[15px]">
+            <Text className="text-foreground text-3.75">
               {maxConsecutiveRunHours}h
             </Text>
           </ListGroup.ItemSuffix>
@@ -34,7 +34,7 @@ export function ConfigurationSection({
             <ListGroup.ItemTitle>Rest Hours</ListGroup.ItemTitle>
           </ListGroup.ItemContent>
           <ListGroup.ItemSuffix>
-            <Text className="text-foreground text-[15px]">
+            <Text className="text-foreground text-3.75">
               {requiredRestHours}h
             </Text>
           </ListGroup.ItemSuffix>
@@ -45,7 +45,7 @@ export function ConfigurationSection({
             <ListGroup.ItemTitle>Warning Threshold</ListGroup.ItemTitle>
           </ListGroup.ItemContent>
           <ListGroup.ItemSuffix>
-            <Text className="text-foreground text-[15px]">
+            <Text className="text-foreground text-3.75">
               {runWarningThresholdPct}%
             </Text>
           </ListGroup.ItemSuffix>

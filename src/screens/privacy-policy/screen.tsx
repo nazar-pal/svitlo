@@ -45,7 +45,7 @@ export default function PrivacyPolicyPage() {
       className="bg-background flex-1"
       contentContainerClassName="px-6 py-10"
     >
-      <View className="mx-auto w-full max-w-[720px] gap-8">
+      <View className="mx-auto w-full max-w-180 gap-8">
         <View className="gap-3">
           <Text className="text-foreground text-center text-4xl font-bold tracking-tight">
             Privacy Policy

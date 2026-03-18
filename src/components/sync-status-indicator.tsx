@@ -1,8 +1,7 @@
 import { useStatus } from '@powersync/react-native'
 import { SymbolView } from 'expo-symbols'
-import { Spinner } from 'heroui-native'
+import { Spinner, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import { useSyncRejections } from '@/lib/powersync/sync-rejections'
 
@@ -63,10 +62,7 @@ function useSyncState() {
 
 export function SyncStatusIndicator() {
   const { label, icon, color, loading } = useSyncState()
-  const [mutedColor, warningColor] = useCSSVariable([
-    '--color-muted',
-    '--color-warning'
-  ]) as string[]
+  const [mutedColor, warningColor] = useThemeColor(['muted', 'warning'])
 
   const iconTint = color === 'text-warning' ? warningColor : mutedColor
 

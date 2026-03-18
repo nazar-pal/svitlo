@@ -83,12 +83,12 @@ export default function LandingScreen() {
       <View className="items-center px-6 pt-24 pb-20">
         <Image
           source={require('../../../assets/images/icon.png')}
-          className="mb-8 h-28 w-28 rounded-[28px] shadow-lg"
+          className="rounded-7 mb-8 h-28 w-28 shadow-lg"
         />
         <Text className="mb-3 text-center text-5xl font-bold tracking-tight text-gray-900">
           Svitlo
         </Text>
-        <Text className="mb-10 max-w-[520px] text-center text-xl leading-8 text-gray-500">
+        <Text className="mb-10 max-w-130 text-center text-xl leading-8 text-gray-500">
           Track, maintain, and manage your power generators {'\u2014'} all from
           one app.
         </Text>
@@ -97,7 +97,7 @@ export default function LandingScreen() {
 
       {/* Features */}
       <View className="border-t border-gray-100 bg-gray-50 px-6 py-20">
-        <View className="mx-auto w-full max-w-[1080px]">
+        <View className="mx-auto w-full max-w-270">
           <Text className="mb-3 text-center text-3xl font-bold tracking-tight text-gray-900">
             Everything You Need
           </Text>
@@ -110,7 +110,7 @@ export default function LandingScreen() {
             {features.map(feature => (
               <View
                 key={feature.title}
-                className="min-w-[300px] flex-1 basis-[30%] rounded-2xl border border-gray-200 bg-white p-6"
+                className="min-w-75 flex-1 basis-[30%] rounded-2xl border border-gray-200 bg-white p-6"
               >
                 <Text className="mb-3 text-3xl">{feature.icon}</Text>
                 <Text className="mb-2 text-lg font-semibold text-gray-900">
@@ -127,7 +127,7 @@ export default function LandingScreen() {
 
       {/* How It Works */}
       <View className="border-t border-gray-100 px-6 py-20">
-        <View className="mx-auto w-full max-w-[1080px]">
+        <View className="mx-auto w-full max-w-270">
           <Text className="mb-12 text-center text-3xl font-bold tracking-tight text-gray-900">
             How It Works
           </Text>
@@ -136,7 +136,7 @@ export default function LandingScreen() {
             {steps.map(step => (
               <View
                 key={step.number}
-                className="min-w-[240px] flex-1 basis-[28%] items-center gap-4"
+                className="min-w-60 flex-1 basis-[28%] items-center gap-4"
               >
                 <View className="h-14 w-14 items-center justify-center rounded-full bg-[#208AEF]">
                   <Text className="text-xl font-bold text-white">
@@ -157,7 +157,7 @@ export default function LandingScreen() {
 
       {/* AI Section */}
       <View className="items-center bg-[#208AEF] px-6 py-20">
-        <View className="mx-auto max-w-[640px] items-center">
+        <View className="mx-auto max-w-160 items-center">
           <Text className="mb-3 text-3xl font-bold text-white">
             Powered by AI
           </Text>
@@ -175,7 +175,7 @@ export default function LandingScreen() {
         <Text className="mb-3 text-3xl font-bold text-white">
           Ready to Get Started?
         </Text>
-        <Text className="mb-8 max-w-[480px] text-center text-lg text-gray-400">
+        <Text className="mb-8 max-w-120 text-center text-lg text-gray-400">
           Download Svitlo and take control of your generator maintenance today.
         </Text>
         <AppStoreButton />

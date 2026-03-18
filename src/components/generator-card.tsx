@@ -1,7 +1,11 @@
 import { SymbolView } from 'expo-symbols'
-import { Button, PressableFeedback, Surface } from 'heroui-native'
+import {
+  Button,
+  PressableFeedback,
+  Surface,
+  useThemeColor
+} from 'heroui-native'
 import { Alert, Text, View } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
 import { startSession, stopSession } from '@/data/client/mutations'
@@ -52,7 +56,7 @@ export function GeneratorCard({
   onPress,
   variant = 'detailed'
 }: GeneratorCardProps) {
-  const mutedColor = useCSSVariable('--color-muted') as string | undefined
+  const mutedColor = useThemeColor('muted')
   const { status, openSession, restEndsAt, consecutiveRunHours } =
     computeGeneratorStatus(generator, sessions)
 
@@ -99,7 +103,7 @@ export function GeneratorCard({
           <View className="flex-1 gap-1">
             <View className="flex-row items-center gap-2">
               <Text
-                className="text-foreground flex-1 text-[17px] font-semibold"
+                className="text-foreground text-4.25 flex-1 font-semibold"
                 numberOfLines={1}
               >
                 {generator.title}
@@ -108,16 +112,16 @@ export function GeneratorCard({
             </View>
 
             {variant === 'compact' ? (
-              <Text className="text-muted text-[13px]">{generator.model}</Text>
+              <Text className="text-muted text-3.25">{generator.model}</Text>
             ) : (
               <View className="flex-row items-center gap-2">
-                <Text className="text-muted text-[13px]">
+                <Text className="text-muted text-3.25">
                   {formatHours(lifetimeHours)} total
                 </Text>
                 {status === 'resting' && restEndsAt ? (
                   <>
-                    <Text className="text-muted text-[11px]">·</Text>
-                    <Text className="text-muted text-[13px]">
+                    <Text className="text-muted text-2.75">·</Text>
+                    <Text className="text-muted text-3.25">
                       rests {formatRestRemaining(restEndsAt)}
                     </Text>
                   </>
@@ -142,19 +146,17 @@ export function GeneratorCard({
             <View className="flex-row justify-between">
               {variant === 'compact' ? (
                 <>
-                  <Text className="text-muted text-[12px]">
+                  <Text className="text-muted text-3">
                     {formatHours(totalRunHours)} elapsed
                   </Text>
-                  <Text className="text-muted text-[12px]">
+                  <Text className="text-muted text-3">
                     {formatHours(maxHours)} max
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text className="text-muted text-[12px]">
-                    {elapsedTimeStr}
-                  </Text>
-                  <Text className="text-muted text-[12px]">
+                  <Text className="text-muted text-3">{elapsedTimeStr}</Text>
+                  <Text className="text-muted text-3">
                     {formatHours(totalRunHours)} / {formatHours(maxHours)}
                   </Text>
                 </>
@@ -172,10 +174,10 @@ export function GeneratorCard({
               />
             </View>
             <View className="flex-row justify-between">
-              <Text className="text-muted text-[12px]">
+              <Text className="text-muted text-3">
                 {restCountdown.remainingFormatted} remaining
               </Text>
-              <Text className="text-muted text-[12px]">
+              <Text className="text-muted text-3">
                 {formatHours(generator.requiredRestHours)} required
               </Text>
             </View>
@@ -185,7 +187,7 @@ export function GeneratorCard({
         {nextMaintenance ? (
           <View className="mt-2.5 flex-row items-center gap-1.5">
             <SymbolView name="wrench.fill" size={12} tintColor={mutedColor} />
-            <Text className="text-muted text-[13px]" numberOfLines={1}>
+            <Text className="text-muted text-3.25" numberOfLines={1}>
               {nextMaintenance.taskName}
               {' · '}
               <Text className={maintenanceLabelColor(nextMaintenance.urgency)}>

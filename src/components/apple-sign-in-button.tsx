@@ -27,7 +27,7 @@ export function AppleSignInButton({
           onPress={onPress}
         />
         {isSigningIn && (
-          <View className="absolute inset-0 items-center justify-center rounded-[14px] bg-black/60">
+          <View className="rounded-3.5 absolute inset-0 items-center justify-center bg-black/60">
             <Spinner color="white" />
           </View>
         )}

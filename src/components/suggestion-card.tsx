@@ -46,7 +46,7 @@ export function SuggestionCard({
       <Pressable onPress={onToggle} className="flex-row items-center gap-3">
         <Checkbox isSelected={item.selected} onSelectedChange={onToggle} />
         <Text
-          className="text-foreground flex-1 text-[15px] font-medium"
+          className="text-foreground text-3.75 flex-1 font-medium"
           numberOfLines={item.selected ? undefined : 1}
         >
           {item.taskName}
