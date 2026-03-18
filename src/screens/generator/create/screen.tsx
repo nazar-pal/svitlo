@@ -21,7 +21,10 @@ import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
 import { notifySuccess } from '@/lib/haptics'
-import { insertGeneratorSchema } from '@/data/client/validation'
+import {
+  flattenZodErrors,
+  insertGeneratorSchema
+} from '@/data/client/validation'
 import { rpcClient } from '@/data/rpc-client'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useLocalUser } from '@/lib/powersync'
@@ -148,11 +151,7 @@ export default function CreateGeneratorScreen() {
 
     const parsed = insertGeneratorSchema.safeParse(input)
     if (!parsed.success) {
-      const flat = parsed.error.flatten().fieldErrors
-      const mapped: Record<string, string> = {}
-      for (const [key, msgs] of Object.entries(flat))
-        if (msgs?.[0]) mapped[key] = msgs[0]
-      setFieldErrors(mapped)
+      setFieldErrors(flattenZodErrors(parsed.error))
       return
     }
 
@@ -209,7 +208,11 @@ export default function CreateGeneratorScreen() {
                 <Input
                   placeholder='e.g. "Back Yard Generator"'
                   value={title}
-                  onChangeText={setTitle}
+                  onChangeText={v => {
+                    setTitle(v)
+                    if (fieldErrors.title)
+                      setFieldErrors(({ title: _, ...rest }) => rest)
+                  }}
                   autoFocus
                 />
                 <FieldError>{fieldErrors.title}</FieldError>
@@ -220,7 +223,11 @@ export default function CreateGeneratorScreen() {
                 <Input
                   placeholder='e.g. "Honda EU2200i"'
                   value={model}
-                  onChangeText={setModel}
+                  onChangeText={v => {
+                    setModel(v)
+                    if (fieldErrors.model)
+                      setFieldErrors(({ model: _, ...rest }) => rest)
+                  }}
                 />
                 <FieldError>{fieldErrors.model}</FieldError>
               </TextField>
@@ -313,7 +320,13 @@ export default function CreateGeneratorScreen() {
                       <Input
                         placeholder="8"
                         value={maxRunHours}
-                        onChangeText={setMaxRunHours}
+                        onChangeText={v => {
+                          setMaxRunHours(v)
+                          if (fieldErrors.maxConsecutiveRunHours)
+                            setFieldErrors(
+                              ({ maxConsecutiveRunHours: _, ...rest }) => rest
+                            )
+                        }}
                         keyboardType="decimal-pad"
                       />
                       <FieldError>
@@ -327,7 +340,13 @@ export default function CreateGeneratorScreen() {
                       <Input
                         placeholder="4"
                         value={restHours}
-                        onChangeText={setRestHours}
+                        onChangeText={v => {
+                          setRestHours(v)
+                          if (fieldErrors.requiredRestHours)
+                            setFieldErrors(
+                              ({ requiredRestHours: _, ...rest }) => rest
+                            )
+                        }}
                         keyboardType="decimal-pad"
                       />
                       <FieldError>{fieldErrors.requiredRestHours}</FieldError>
@@ -340,7 +359,13 @@ export default function CreateGeneratorScreen() {
                   <Input
                     placeholder="80"
                     value={warningPct}
-                    onChangeText={setWarningPct}
+                    onChangeText={v => {
+                      setWarningPct(v)
+                      if (fieldErrors.runWarningThresholdPct)
+                        setFieldErrors(
+                          ({ runWarningThresholdPct: _, ...rest }) => rest
+                        )
+                    }}
                     keyboardType="number-pad"
                   />
                   <Description>

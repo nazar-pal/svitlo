@@ -16,7 +16,10 @@ import { KeyboardToolbar } from 'react-native-keyboard-controller'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createMaintenanceTemplate } from '@/data/client/mutations'
 import { notifySuccess, selection } from '@/lib/haptics'
-import { insertMaintenanceTemplateSchema } from '@/data/client/validation'
+import {
+  flattenZodErrors,
+  insertMaintenanceTemplateSchema
+} from '@/data/client/validation'
 import { useLocalUser } from '@/lib/powersync'
 
 const TRIGGER_TYPES = ['hours', 'calendar', 'whichever_first'] as const
@@ -64,11 +67,7 @@ export default function CreateMaintenanceTemplateScreen() {
 
     const parsed = insertMaintenanceTemplateSchema.safeParse(input)
     if (!parsed.success) {
-      const flat = parsed.error.flatten().fieldErrors
-      const mapped: Record<string, string> = {}
-      for (const [key, msgs] of Object.entries(flat))
-        if (msgs?.[0]) mapped[key] = msgs[0]
-      setFieldErrors(mapped)
+      setFieldErrors(flattenZodErrors(parsed.error))
       return
     }
 
@@ -108,7 +107,11 @@ export default function CreateMaintenanceTemplateScreen() {
               <Input
                 placeholder='e.g. "Oil Change", "Air Filter"'
                 value={taskName}
-                onChangeText={setTaskName}
+                onChangeText={v => {
+                  setTaskName(v)
+                  if (fieldErrors.taskName)
+                    setFieldErrors(({ taskName: _, ...rest }) => rest)
+                }}
                 autoFocus
               />
               <FieldError>{fieldErrors.taskName}</FieldError>
@@ -154,7 +157,13 @@ export default function CreateMaintenanceTemplateScreen() {
                 <Input
                   placeholder="e.g. 100"
                   value={hoursInterval}
-                  onChangeText={setHoursInterval}
+                  onChangeText={v => {
+                    setHoursInterval(v)
+                    if (fieldErrors.triggerHoursInterval)
+                      setFieldErrors(
+                        ({ triggerHoursInterval: _, ...rest }) => rest
+                      )
+                  }}
                   keyboardType="decimal-pad"
                 />
                 <Description>
@@ -170,7 +179,13 @@ export default function CreateMaintenanceTemplateScreen() {
                 <Input
                   placeholder="e.g. 30"
                   value={calendarDays}
-                  onChangeText={setCalendarDays}
+                  onChangeText={v => {
+                    setCalendarDays(v)
+                    if (fieldErrors.triggerCalendarDays)
+                      setFieldErrors(
+                        ({ triggerCalendarDays: _, ...rest }) => rest
+                      )
+                  }}
                   keyboardType="number-pad"
                 />
                 <Description>Maintenance due after this many days</Description>

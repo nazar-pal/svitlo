@@ -54,8 +54,8 @@ export type StopSessionInput = z.input<typeof stopSessionSchema>
 export const logManualSessionSchema = z
   .object({
     generatorId: z.string(),
-    startedAt: z.string().datetime(),
-    stoppedAt: z.string().datetime()
+    startedAt: z.iso.datetime(),
+    stoppedAt: z.iso.datetime()
   })
   .refine(data => data.startedAt < data.stoppedAt, {
     error: 'Start time must be before end time',
