@@ -1,7 +1,6 @@
 import * as Network from 'expo-network'
 import { useRouter } from 'expo-router'
 import {
-  Alert as HeroAlert,
   Button,
   Card,
   Description,
@@ -17,15 +16,17 @@ import { Alert as RNAlert, Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { AiSourcesList } from '@/components/ai-sources-list'
-import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { FormError } from '@/components/form-error'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
+import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
-import { notifySuccess } from '@/lib/haptics'
 import {
   flattenZodErrors,
   insertGeneratorSchema
 } from '@/data/client/validation'
 import { rpcClient } from '@/data/rpc-client'
+import { notifySuccess } from '@/lib/haptics'
+import { useFormFields } from '@/lib/hooks/use-form-fields'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -39,12 +40,14 @@ export default function CreateGeneratorScreen() {
   const [step, setStep] = useState<Step>('basics')
   const [mode, setMode] = useState<Mode>(null)
 
-  const [title, setTitle] = useState('')
-  const [model, setModel] = useState('')
-  const [description, setDescription] = useState('')
-  const [maxRunHours, setMaxRunHours] = useState('8')
-  const [restHours, setRestHours] = useState('4')
-  const [warningPct, setWarningPct] = useState('80')
+  const { values, field, set, fieldErrors, setFieldErrors } = useFormFields({
+    title: '',
+    model: '',
+    description: '',
+    maxConsecutiveRunHours: '8',
+    requiredRestHours: '4',
+    runWarningThresholdPct: '80'
+  })
 
   const [maintenanceItems, setMaintenanceItems] = useState<EditableItem[]>([])
   const [isLoadingAI, setIsLoadingAI] = useState(false)
@@ -52,13 +55,12 @@ export default function CreateGeneratorScreen() {
   const [aiModelInfo, setAiModelInfo] = useState('')
 
   const [error, setError] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   function handleNext() {
     setFieldErrors({})
     const errors: Record<string, string> = {}
-    if (!title.trim()) errors.title = 'Title is required'
-    if (!model.trim()) errors.model = 'Model is required'
+    if (!values.title.trim()) errors.title = 'Title is required'
+    if (!values.model.trim()) errors.model = 'Model is required'
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
       return
@@ -82,8 +84,8 @@ export default function CreateGeneratorScreen() {
     setIsLoadingAI(true)
     const result = await rpcClient.ai
       .suggestMaintenancePlan({
-        generatorModel: model,
-        description: description || undefined
+        generatorModel: values.model,
+        description: values.description || undefined
       })
       .catch((err: unknown) => {
         RNAlert.alert(
@@ -100,9 +102,9 @@ export default function CreateGeneratorScreen() {
     }
 
     if (result.maxConsecutiveRunHours != null)
-      setMaxRunHours(String(result.maxConsecutiveRunHours))
+      set('maxConsecutiveRunHours', String(result.maxConsecutiveRunHours))
     if (result.requiredRestHours != null)
-      setRestHours(String(result.requiredRestHours))
+      set('requiredRestHours', String(result.requiredRestHours))
 
     setAiSources(result.sources)
     setAiModelInfo(result.modelInfo)
@@ -141,12 +143,12 @@ export default function CreateGeneratorScreen() {
 
     const input = {
       organizationId: selectedOrgId,
-      title,
-      model,
-      description: description || undefined,
-      maxConsecutiveRunHours: parseFloat(maxRunHours) || 0,
-      requiredRestHours: parseFloat(restHours) || 0,
-      runWarningThresholdPct: parseInt(warningPct, 10) || 80
+      title: values.title,
+      model: values.model,
+      description: values.description || undefined,
+      maxConsecutiveRunHours: parseFloat(values.maxConsecutiveRunHours) || 0,
+      requiredRestHours: parseFloat(values.requiredRestHours) || 0,
+      runWarningThresholdPct: parseInt(values.runWarningThresholdPct, 10) || 80
     }
 
     const parsed = insertGeneratorSchema.safeParse(input)
@@ -207,12 +209,7 @@ export default function CreateGeneratorScreen() {
                 <Label>Title</Label>
                 <Input
                   placeholder='e.g. "Back Yard Generator"'
-                  value={title}
-                  onChangeText={v => {
-                    setTitle(v)
-                    if (fieldErrors.title)
-                      setFieldErrors(({ title: _, ...rest }) => rest)
-                  }}
+                  {...field('title')}
                   autoFocus
                 />
                 <FieldError>{fieldErrors.title}</FieldError>
@@ -220,15 +217,7 @@ export default function CreateGeneratorScreen() {
 
               <TextField isInvalid={!!fieldErrors.model}>
                 <Label>Model</Label>
-                <Input
-                  placeholder='e.g. "Honda EU2200i"'
-                  value={model}
-                  onChangeText={v => {
-                    setModel(v)
-                    if (fieldErrors.model)
-                      setFieldErrors(({ model: _, ...rest }) => rest)
-                  }}
-                />
+                <Input placeholder='e.g. "Honda EU2200i"' {...field('model')} />
                 <FieldError>{fieldErrors.model}</FieldError>
               </TextField>
 
@@ -236,8 +225,7 @@ export default function CreateGeneratorScreen() {
                 <Label>Description</Label>
                 <Input
                   placeholder="Location, serial number, notes..."
-                  value={description}
-                  onChangeText={setDescription}
+                  {...field('description')}
                   multiline
                 />
                 <Description>Optional</Description>
@@ -273,7 +261,7 @@ export default function CreateGeneratorScreen() {
               Generator Details
             </Text>
             <Text className="text-muted text-3.75 leading-5.5">
-              {model} — configure specs and maintenance schedule.
+              {values.model} — configure specs and maintenance schedule.
             </Text>
           </View>
 
@@ -306,7 +294,9 @@ export default function CreateGeneratorScreen() {
           {isLoadingAI ? (
             <View className="items-center gap-3 py-10">
               <Spinner />
-              <Text className="text-muted text-sm">Researching {model}...</Text>
+              <Text className="text-muted text-sm">
+                Researching {values.model}...
+              </Text>
             </View>
           ) : null}
 
@@ -319,14 +309,7 @@ export default function CreateGeneratorScreen() {
                       <Label>Max Run Hours</Label>
                       <Input
                         placeholder="8"
-                        value={maxRunHours}
-                        onChangeText={v => {
-                          setMaxRunHours(v)
-                          if (fieldErrors.maxConsecutiveRunHours)
-                            setFieldErrors(
-                              ({ maxConsecutiveRunHours: _, ...rest }) => rest
-                            )
-                        }}
+                        {...field('maxConsecutiveRunHours')}
                         keyboardType="decimal-pad"
                       />
                       <FieldError>
@@ -339,14 +322,7 @@ export default function CreateGeneratorScreen() {
                       <Label>Rest Hours</Label>
                       <Input
                         placeholder="4"
-                        value={restHours}
-                        onChangeText={v => {
-                          setRestHours(v)
-                          if (fieldErrors.requiredRestHours)
-                            setFieldErrors(
-                              ({ requiredRestHours: _, ...rest }) => rest
-                            )
-                        }}
+                        {...field('requiredRestHours')}
                         keyboardType="decimal-pad"
                       />
                       <FieldError>{fieldErrors.requiredRestHours}</FieldError>
@@ -358,14 +334,7 @@ export default function CreateGeneratorScreen() {
                   <Label>Warning Threshold %</Label>
                   <Input
                     placeholder="80"
-                    value={warningPct}
-                    onChangeText={v => {
-                      setWarningPct(v)
-                      if (fieldErrors.runWarningThresholdPct)
-                        setFieldErrors(
-                          ({ runWarningThresholdPct: _, ...rest }) => rest
-                        )
-                    }}
+                    {...field('runWarningThresholdPct')}
                     keyboardType="number-pad"
                   />
                   <Description>
@@ -404,14 +373,7 @@ export default function CreateGeneratorScreen() {
 
               <AiSourcesList sources={aiSources} />
 
-              {error ? (
-                <HeroAlert status="danger">
-                  <HeroAlert.Indicator />
-                  <HeroAlert.Content>
-                    <HeroAlert.Description>{error}</HeroAlert.Description>
-                  </HeroAlert.Content>
-                </HeroAlert>
-              ) : null}
+              <FormError message={error} />
 
               <Button variant="primary" onPress={handleCreate}>
                 Create Generator

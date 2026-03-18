@@ -1,6 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
-  Alert as HeroAlert,
   Button,
   Card,
   Description,
@@ -11,6 +10,7 @@ import {
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 
+import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { recordMaintenance } from '@/data/client/mutations'
 import { notifySuccess } from '@/lib/haptics'
@@ -99,14 +99,7 @@ export default function RecordMaintenanceScreen() {
           <Description>Optional</Description>
         </TextField>
 
-        {error ? (
-          <HeroAlert status="danger">
-            <HeroAlert.Indicator />
-            <HeroAlert.Content>
-              <HeroAlert.Description>{error}</HeroAlert.Description>
-            </HeroAlert.Content>
-          </HeroAlert>
-        ) : null}
+        <FormError message={error} />
 
         <Button variant="primary" onPress={handleRecord}>
           Log Maintenance

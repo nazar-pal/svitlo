@@ -1,7 +1,9 @@
 import * as AppleAuthentication from 'expo-apple-authentication'
-import { Alert as HeroAlert, Spinner } from 'heroui-native'
+import { Spinner } from 'heroui-native'
 import React from 'react'
 import { View } from 'react-native'
+
+import { FormError } from '@/components/form-error'
 
 interface AppleSignInButtonProps {
   isSigningIn: boolean
@@ -33,14 +35,7 @@ export function AppleSignInButton({
         )}
       </View>
 
-      {error ? (
-        <HeroAlert status="danger">
-          <HeroAlert.Indicator />
-          <HeroAlert.Content>
-            <HeroAlert.Description>{error}</HeroAlert.Description>
-          </HeroAlert.Content>
-        </HeroAlert>
-      ) : null}
+      <FormError message={error} />
     </View>
   )
 }

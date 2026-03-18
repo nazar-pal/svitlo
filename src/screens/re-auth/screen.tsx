@@ -1,16 +1,12 @@
 import { useRouter } from 'expo-router'
-import {
-  Alert as HeroAlert,
-  Button,
-  Input,
-  Label,
-  TextField
-} from 'heroui-native'
+import { Button, Input, Label, TextField } from 'heroui-native'
 import React, { useRef, useState } from 'react'
 import { Alert, Pressable, Text, TextInput, View } from 'react-native'
 
 import { AppleSignInButton } from '@/components/apple-sign-in-button'
+import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { signInSchema } from '@/data/client/validation'
 import { authClient } from '@/lib/auth/auth-client'
 import { useLocalIdentity } from '@/lib/auth/local-identity-context'
 import { useAppleSignIn } from '@/lib/auth/use-apple-sign-in'
@@ -52,14 +48,9 @@ export default function ReAuthScreen() {
     setIsEmailSubmitting(true)
     setEmailError('')
 
-    if (!email.trim()) {
-      setEmailError('Please enter your email.')
-      setIsEmailSubmitting(false)
-      return
-    }
-
-    if (!password) {
-      setEmailError('Please enter your password.')
+    const parsed = signInSchema.safeParse({ email, password })
+    if (!parsed.success) {
+      setEmailError(parsed.error.issues[0].message)
       setIsEmailSubmitting(false)
       return
     }
@@ -70,7 +61,7 @@ export default function ReAuthScreen() {
     })
 
     if (result.error) {
-      setEmailError(result.error.message ?? 'Something went wrong.')
+      setEmailError(result.error.message ?? 'Something went wrong')
       setIsEmailSubmitting(false)
       return
     }
@@ -142,14 +133,7 @@ export default function ReAuthScreen() {
               />
             </TextField>
 
-            {emailError ? (
-              <HeroAlert status="danger">
-                <HeroAlert.Indicator />
-                <HeroAlert.Content>
-                  <HeroAlert.Description>{emailError}</HeroAlert.Description>
-                </HeroAlert.Content>
-              </HeroAlert>
-            ) : null}
+            <FormError message={emailError} />
 
             <Button
               variant="primary"

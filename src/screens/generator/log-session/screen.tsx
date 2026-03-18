@@ -1,9 +1,10 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
-import { Alert as HeroAlert, Button, Card } from 'heroui-native'
+import { Button, Card } from 'heroui-native'
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 import { DatePicker, Host } from '@expo/ui/swift-ui'
 
+import { FormError } from '@/components/form-error'
 import { logManualSession } from '@/data/client/mutations'
 import { notifySuccess } from '@/lib/haptics'
 import { getGenerator } from '@/data/client/queries'
@@ -103,14 +104,7 @@ export default function LogSessionScreen() {
             </Host>
           </View>
 
-          {error ? (
-            <HeroAlert status="danger">
-              <HeroAlert.Indicator />
-              <HeroAlert.Content>
-                <HeroAlert.Description>{error}</HeroAlert.Description>
-              </HeroAlert.Content>
-            </HeroAlert>
-          ) : null}
+          <FormError message={error} />
 
           <Button variant="primary" onPress={handleSubmit}>
             Log Session

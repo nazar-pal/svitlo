@@ -1,16 +1,11 @@
 import { useRouter } from 'expo-router'
-import {
-  Alert,
-  Button,
-  Description,
-  Input,
-  Label,
-  TextField
-} from 'heroui-native'
+import { Button, Description, Input, Label, TextField } from 'heroui-native'
 import { useRef, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 
+import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { signInSchema, signUpSchema } from '@/data/client/validation'
 import { authClient } from '@/lib/auth/auth-client'
 
 export default function EmailAuthScreen() {
@@ -34,32 +29,13 @@ export default function EmailAuthScreen() {
     setIsSubmitting(true)
     setError('')
 
-    if (isSignUp && !name.trim()) {
-      setError('Please enter your name.')
-      setIsSubmitting(false)
-      return
-    }
-
-    if (!email.trim()) {
-      setError('Please enter your email.')
-      setIsSubmitting(false)
-      return
-    }
-
-    if (!password) {
-      setError('Please enter your password.')
-      setIsSubmitting(false)
-      return
-    }
-
-    if (isSignUp && password.length < 8) {
-      setError('Password must be at least 8 characters.')
-      setIsSubmitting(false)
-      return
-    }
-
-    if (isSignUp && password !== confirmPassword) {
-      setError('Passwords do not match.')
+    const schema = isSignUp ? signUpSchema : signInSchema
+    const input = isSignUp
+      ? { name, email, password, confirmPassword }
+      : { email, password }
+    const parsed = schema.safeParse(input)
+    if (!parsed.success) {
+      setError(parsed.error.issues[0].message)
       setIsSubmitting(false)
       return
     }
@@ -76,7 +52,7 @@ export default function EmailAuthScreen() {
         })
 
     if (result.error) {
-      setError(result.error.message ?? 'Something went wrong.')
+      setError(result.error.message ?? 'Something went wrong')
       setIsSubmitting(false)
       return
     }
@@ -175,14 +151,7 @@ export default function EmailAuthScreen() {
           )}
         </View>
 
-        {error ? (
-          <Alert status="danger">
-            <Alert.Indicator />
-            <Alert.Content>
-              <Alert.Description>{error}</Alert.Description>
-            </Alert.Content>
-          </Alert>
-        ) : null}
+        <FormError message={error} />
 
         <Button
           variant="primary"

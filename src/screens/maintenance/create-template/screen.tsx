@@ -1,6 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
-  Alert as HeroAlert,
   Button,
   Description,
   FieldError,
@@ -13,13 +12,15 @@ import { useState } from 'react'
 import { Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
+import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createMaintenanceTemplate } from '@/data/client/mutations'
-import { notifySuccess, selection } from '@/lib/haptics'
 import {
   flattenZodErrors,
   insertMaintenanceTemplateSchema
 } from '@/data/client/validation'
+import { notifySuccess, selection } from '@/lib/haptics'
+import { useFormFields } from '@/lib/hooks/use-form-fields'
 import { useLocalUser } from '@/lib/powersync'
 
 const TRIGGER_TYPES = ['hours', 'calendar', 'whichever_first'] as const
@@ -36,13 +37,15 @@ export default function CreateMaintenanceTemplateScreen() {
   const router = useRouter()
   const localUser = useLocalUser()
 
-  const [taskName, setTaskName] = useState('')
-  const [description, setDescription] = useState('')
-  const [triggerType, setTriggerType] = useState<TriggerType>('hours')
-  const [hoursInterval, setHoursInterval] = useState('')
-  const [calendarDays, setCalendarDays] = useState('')
+  const { values, field, set, fieldErrors, setFieldErrors } = useFormFields({
+    taskName: '',
+    description: '',
+    triggerType: 'hours',
+    triggerHoursInterval: '',
+    triggerCalendarDays: ''
+  })
   const [error, setError] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const triggerType = values.triggerType as TriggerType
   const showHours = triggerType === 'hours' || triggerType === 'whichever_first'
   const showCalendar =
     triggerType === 'calendar' || triggerType === 'whichever_first'
@@ -54,14 +57,14 @@ export default function CreateMaintenanceTemplateScreen() {
 
     const input = {
       generatorId,
-      taskName,
-      description: description || undefined,
+      taskName: values.taskName,
+      description: values.description || undefined,
       triggerType,
       triggerHoursInterval: showHours
-        ? parseFloat(hoursInterval) || undefined
+        ? parseFloat(values.triggerHoursInterval) || undefined
         : undefined,
       triggerCalendarDays: showCalendar
-        ? parseInt(calendarDays, 10) || undefined
+        ? parseInt(values.triggerCalendarDays, 10) || undefined
         : undefined
     }
 
@@ -106,12 +109,7 @@ export default function CreateMaintenanceTemplateScreen() {
               <Label>Task Name</Label>
               <Input
                 placeholder='e.g. "Oil Change", "Air Filter"'
-                value={taskName}
-                onChangeText={v => {
-                  setTaskName(v)
-                  if (fieldErrors.taskName)
-                    setFieldErrors(({ taskName: _, ...rest }) => rest)
-                }}
+                {...field('taskName')}
                 autoFocus
               />
               <FieldError>{fieldErrors.taskName}</FieldError>
@@ -121,8 +119,7 @@ export default function CreateMaintenanceTemplateScreen() {
               <Label>Description</Label>
               <Input
                 placeholder="Instructions or notes..."
-                value={description}
-                onChangeText={setDescription}
+                {...field('description')}
                 multiline
               />
               <Description>Optional</Description>
@@ -134,10 +131,10 @@ export default function CreateMaintenanceTemplateScreen() {
                 Trigger Type
               </Text>
               <Tabs
-                value={triggerType}
+                value={values.triggerType}
                 onValueChange={v => {
                   selection()
-                  setTriggerType(v as TriggerType)
+                  set('triggerType', v)
                 }}
               >
                 <Tabs.List>
@@ -156,14 +153,7 @@ export default function CreateMaintenanceTemplateScreen() {
                 <Label>Hours Interval</Label>
                 <Input
                   placeholder="e.g. 100"
-                  value={hoursInterval}
-                  onChangeText={v => {
-                    setHoursInterval(v)
-                    if (fieldErrors.triggerHoursInterval)
-                      setFieldErrors(
-                        ({ triggerHoursInterval: _, ...rest }) => rest
-                      )
-                  }}
+                  {...field('triggerHoursInterval')}
                   keyboardType="decimal-pad"
                 />
                 <Description>
@@ -178,14 +168,7 @@ export default function CreateMaintenanceTemplateScreen() {
                 <Label>Calendar Days</Label>
                 <Input
                   placeholder="e.g. 30"
-                  value={calendarDays}
-                  onChangeText={v => {
-                    setCalendarDays(v)
-                    if (fieldErrors.triggerCalendarDays)
-                      setFieldErrors(
-                        ({ triggerCalendarDays: _, ...rest }) => rest
-                      )
-                  }}
+                  {...field('triggerCalendarDays')}
                   keyboardType="number-pad"
                 />
                 <Description>Maintenance due after this many days</Description>
@@ -194,14 +177,7 @@ export default function CreateMaintenanceTemplateScreen() {
             ) : null}
           </View>
 
-          {error ? (
-            <HeroAlert status="danger">
-              <HeroAlert.Indicator />
-              <HeroAlert.Content>
-                <HeroAlert.Description>{error}</HeroAlert.Description>
-              </HeroAlert.Content>
-            </HeroAlert>
-          ) : null}
+          <FormError message={error} />
 
           <Button variant="primary" onPress={handleCreate}>
             Create Task
