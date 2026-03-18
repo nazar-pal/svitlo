@@ -34,19 +34,22 @@ import { useLocalUser } from '@/lib/powersync'
 import { getUserName } from '@/lib/utils/get-user-name'
 import { formatHours } from '@/lib/utils/time'
 
+import type { ActivityItem } from '@/lib/generator/activity-item'
+import { setPendingSuggestions } from '@/lib/maintenance/suggestions-store'
+import { isLiquidGlassAvailable } from 'expo-glass-effect'
+import { useThemeColor } from 'heroui-native'
 import { AssignedEmployeesSection } from './components/assigned-employees-section'
 import { ConfigurationSection } from './components/configuration-section'
 import { MaintenanceSection } from './components/maintenance-section'
-import type { ActivityItem } from '@/lib/generator/activity-item'
 import { RecentActivitySection } from './components/recent-activity-section'
 import type { StatusCardProps } from './components/status-card'
 import { StatusCard } from './components/status-card'
-import { setPendingSuggestions } from '@/lib/maintenance/suggestions-store'
 
 export default function GeneratorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
+  const [backgroundColor] = useThemeColor(['background'])
 
   const userId = localUser?.id ?? ''
   const [isSuggesting, setIsSuggesting] = useState(false)
@@ -227,7 +230,16 @@ export default function GeneratorDetailScreen() {
       contentInsetAdjustmentBehavior="automatic"
       contentContainerClassName="px-5 pb-10 pt-4"
     >
-      <Stack.Screen options={{ title: generator.title }} />
+      <Stack.Screen
+        options={{
+          title: generator.title,
+          headerStyle: {
+            backgroundColor: isLiquidGlassAvailable()
+              ? 'transparent'
+              : backgroundColor
+          }
+        }}
+      />
       <View className="mx-auto w-full max-w-[600px] gap-6">
         {/* Generator Info */}
         <View className="items-center gap-1 pt-4">

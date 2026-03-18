@@ -1,38 +1,26 @@
 import { isLiquidGlassAvailable } from 'expo-glass-effect'
 import { NativeTabs } from 'expo-router/unstable-native-tabs'
+import { useThemeColor } from 'heroui-native'
 import React from 'react'
 import { DynamicColorIOS } from 'react-native'
-import { useCSSVariable } from 'uniwind'
 
 export const unstable_settings = {
   initialRouteName: '(dashboard)'
 }
 
 export default function AppTabs() {
-  const [accentColor, blackColor, whiteColor, accentSoftColor] = useCSSVariable(
-    ['--color-accent', '--color-black', '--color-white', '--color-accent-soft']
-  ) as [string, string, string, string]
+  const [accentColor] = useThemeColor(['accent'])
+
+  const dynamicLabelAndIconColor = isLiquidGlassAvailable()
+    ? DynamicColorIOS({ light: '#000', dark: '#FFF' })
+    : undefined
 
   return (
     <NativeTabs
       backgroundColor={undefined}
       badgeBackgroundColor={accentColor}
-      labelStyle={{
-        color: isLiquidGlassAvailable()
-          ? DynamicColorIOS({
-              light: blackColor,
-              dark: whiteColor
-            })
-          : accentSoftColor
-      }}
-      iconColor={
-        isLiquidGlassAvailable()
-          ? DynamicColorIOS({
-              light: blackColor,
-              dark: whiteColor
-            })
-          : accentSoftColor
-      }
+      labelStyle={{ color: dynamicLabelAndIconColor }}
+      iconColor={dynamicLabelAndIconColor}
       tintColor={accentColor}
       labelVisibilityMode="labeled"
       indicatorColor={accentColor + '25'}
