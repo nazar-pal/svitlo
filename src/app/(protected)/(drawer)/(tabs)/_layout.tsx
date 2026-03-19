@@ -40,11 +40,14 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf="bolt.fill" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="settings">
+      <NativeTabs.Trigger
+        name="members"
+        role={isLiquidGlassAvailable() ? 'search' : undefined}
+      >
         <NativeTabs.Trigger.Label selectedStyle={{ color: accentColor }}>
-          Settings
+          Members
         </NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="gearshape.fill" />
+        <NativeTabs.Trigger.Icon sf="person.2.fill" />
       </NativeTabs.Trigger>
     </NativeTabs>
   )

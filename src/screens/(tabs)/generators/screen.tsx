@@ -32,8 +32,8 @@ export default function GeneratorsScreen() {
           icon="building.2"
           title="No Organizations"
           description="Create an organization or accept an invitation to get started."
-          actionLabel="Go to Settings"
-          onAction={() => router.push('/settings')}
+          actionLabel="Go to Members"
+          onAction={() => router.push('/members')}
         />
       </View>
     )
