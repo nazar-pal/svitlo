@@ -6,8 +6,13 @@ import { useToast } from 'heroui-native'
 export function UpdateChecker() {
   const { toast } = useToast()
   const toastShownRef = useRef(false)
-  const { isUpdateAvailable, isUpdatePending, isDownloading } =
-    Updates.useUpdates()
+  const {
+    isUpdateAvailable,
+    isUpdatePending,
+    isDownloading,
+    currentlyRunning,
+    downloadedUpdate
+  } = Updates.useUpdates()
 
   useEffect(() => {
     if (!Updates.isEnabled || !isUpdateAvailable || isDownloading) return
@@ -16,6 +21,14 @@ export function UpdateChecker() {
 
   useEffect(() => {
     if (!isUpdatePending || toastShownRef.current) return
+    // After reloadAsync() the native state machine may still report the
+    // previously downloaded update as "pending" before it settles. Skip the
+    // toast when the downloaded update is already the one we're running.
+    if (
+      !downloadedUpdate?.updateId ||
+      downloadedUpdate.updateId === currentlyRunning.updateId
+    )
+      return
     toastShownRef.current = true
     toast.show({
       variant: 'accent',
@@ -29,7 +42,7 @@ export function UpdateChecker() {
         Updates.reloadAsync().catch(console.warn)
       }
     })
-  }, [isUpdatePending, toast])
+  }, [isUpdatePending, downloadedUpdate, currentlyRunning, toast])
 
   useEffect(() => {
     if (!Updates.isEnabled) return
