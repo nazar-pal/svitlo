@@ -44,7 +44,7 @@ export function ReAuthBanner() {
           variant="primary"
           onPress={() => router.push('/(protected)/re-auth')}
         >
-          Sign in
+          Sign In
         </Button>
         {pendingCount === 0 ? (
           <Button size="sm" variant="ghost" onPress={() => setDismissed(true)}>

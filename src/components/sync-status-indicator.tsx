@@ -3,10 +3,12 @@ import { SymbolView } from 'expo-symbols'
 import { Spinner, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
 
+import { useSessionStatus } from '@/lib/auth/session-status-context'
 import { useSyncRejections } from '@/lib/powersync/sync-rejections'
 
 function useSyncState() {
   const status = useStatus()
+  const { sessionStatus } = useSessionStatus()
   const rejections = useSyncRejections()
 
   if (rejections.length > 0)
@@ -36,6 +38,14 @@ function useSyncState() {
       loading: true
     }
 
+  if (sessionStatus === 'expired' && !status.connected)
+    return {
+      label: 'Session expired',
+      icon: 'exclamationmark.arrow.circlepath' as const,
+      color: 'text-warning' as const,
+      loading: false
+    }
+
   if (!status.connected && !status.connecting)
     return {
       label: 'Offline — changes saved locally',
@@ -62,9 +72,18 @@ function useSyncState() {
 
 export function SyncStatusIndicator() {
   const { label, icon, color, loading } = useSyncState()
-  const [mutedColor, warningColor] = useThemeColor(['muted', 'warning'])
+  const [mutedColor, warningColor, dangerColor] = useThemeColor([
+    'muted',
+    'warning',
+    'danger'
+  ])
 
-  const iconTint = color === 'text-warning' ? warningColor : mutedColor
+  const iconTint =
+    color === 'text-warning'
+      ? warningColor
+      : color === 'text-danger'
+        ? dangerColor
+        : mutedColor
 
   return (
     <View className="flex-row items-center gap-1.5">

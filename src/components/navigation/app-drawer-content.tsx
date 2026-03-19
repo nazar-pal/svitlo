@@ -14,6 +14,7 @@ import { SectionHeader } from '@/components/section-header'
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
 import { SafeAreaView } from '@/components/uniwind'
 import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
+import { useSessionStatus } from '@/lib/auth/session-status-context'
 import { notifySuccess, notifyWarning, selection } from '@/lib/haptics'
 import {
   getAllOrganizations,
@@ -40,6 +41,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
   const router = useRouter()
   const localUser = useLocalUser()
   const handleSignOut = useSignOut()
+  const { sessionStatus } = useSessionStatus()
   const { userOrgs, userId } = useUserOrgs()
   const { selectedOrgId, setSelectedOrgId } = useSelectedOrg()
   const foregroundColor = useThemeColor('foreground')
@@ -196,8 +198,16 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
         ) : null}
       </ScrollView>
 
-      {/* Footer — Sign Out */}
-      <View className="px-5 pt-2 pb-4">
+      {/* Footer */}
+      <View className="gap-2 px-5 pt-2 pb-4">
+        {sessionStatus === 'expired' ? (
+          <Button
+            variant="primary"
+            onPress={() => router.push('/(protected)/re-auth')}
+          >
+            Sign In
+          </Button>
+        ) : null}
         <Button variant="danger-soft" onPress={handleSignOut}>
           Sign Out
         </Button>
