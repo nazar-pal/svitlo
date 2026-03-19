@@ -8,21 +8,19 @@ import {
   Separator,
   useThemeColor
 } from 'heroui-native'
-import { Alert, ScrollView, Text, View } from 'react-native'
+import { useState } from 'react'
+import { ScrollView, Text, View } from 'react-native'
 
+import { InvitationDialog } from '@/components/invitation-dialog'
 import { SectionHeader } from '@/components/section-header'
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
 import { SafeAreaView } from '@/components/uniwind'
-import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
 import { useSessionStatus } from '@/lib/auth/session-status-context'
-import { notifySuccess, notifyWarning, selection } from '@/lib/haptics'
-import {
-  getAllOrganizations,
-  getAllUsers,
-  getInvitationsByEmail
-} from '@/data/client/queries'
+import { selection } from '@/lib/haptics'
+import { getAllOrganizations, getAllUsers } from '@/data/client/queries'
 import { useSignOut } from '@/lib/auth/use-sign-out'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
+import { usePendingInvitations } from '@/lib/hooks/use-pending-invitations'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
@@ -42,22 +40,19 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
   const localUser = useLocalUser()
   const handleSignOut = useSignOut()
   const { sessionStatus } = useSessionStatus()
-  const { userOrgs, userId } = useUserOrgs()
+  const { userOrgs, isAdmin } = useUserOrgs()
   const { selectedOrgId, setSelectedOrgId } = useSelectedOrg()
   const foregroundColor = useThemeColor('foreground')
   const accentColor = useThemeColor('accent')
+  const [selectedInvitationIds, setSelectedInvitationIds] = useState<string[]>(
+    []
+  )
 
   const userEmail = localUser?.email ?? ''
   const userName = localUser?.name || 'Unknown'
 
   const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
-
-  const normalizedEmail = userEmail.toLowerCase()
-
-  const { data: pendingInvitations } = useDrizzleQuery(
-    normalizedEmail ? getInvitationsByEmail(normalizedEmail) : undefined
-  )
-
+  const pendingInvitations = usePendingInvitations()
   const { data: allUsers } = useDrizzleQuery(getAllUsers())
 
   function getOrgName(orgId: string): string {
@@ -66,18 +61,6 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
 
   function getInviterName(userId: string): string {
     return allUsers.find(u => u.id === userId)?.name ?? 'Unknown'
-  }
-
-  async function handleAccept(invitationId: string) {
-    const result = await acceptInvitation(userId, userEmail, invitationId)
-    if (!result.ok) return Alert.alert('Error', result.error)
-    notifySuccess()
-  }
-
-  async function handleDecline(invitationId: string) {
-    const result = await declineInvitation(userEmail, invitationId)
-    if (!result.ok) return Alert.alert('Error', result.error)
-    notifyWarning()
   }
 
   return (
@@ -117,11 +100,22 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
                   }}
                 >
                   <ListGroup.ItemPrefix>
-                    <SymbolView
-                      name="building.2.fill"
-                      size={20}
-                      tintColor={foregroundColor}
-                    />
+                    <View>
+                      <SymbolView
+                        name="building.2.fill"
+                        size={20}
+                        tintColor={foregroundColor}
+                      />
+                      {isAdmin(org.id) ? (
+                        <View className="bg-background absolute -right-1 -bottom-1 rounded-full p-px">
+                          <SymbolView
+                            name="shield.fill"
+                            size={10}
+                            tintColor={accentColor}
+                          />
+                        </View>
+                      ) : null}
+                    </View>
                   </ListGroup.ItemPrefix>
                   <ListGroup.ItemContent>
                     <ListGroup.ItemTitle>{org.name}</ListGroup.ItemTitle>
@@ -158,7 +152,9 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
               {pendingInvitations.map((inv, index) => (
                 <View key={inv.id}>
                   {index > 0 ? <Separator className="mx-4" /> : null}
-                  <ListGroup.Item>
+                  <ListGroup.Item
+                    onPress={() => setSelectedInvitationIds([inv.id])}
+                  >
                     <ListGroup.ItemPrefix>
                       <SymbolView
                         name="envelope.fill"
@@ -174,22 +170,9 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
                         Invited by {getInviterName(inv.invitedByUserId)}
                       </ListGroup.ItemDescription>
                     </ListGroup.ItemContent>
-                    <View className="flex-row gap-2">
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        onPress={() => handleAccept(inv.id)}
-                      >
-                        Accept
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onPress={() => handleDecline(inv.id)}
-                      >
-                        Decline
-                      </Button>
-                    </View>
+                    <ListGroup.ItemSuffix
+                      iconProps={{ size: 14, color: foregroundColor }}
+                    />
                   </ListGroup.Item>
                 </View>
               ))}
@@ -197,6 +180,11 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
           </View>
         ) : null}
       </ScrollView>
+
+      <InvitationDialog
+        invitationIds={selectedInvitationIds}
+        onClose={() => setSelectedInvitationIds([])}
+      />
 
       {/* Footer */}
       <View className="gap-2 px-5 pt-2 pb-4">

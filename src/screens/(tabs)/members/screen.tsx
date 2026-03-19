@@ -15,7 +15,13 @@ import { getUserName } from '@/lib/utils/get-user-name'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import { Button, ListGroup, Separator, useThemeColor } from 'heroui-native'
+import {
+  Button,
+  Chip,
+  ListGroup,
+  Separator,
+  useThemeColor
+} from 'heroui-native'
 import { Alert, ScrollView, View } from 'react-native'
 
 export default function MembersScreen() {
@@ -47,7 +53,6 @@ export default function MembersScreen() {
   const { data: users } = useDrizzleQuery(getAllUsers())
 
   const isAdmin = org?.adminUserId === userId
-  const adminUser = users.find(u => u.id === org?.adminUserId)
 
   function getUserInfo(uid: string) {
     return {
@@ -82,31 +87,50 @@ export default function MembersScreen() {
   }
 
   const query = searchText.toLowerCase()
-  const membersWithInfo = members.map(m => ({
-    member: m,
-    info: getUserInfo(m.userId)
-  }))
-  const filteredMembers = query
-    ? membersWithInfo.filter(
+
+  // Unified list: admin first, then members (deduplicated)
+  const allPeople: {
+    userId: string
+    memberId?: string
+    info: { name: string; email: string }
+    isAdmin: boolean
+    isYou: boolean
+  }[] = []
+
+  if (org?.adminUserId) {
+    allPeople.push({
+      userId: org.adminUserId,
+      info: getUserInfo(org.adminUserId),
+      isAdmin: true,
+      isYou: org.adminUserId === userId
+    })
+  }
+
+  for (const m of members) {
+    if (m.userId === org?.adminUserId) continue
+    allPeople.push({
+      userId: m.userId,
+      memberId: m.id,
+      info: getUserInfo(m.userId),
+      isAdmin: false,
+      isYou: m.userId === userId
+    })
+  }
+
+  const filteredPeople = query
+    ? allPeople.filter(
         ({ info }) =>
           info.name.toLowerCase().includes(query) ||
           info.email.toLowerCase().includes(query)
       )
-    : membersWithInfo
+    : allPeople
   const filteredInvitations = query
     ? orgInvitations.filter(inv =>
         inv.inviteeEmail.toLowerCase().includes(query)
       )
     : orgInvitations
-  const showAdmin =
-    !query ||
-    adminUser?.name?.toLowerCase().includes(query) ||
-    adminUser?.email?.toLowerCase().includes(query)
   const hasNoResults =
-    query &&
-    !showAdmin &&
-    filteredMembers.length === 0 &&
-    filteredInvitations.length === 0
+    query && filteredPeople.length === 0 && filteredInvitations.length === 0
 
   if (!org) return null
 
@@ -151,39 +175,13 @@ export default function MembersScreen() {
             />
           ) : (
             <>
-              {/* Administrator */}
-              {showAdmin ? (
-                <View className="gap-2">
-                  <SectionHeader title="Administrator" />
-                  <ListGroup>
-                    <ListGroup.Item>
-                      <ListGroup.ItemPrefix>
-                        <SymbolView
-                          name="person.fill"
-                          size={20}
-                          tintColor={foregroundColor}
-                        />
-                      </ListGroup.ItemPrefix>
-                      <ListGroup.ItemContent>
-                        <ListGroup.ItemTitle>
-                          {adminUser?.name || 'Unknown'}
-                        </ListGroup.ItemTitle>
-                        <ListGroup.ItemDescription>
-                          {adminUser?.email || ''}
-                        </ListGroup.ItemDescription>
-                      </ListGroup.ItemContent>
-                    </ListGroup.Item>
-                  </ListGroup>
-                </View>
-              ) : null}
-
               {/* Members */}
               <View className="gap-2">
                 <SectionHeader
-                  title={query ? 'Members' : `Members (${members.length})`}
+                  title={query ? 'Members' : `Members (${allPeople.length})`}
                 />
                 <ListGroup>
-                  {filteredMembers.length === 0 ? (
+                  {filteredPeople.length === 0 ? (
                     <ListGroup.Item>
                       <ListGroup.ItemContent>
                         <ListGroup.ItemTitle className="text-muted">
@@ -192,37 +190,62 @@ export default function MembersScreen() {
                       </ListGroup.ItemContent>
                     </ListGroup.Item>
                   ) : (
-                    filteredMembers.map(({ member, info }, index) => (
-                      <View key={member.id}>
-                        {index > 0 ? <Separator className="mx-4" /> : null}
-                        <ListGroup.Item>
-                          <ListGroup.ItemPrefix>
-                            <SymbolView
-                              name="person.fill"
-                              size={18}
-                              tintColor={foregroundColor}
-                            />
-                          </ListGroup.ItemPrefix>
-                          <ListGroup.ItemContent>
-                            <ListGroup.ItemTitle>
-                              {info.name}
-                            </ListGroup.ItemTitle>
-                            <ListGroup.ItemDescription>
-                              {info.email}
-                            </ListGroup.ItemDescription>
-                          </ListGroup.ItemContent>
-                          {isAdmin ? (
-                            <Button
-                              size="sm"
-                              variant="danger-soft"
-                              onPress={() => handleRemoveMember(member.id)}
-                            >
-                              Remove
-                            </Button>
-                          ) : null}
-                        </ListGroup.Item>
-                      </View>
-                    ))
+                    filteredPeople.map((person, index) => {
+                      const { memberId } = person
+                      return (
+                        <View key={person.userId}>
+                          {index > 0 ? <Separator className="mx-4" /> : null}
+                          <ListGroup.Item>
+                            <ListGroup.ItemPrefix>
+                              <SymbolView
+                                name="person.fill"
+                                size={18}
+                                tintColor={foregroundColor}
+                              />
+                            </ListGroup.ItemPrefix>
+                            <ListGroup.ItemContent>
+                              <ListGroup.ItemTitle>
+                                {person.info.name}
+                              </ListGroup.ItemTitle>
+                              <ListGroup.ItemDescription>
+                                {person.info.email}
+                              </ListGroup.ItemDescription>
+                              {(person.isAdmin || person.isYou) && (
+                                <View className="mt-1 flex-row gap-1.5">
+                                  {person.isAdmin && (
+                                    <Chip
+                                      size="sm"
+                                      variant="soft"
+                                      color="warning"
+                                    >
+                                      Admin
+                                    </Chip>
+                                  )}
+                                  {person.isYou && (
+                                    <Chip
+                                      size="sm"
+                                      variant="soft"
+                                      color="accent"
+                                    >
+                                      You
+                                    </Chip>
+                                  )}
+                                </View>
+                              )}
+                            </ListGroup.ItemContent>
+                            {isAdmin && memberId && (
+                              <Button
+                                size="sm"
+                                variant="danger-soft"
+                                onPress={() => handleRemoveMember(memberId)}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </ListGroup.Item>
+                        </View>
+                      )
+                    })
                   )}
                 </ListGroup>
               </View>
