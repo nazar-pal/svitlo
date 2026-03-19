@@ -19,21 +19,13 @@ import {
   getMaintenanceRecords,
   getMaintenanceTemplateSummaries
 } from '@/data/client/queries'
+import { type Filter, FILTERS, FILTER_LABELS } from '@/lib/activity'
 import { notifyWarning, selection } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 import { getUserName } from '@/lib/utils/get-user-name'
 import { formatDuration } from '@/lib/utils/time'
 import { SwipeableRow } from './components/swipeable-row'
-
-const FILTERS = ['all', 'sessions', 'maintenance'] as const
-type Filter = (typeof FILTERS)[number]
-
-const FILTER_LABELS: Record<Filter, string> = {
-  all: 'All',
-  sessions: 'Runs',
-  maintenance: 'Maintenance'
-}
 
 type ActivityListItem =
   | {
@@ -229,13 +221,13 @@ export default function ActivityScreen() {
                 openRowRef={openRowRef}
               >
                 <ListGroup.Item>
-                  <View className="mr-3 items-center justify-center">
+                  <ListGroup.ItemPrefix>
                     <SymbolView
                       name="bolt.fill"
                       size={16}
                       tintColor={isInProgress ? successColor : mutedColor}
                     />
-                  </View>
+                  </ListGroup.ItemPrefix>
                   <ListGroup.ItemContent>
                     <ListGroup.ItemTitle>
                       {format(parseISO(session.startedAt), 'MMM d, HH:mm')}
@@ -267,13 +259,13 @@ export default function ActivityScreen() {
               openRowRef={openRowRef}
             >
               <ListGroup.Item>
-                <View className="mr-3 items-center justify-center">
+                <ListGroup.ItemPrefix>
                   <SymbolView
                     name="wrench.fill"
                     size={16}
                     tintColor={mutedColor}
                   />
-                </View>
+                </ListGroup.ItemPrefix>
                 <ListGroup.ItemContent>
                   <ListGroup.ItemTitle>
                     {format(parseISO(record.performedAt), 'MMM d, HH:mm')}

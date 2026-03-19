@@ -1,7 +1,6 @@
 import { isLiquidGlassAvailable } from 'expo-glass-effect'
 import { NativeTabs } from 'expo-router/unstable-native-tabs'
 import { useThemeColor } from 'heroui-native'
-import React from 'react'
 import { DynamicColorIOS } from 'react-native'
 
 export const unstable_settings = {
@@ -17,6 +16,7 @@ export default function AppTabs() {
 
   return (
     <NativeTabs
+      minimizeBehavior="onScrollDown"
       backgroundColor={undefined}
       badgeBackgroundColor={accentColor}
       labelStyle={{ color: dynamicLabelAndIconColor }}
@@ -38,6 +38,13 @@ export default function AppTabs() {
           Generators
         </NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="bolt.fill" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="activity">
+        <NativeTabs.Trigger.Label selectedStyle={{ color: accentColor }}>
+          Activity
+        </NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="clock.arrow.circlepath" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger
