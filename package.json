@@ -16,7 +16,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md}\"",
-    "flt": "npm run format && npm run lint && npm run typecheck"
+    "flt": "npm run format && npm run lint && npm run typecheck",
+    "ota:prod": "eas update --channel production --environment production --platform ios"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.43",
