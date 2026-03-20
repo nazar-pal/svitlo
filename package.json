@@ -20,12 +20,12 @@
     "ota:prod": "eas update --channel production --environment production --platform ios"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.43",
+    "@ai-sdk/google": "^3.0.52",
     "@azure/core-asynciterator-polyfill": "^1.0.2",
     "@better-auth/expo": "^1.5.5",
     "@expo/ui": "~55.0.5",
     "@gorhom/bottom-sheet": "^5.2.8",
-    "@mastra/core": "^1.14.0",
+    "@mastra/core": "^1.15.0",
     "@neondatabase/serverless": "^1.0.2",
     "@op-engineering/op-sqlite": "^15.2.7",
     "@orpc/client": "^1.13.9",
@@ -71,7 +71,7 @@
     "react-native": "0.83.2",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-keyboard-controller": "1.20.7",
-    "react-native-mmkv": "^4.2.0",
+    "react-native-mmkv": "^4.3.0",
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.23.0",
