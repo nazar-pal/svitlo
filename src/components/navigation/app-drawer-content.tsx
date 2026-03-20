@@ -1,7 +1,10 @@
 import {
-  type DrawerContentComponentProps,
-  useDrawerStatus
-} from '@react-navigation/drawer'
+  Host,
+  Button as SwiftButton,
+  Menu as SwiftMenu
+} from '@expo/ui/swift-ui'
+import { labelStyle } from '@expo/ui/swift-ui/modifiers'
+import { type DrawerContentComponentProps } from '@react-navigation/drawer'
 import { DrawerActions } from '@react-navigation/native'
 import { useNavigation, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
@@ -12,20 +15,18 @@ import {
   Separator,
   useThemeColor
 } from 'heroui-native'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
-import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 
 import { DeleteOrgDialog } from '@/components/delete-org-dialog'
 import { InvitationDialog } from '@/components/invitation-dialog'
-import { SwipeableRow } from '@/components/swipeable-row'
 import { SectionHeader } from '@/components/section-header'
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
 import { SafeAreaView } from '@/components/uniwind'
-import { useSessionStatus } from '@/lib/auth/session-status-context'
-import { selection } from '@/lib/haptics'
 import { getAllOrganizations, getAllUsers } from '@/data/client/queries'
+import { useSessionStatus } from '@/lib/auth/session-status-context'
 import { useSignOut } from '@/lib/auth/use-sign-out'
+import { selection } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { usePendingInvitations } from '@/lib/hooks/use-pending-invitations'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
@@ -56,14 +57,6 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
     []
   )
   const [deleteOrgId, setDeleteOrgId] = useState<string | null>(null)
-  const openRowRef = useRef<SwipeableMethods | null>(null)
-  const drawerStatus = useDrawerStatus()
-
-  // Reset any revealed swipeable row when the drawer closes so it
-  // doesn't stay open the next time the drawer is shown.
-  useEffect(() => {
-    if (drawerStatus === 'closed') openRowRef.current?.close()
-  }, [drawerStatus])
 
   const userEmail = localUser?.email ?? ''
   const userName = localUser?.name || 'Unknown'
@@ -107,9 +100,13 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
         <View className="gap-2">
           <SectionHeader title="Organization" />
           <ListGroup>
-            {userOrgs.map((org, index) => {
-              const orgItem = (
+            {userOrgs.map((org, index) => (
+              <View key={org.id}>
+                {index > 0 ? <Separator className="mx-4" /> : null}
                 <ListGroup.Item
+                  className={
+                    org.id === selectedOrgId ? 'bg-accent/10' : undefined
+                  }
                   onPress={() => {
                     selection()
                     setSelectedOrgId(org.id)
@@ -134,44 +131,42 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
                     </View>
                   </ListGroup.ItemPrefix>
                   <ListGroup.ItemContent>
-                    <ListGroup.ItemTitle>{org.name}</ListGroup.ItemTitle>
+                    <ListGroup.ItemTitle
+                      className={
+                        org.id === selectedOrgId ? 'font-semibold' : undefined
+                      }
+                    >
+                      {org.name}
+                    </ListGroup.ItemTitle>
                   </ListGroup.ItemContent>
-                  {org.id === selectedOrgId ? (
+                  {isAdmin(org.id) ? (
                     <ListGroup.ItemSuffix>
-                      <SymbolView
-                        name="checkmark"
-                        size={16}
-                        tintColor={accentColor}
-                      />
+                      <Host matchContents>
+                        <SwiftMenu
+                          label="Actions"
+                          systemImage="ellipsis"
+                          modifiers={[labelStyle('iconOnly')]}
+                        >
+                          <SwiftButton
+                            label="Rename"
+                            systemImage="pencil"
+                            onPress={() =>
+                              router.push(`/organization/${org.id}/rename`)
+                            }
+                          />
+                          <SwiftButton
+                            label="Delete"
+                            systemImage="trash"
+                            role="destructive"
+                            onPress={() => setDeleteOrgId(org.id)}
+                          />
+                        </SwiftMenu>
+                      </Host>
                     </ListGroup.ItemSuffix>
                   ) : null}
                 </ListGroup.Item>
-              )
-
-              return (
-                <View key={org.id}>
-                  {index > 0 ? <Separator className="mx-4" /> : null}
-                  {isAdmin(org.id) ? (
-                    <SwipeableRow
-                      onEdit={() => {
-                        openRowRef.current?.close()
-                        router.push(`/organization/${org.id}/rename`)
-                      }}
-                      onDelete={() => {
-                        openRowRef.current?.close()
-                        setDeleteOrgId(org.id)
-                      }}
-                      side="left"
-                      openRowRef={openRowRef}
-                    >
-                      {orgItem}
-                    </SwipeableRow>
-                  ) : (
-                    orgItem
-                  )}
-                </View>
-              )
-            })}
+              </View>
+            ))}
             <Separator className="mx-4" />
             <ListGroup.Item onPress={() => router.push('/organization/create')}>
               <ListGroup.ItemPrefix>
