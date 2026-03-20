@@ -1,5 +1,9 @@
-import type { DrawerContentComponentProps } from '@react-navigation/drawer'
-import { useRouter } from 'expo-router'
+import {
+  type DrawerContentComponentProps,
+  useDrawerStatus
+} from '@react-navigation/drawer'
+import { DrawerActions } from '@react-navigation/native'
+import { useNavigation, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import {
   Avatar,
@@ -8,10 +12,13 @@ import {
   Separator,
   useThemeColor
 } from 'heroui-native'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
+import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 
+import { DeleteOrgDialog } from '@/components/delete-org-dialog'
 import { InvitationDialog } from '@/components/invitation-dialog'
+import { SwipeableRow } from '@/components/swipeable-row'
 import { SectionHeader } from '@/components/section-header'
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
 import { SafeAreaView } from '@/components/uniwind'
@@ -37,6 +44,7 @@ function getInitials(name: string | null | undefined): string {
 
 export function AppDrawerContent(_props: DrawerContentComponentProps) {
   const router = useRouter()
+  const navigation = useNavigation()
   const localUser = useLocalUser()
   const handleSignOut = useSignOut()
   const { sessionStatus } = useSessionStatus()
@@ -47,6 +55,15 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
   const [selectedInvitationIds, setSelectedInvitationIds] = useState<string[]>(
     []
   )
+  const [deleteOrgId, setDeleteOrgId] = useState<string | null>(null)
+  const openRowRef = useRef<SwipeableMethods | null>(null)
+  const drawerStatus = useDrawerStatus()
+
+  // Reset any revealed swipeable row when the drawer closes so it
+  // doesn't stay open the next time the drawer is shown.
+  useEffect(() => {
+    if (drawerStatus === 'closed') openRowRef.current?.close()
+  }, [drawerStatus])
 
   const userEmail = localUser?.email ?? ''
   const userName = localUser?.name || 'Unknown'
@@ -90,9 +107,8 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
         <View className="gap-2">
           <SectionHeader title="Organization" />
           <ListGroup>
-            {userOrgs.map((org, index) => (
-              <View key={org.id}>
-                {index > 0 ? <Separator className="mx-4" /> : null}
+            {userOrgs.map((org, index) => {
+              const orgItem = (
                 <ListGroup.Item
                   onPress={() => {
                     selection()
@@ -130,8 +146,32 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
                     </ListGroup.ItemSuffix>
                   ) : null}
                 </ListGroup.Item>
-              </View>
-            ))}
+              )
+
+              return (
+                <View key={org.id}>
+                  {index > 0 ? <Separator className="mx-4" /> : null}
+                  {isAdmin(org.id) ? (
+                    <SwipeableRow
+                      onEdit={() => {
+                        openRowRef.current?.close()
+                        router.push(`/organization/${org.id}/rename`)
+                      }}
+                      onDelete={() => {
+                        openRowRef.current?.close()
+                        setDeleteOrgId(org.id)
+                      }}
+                      side="left"
+                      openRowRef={openRowRef}
+                    >
+                      {orgItem}
+                    </SwipeableRow>
+                  ) : (
+                    orgItem
+                  )}
+                </View>
+              )
+            })}
             <Separator className="mx-4" />
             <ListGroup.Item onPress={() => router.push('/organization/create')}>
               <ListGroup.ItemPrefix>
@@ -184,6 +224,17 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
       <InvitationDialog
         invitationIds={selectedInvitationIds}
         onClose={() => setSelectedInvitationIds([])}
+      />
+
+      <DeleteOrgDialog
+        key={deleteOrgId}
+        orgId={deleteOrgId}
+        onClose={() => setDeleteOrgId(null)}
+        onDeleted={() => {
+          // Navigate to dashboard to avoid stale org-specific tab content
+          router.navigate('/(protected)/(drawer)/(tabs)/(dashboard)')
+          navigation.dispatch(DrawerActions.closeDrawer())
+        }}
       />
 
       {/* Footer */}

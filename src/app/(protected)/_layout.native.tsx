@@ -110,6 +110,13 @@ export default function ProtectedLayout() {
               title: 'Invite Member'
             }}
           />
+          <Stack.Screen
+            name="organization/[id]/rename"
+            options={{
+              ...formSheetOptions,
+              title: 'Rename Organization'
+            }}
+          />
         </Stack>
       </SelectedOrgProvider>
     </PowerSyncProvider>

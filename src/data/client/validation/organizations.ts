@@ -14,3 +14,9 @@ export const insertInvitationSchema = z.object({
 })
 
 export type InsertInvitationInput = z.input<typeof insertInvitationSchema>
+
+export const updateOrganizationSchema = z.object({
+  name: zNonEmptyString
+})
+
+export type UpdateOrganizationInput = z.input<typeof updateOrganizationSchema>

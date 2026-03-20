@@ -8,10 +8,12 @@ import {
 import {
   insertInvitationSchema,
   insertOrganizationSchema,
+  updateOrganizationSchema,
   type InsertInvitationInput,
-  type InsertOrganizationInput
+  type InsertOrganizationInput,
+  type UpdateOrganizationInput
 } from '@/data/client/validation'
-import { db } from '@/lib/powersync/database'
+import { db, powersync } from '@/lib/powersync/database'
 
 import {
   fail,
@@ -151,6 +153,66 @@ export async function cancelInvitation(
     return fail('Only admin can cancel invitations')
 
   await db.delete(invitations).where(eq(invitations.id, invitationId))
+
+  return ok
+}
+
+export async function renameOrganization(
+  userId: string,
+  orgId: string,
+  input: UpdateOrganizationInput
+): Promise<MutationResult> {
+  const parsed = updateOrganizationSchema.safeParse(input)
+  if (!parsed.success) return fail(parsed.error.issues[0].message)
+
+  if (!(await isOrgAdmin(userId, orgId)))
+    return fail('Only admin can rename organization')
+
+  await db
+    .update(organizations)
+    .set({ name: parsed.data.name })
+    .where(eq(organizations.id, orgId))
+
+  return ok
+}
+
+export async function deleteOrganization(
+  userId: string,
+  orgId: string
+): Promise<MutationResult> {
+  if (!(await isOrgAdmin(userId, orgId)))
+    return fail('Only admin can delete organization')
+
+  await powersync.writeTransaction(async tx => {
+    // Cascade delete leaves-first (client SQLite has no FK constraints)
+    await tx.execute(
+      'DELETE FROM maintenance_records WHERE generator_id IN (SELECT id FROM generators WHERE organization_id = ?)',
+      [orgId]
+    )
+    await tx.execute(
+      'DELETE FROM maintenance_templates WHERE generator_id IN (SELECT id FROM generators WHERE organization_id = ?)',
+      [orgId]
+    )
+    await tx.execute(
+      'DELETE FROM generator_sessions WHERE generator_id IN (SELECT id FROM generators WHERE organization_id = ?)',
+      [orgId]
+    )
+    await tx.execute(
+      'DELETE FROM generator_user_assignments WHERE generator_id IN (SELECT id FROM generators WHERE organization_id = ?)',
+      [orgId]
+    )
+    await tx.execute('DELETE FROM generators WHERE organization_id = ?', [
+      orgId
+    ])
+    await tx.execute('DELETE FROM invitations WHERE organization_id = ?', [
+      orgId
+    ])
+    await tx.execute(
+      'DELETE FROM organization_members WHERE organization_id = ?',
+      [orgId]
+    )
+    await tx.execute('DELETE FROM organizations WHERE id = ?', [orgId])
+  })
 
   return ok
 }
