@@ -17,6 +17,7 @@ import { Chip, ListGroup, Separator, useThemeColor } from 'heroui-native'
 import { useRef, useState } from 'react'
 import { View } from 'react-native'
 import { FlatList } from 'react-native-gesture-handler'
+import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import Animated, {
   Extrapolation,
   FadeIn,
@@ -30,6 +31,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
 import { EmptyState } from '@/components/empty-state'
+import { SwipeableRow } from '@/components/swipeable-row'
+import {
+  confirmDeleteRecord,
+  confirmDeleteSession
+} from '@/lib/activity/confirm-delete'
 import { type Filter, FILTERS, FILTER_LABELS } from '@/lib/activity'
 import { selection } from '@/lib/haptics'
 import { type ActivityItem, useActivityData } from './lib/use-activity-data'
@@ -40,15 +46,19 @@ export default function ActivityScreen() {
   const router = useRouter()
   const [filter, setFilter] = useState<Filter>('all')
   const [generatorScope, setGeneratorScope] = useState<string | null>(null)
-  const [mutedColor, successColor, backgroundColor] = useThemeColor([
-    'muted',
-    'success',
-    'background'
-  ])
+  const [mutedColor, successColor, warningColor, backgroundColor] =
+    useThemeColor(['muted', 'success', 'warning', 'background'])
   const isLiquidGlass = isLiquidGlassAvailable()
+  const openRowRef = useRef<SwipeableMethods | null>(null)
 
-  const { userOrgs, admin, items, availableGenerators, effectiveScope } =
-    useActivityData(filter, generatorScope)
+  const {
+    userOrgs,
+    admin,
+    userId,
+    items,
+    availableGenerators,
+    effectiveScope
+  } = useActivityData(filter, generatorScope)
 
   const scrollRef = useRef<FlatList<ActivityItem>>(null)
   useScrollToTop(
@@ -83,15 +93,47 @@ export default function ActivityScreen() {
   })
 
   const renderItem = ({ item }: { item: ActivityItem }) => {
-    if (item.type === 'session')
+    if (item.type === 'session') {
+      const canEdit = !item.isInProgress
       return (
-        <SessionItem
-          item={item}
-          mutedColor={mutedColor}
-          successColor={successColor}
-        />
+        <SwipeableRow
+          onDelete={
+            canEdit ? () => confirmDeleteSession(userId, item.id) : undefined
+          }
+          openRowRef={openRowRef}
+        >
+          <SessionItem
+            item={item}
+            mutedColor={mutedColor}
+            successColor={successColor}
+            onPress={
+              canEdit
+                ? () => {
+                    openRowRef.current?.close()
+                    router.push(`/activity/edit-session?sessionId=${item.id}`)
+                  }
+                : undefined
+            }
+          />
+        </SwipeableRow>
       )
-    return <MaintenanceItem item={item} mutedColor={mutedColor} />
+    }
+
+    return (
+      <SwipeableRow
+        onDelete={() => confirmDeleteRecord(userId, item.id)}
+        openRowRef={openRowRef}
+      >
+        <MaintenanceItem
+          item={item}
+          warningColor={warningColor}
+          onPress={() => {
+            openRowRef.current?.close()
+            router.push(`/activity/edit-maintenance?recordId=${item.id}`)
+          }}
+        />
+      </SwipeableRow>
+    )
   }
 
   const handleFilterChange = (i: number) => {
@@ -248,15 +290,17 @@ export default function ActivityScreen() {
 function SessionItem({
   item,
   mutedColor,
-  successColor
+  successColor,
+  onPress
 }: {
   item: Extract<ActivityItem, { type: 'session' }>
   mutedColor: string
   successColor: string
+  onPress?: () => void
 }) {
   return (
     <Animated.View entering={FadeIn.duration(200)}>
-      <ListGroup.Item>
+      <ListGroup.Item onPress={onPress}>
         <ListGroup.ItemPrefix>
           <SymbolView
             name="bolt.fill"
@@ -265,11 +309,10 @@ function SessionItem({
           />
         </ListGroup.ItemPrefix>
         <ListGroup.ItemContent>
-          <ListGroup.ItemTitle>
-            {format(parseISO(item.timestamp), 'MMM d, HH:mm')}
-          </ListGroup.ItemTitle>
+          <ListGroup.ItemTitle>{item.generatorTitle}</ListGroup.ItemTitle>
           <ListGroup.ItemDescription>
-            {item.generatorTitle} · {item.userName} · {item.duration}
+            {item.userName} · {format(parseISO(item.timestamp), 'MMM d, HH:mm')}{' '}
+            · {item.duration}
           </ListGroup.ItemDescription>
         </ListGroup.ItemContent>
         <Chip
@@ -277,7 +320,7 @@ function SessionItem({
           variant="soft"
           color={item.isInProgress ? 'success' : undefined}
         >
-          {item.isInProgress ? 'Active' : 'Session'}
+          {item.isInProgress ? 'Active' : 'Run'}
         </Chip>
       </ListGroup.Item>
     </Animated.View>
@@ -286,27 +329,28 @@ function SessionItem({
 
 function MaintenanceItem({
   item,
-  mutedColor
+  warningColor,
+  onPress
 }: {
   item: Extract<ActivityItem, { type: 'maintenance' }>
-  mutedColor: string
+  warningColor: string
+  onPress?: () => void
 }) {
   return (
     <Animated.View entering={FadeIn.duration(200)}>
-      <ListGroup.Item>
+      <ListGroup.Item onPress={onPress}>
         <ListGroup.ItemPrefix>
-          <SymbolView name="wrench.fill" size={16} tintColor={mutedColor} />
+          <SymbolView name="wrench.fill" size={16} tintColor={warningColor} />
         </ListGroup.ItemPrefix>
         <ListGroup.ItemContent>
-          <ListGroup.ItemTitle>
-            {format(parseISO(item.timestamp), 'MMM d, HH:mm')}
-          </ListGroup.ItemTitle>
+          <ListGroup.ItemTitle>{item.generatorTitle}</ListGroup.ItemTitle>
           <ListGroup.ItemDescription>
-            {item.generatorTitle} · {item.userName} · {item.templateName}
+            {item.userName} · {format(parseISO(item.timestamp), 'MMM d, HH:mm')}{' '}
+            · {item.templateName}
             {item.record.notes ? ` · ${item.record.notes}` : ''}
           </ListGroup.ItemDescription>
         </ListGroup.ItemContent>
-        <Chip size="sm" variant="soft">
+        <Chip size="sm" variant="soft" color="warning">
           Maintenance
         </Chip>
       </ListGroup.Item>

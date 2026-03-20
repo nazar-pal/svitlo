@@ -95,6 +95,7 @@ export function useActivityData(filter: Filter, generatorScope: string | null) {
   return {
     userOrgs,
     admin,
+    userId: userId ?? '',
     items,
     availableGenerators,
     effectiveScope

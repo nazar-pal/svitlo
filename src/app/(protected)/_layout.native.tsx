@@ -83,6 +83,20 @@ export default function ProtectedLayout() {
             }}
           />
           <Stack.Screen
+            name="activity/edit-session"
+            options={{
+              ...formSheetOptions,
+              title: 'Edit Run'
+            }}
+          />
+          <Stack.Screen
+            name="activity/edit-maintenance"
+            options={{
+              ...formSheetOptions,
+              title: 'Edit Maintenance'
+            }}
+          />
+          <Stack.Screen
             name="organization/create"
             options={{
               ...formSheetOptions,

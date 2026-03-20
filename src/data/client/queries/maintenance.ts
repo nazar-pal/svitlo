@@ -39,6 +39,13 @@ export function getMaintenanceRecords(generatorId: string) {
     .orderBy(desc(maintenanceRecords.performedAt))
 }
 
+export function getMaintenanceRecord(id: string) {
+  return db
+    .select()
+    .from(maintenanceRecords)
+    .where(eq(maintenanceRecords.id, id))
+}
+
 export function getAllMaintenanceRecords() {
   return db.select().from(maintenanceRecords)
 }

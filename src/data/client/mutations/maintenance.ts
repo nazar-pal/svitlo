@@ -174,6 +174,8 @@ export async function deleteMaintenanceTemplate(
   return ok
 }
 
+// No ownership check needed: PowerSync sync rules + client-side filtering ensure
+// users only see activity for generators they can access (admin or assigned).
 export async function deleteMaintenanceRecord(
   userId: string,
   recordId: string
@@ -186,15 +188,42 @@ export async function deleteMaintenanceRecord(
 
   if (!record) return fail('Record not found')
 
-  const isAdmin = await isGeneratorOrgAdmin(userId, record.generatorId)
-  if (!isAdmin) {
-    if (!(await canAccessGenerator(userId, record.generatorId)))
-      return fail('Not authorized for this generator')
-    if (record.performedByUserId !== userId)
-      return fail('You can only delete your own records')
-  }
+  if (!(await canAccessGenerator(userId, record.generatorId)))
+    return fail('Not authorized for this generator')
 
   await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, recordId))
+
+  return ok
+}
+
+// No ownership check needed: PowerSync sync rules + client-side filtering ensure
+// users only see activity for generators they can access (admin or assigned).
+export async function updateMaintenanceRecord(
+  userId: string,
+  recordId: string,
+  input: { performedAt: string; notes: string | null }
+): Promise<MutationResult> {
+  const [record] = await db
+    .select()
+    .from(maintenanceRecords)
+    .where(eq(maintenanceRecords.id, recordId))
+    .limit(1)
+
+  if (!record) return fail('Record not found')
+
+  if (!(await canAccessGenerator(userId, record.generatorId)))
+    return fail('Not authorized for this generator')
+
+  if (new Date(input.performedAt) > new Date())
+    return fail('Performed time cannot be in the future')
+
+  await db
+    .update(maintenanceRecords)
+    .set({
+      performedAt: input.performedAt,
+      notes: input.notes
+    })
+    .where(eq(maintenanceRecords.id, recordId))
 
   return ok
 }

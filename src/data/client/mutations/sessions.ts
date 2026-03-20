@@ -6,7 +6,6 @@ import { db } from '@/lib/powersync/database'
 import {
   canAccessGenerator,
   fail,
-  isGeneratorOrgAdmin,
   newId,
   nowISO,
   ok,
@@ -58,6 +57,8 @@ export async function startSession(
   return ok
 }
 
+// No ownership check needed: PowerSync sync rules + client-side filtering ensure
+// users only see activity for generators they can access (admin or assigned).
 export async function deleteSession(
   userId: string,
   sessionId: string
@@ -71,13 +72,8 @@ export async function deleteSession(
   if (!session) return fail('Session not found')
   if (!session.stoppedAt) return fail('Cannot delete an in-progress session')
 
-  const isAdmin = await isGeneratorOrgAdmin(userId, session.generatorId)
-  if (!isAdmin) {
-    if (!(await canAccessGenerator(userId, session.generatorId)))
-      return fail('Not authorized for this generator')
-    if (session.startedByUserId !== userId)
-      return fail('You can only delete your own sessions')
-  }
+  if (!(await canAccessGenerator(userId, session.generatorId)))
+    return fail('Not authorized for this generator')
 
   await db.delete(generatorSessions).where(eq(generatorSessions.id, sessionId))
 
@@ -107,6 +103,42 @@ export async function stopSession(
     .set({
       stoppedAt: nowISO(),
       stoppedByUserId: userId
+    })
+    .where(eq(generatorSessions.id, sessionId))
+
+  return ok
+}
+
+// No ownership check needed: PowerSync sync rules + client-side filtering ensure
+// users only see activity for generators they can access (admin or assigned).
+export async function updateSession(
+  userId: string,
+  sessionId: string,
+  input: { startedAt: string; stoppedAt: string }
+): Promise<MutationResult> {
+  const [session] = await db
+    .select()
+    .from(generatorSessions)
+    .where(eq(generatorSessions.id, sessionId))
+    .limit(1)
+
+  if (!session) return fail('Session not found')
+  if (!session.stoppedAt) return fail('Cannot edit an in-progress session')
+
+  if (!(await canAccessGenerator(userId, session.generatorId)))
+    return fail('Not authorized for this generator')
+
+  if (input.startedAt >= input.stoppedAt)
+    return fail('Start time must be before end time')
+
+  if (new Date(input.stoppedAt) > new Date())
+    return fail('End time cannot be in the future')
+
+  await db
+    .update(generatorSessions)
+    .set({
+      startedAt: input.startedAt,
+      stoppedAt: input.stoppedAt
     })
     .where(eq(generatorSessions.id, sessionId))
 

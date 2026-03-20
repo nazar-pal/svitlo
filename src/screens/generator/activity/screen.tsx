@@ -3,29 +3,32 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { Chip, ListGroup, Separator, Tabs, useThemeColor } from 'heroui-native'
 import { useRef, useState } from 'react'
-import { Alert, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import Animated, { LinearTransition } from 'react-native-reanimated'
 
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import type { GeneratorSession } from '@/data/client/db-schema/generators'
 import type { MaintenanceRecord } from '@/data/client/db-schema/maintenance'
-import { deleteMaintenanceRecord, deleteSession } from '@/data/client/mutations'
 import {
-  getAllOrganizations,
   getAllUsers,
-  getGenerator,
   getGeneratorSessions,
   getMaintenanceRecords,
   getMaintenanceTemplateSummaries
 } from '@/data/client/queries'
+import {
+  confirmDeleteRecord,
+  confirmDeleteSession
+} from '@/lib/activity/confirm-delete'
 import { type Filter, FILTERS, FILTER_LABELS } from '@/lib/activity'
-import { notifyWarning, selection } from '@/lib/haptics'
+import { selection } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 import { getUserName } from '@/lib/utils/get-user-name'
 import { formatDuration } from '@/lib/utils/time'
-import { SwipeableRow } from './components/swipeable-row'
+import { SwipeableRow } from '@/components/swipeable-row'
+
+const ItemSeparator = () => <Separator className="mx-4" />
 
 type ActivityListItem =
   | {
@@ -81,7 +84,11 @@ export default function ActivityScreen() {
   const [filter, setFilter] = useState<Filter>('all')
   const openRowRef = useRef<SwipeableMethods | null>(null)
   const localUser = useLocalUser()
-  const [mutedColor, successColor] = useThemeColor(['muted', 'success'])
+  const [mutedColor, successColor, warningColor] = useThemeColor([
+    'muted',
+    'success',
+    'warning'
+  ])
 
   const userId = localUser?.id ?? ''
 
@@ -99,68 +106,7 @@ export default function ActivityScreen() {
 
   const { data: users } = useDrizzleQuery(getAllUsers())
 
-  const { data: gens } = useDrizzleQuery(
-    generatorId ? getGenerator(generatorId) : undefined
-  )
-  const generator = gens[0]
-
-  const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
-
-  const org = generator
-    ? allOrgs.find(o => o.id === generator.organizationId)
-    : undefined
-  const isAdmin = org?.adminUserId === userId
-
   const resolveUserName = (uid: string) => getUserName(users, uid)
-
-  function canDeleteSession(session: GeneratorSession): boolean {
-    if (!session.stoppedAt) return false
-    if (isAdmin) return true
-    return session.startedByUserId === userId
-  }
-
-  function canDeleteRecord(record: MaintenanceRecord): boolean {
-    if (isAdmin) return true
-    return record.performedByUserId === userId
-  }
-
-  function handleDeleteSession(sessionId: string) {
-    Alert.alert(
-      'Delete Session',
-      'Are you sure you want to delete this session?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const result = await deleteSession(userId, sessionId)
-            if (!result.ok) return Alert.alert('Error', result.error)
-            notifyWarning()
-          }
-        }
-      ]
-    )
-  }
-
-  function handleDeleteRecord(recordId: string) {
-    Alert.alert(
-      'Delete Record',
-      'Are you sure you want to delete this maintenance record?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const result = await deleteMaintenanceRecord(userId, recordId)
-            if (!result.ok) return Alert.alert('Error', result.error)
-            notifyWarning()
-          }
-        }
-      ]
-    )
-  }
 
   const items = buildActivityItems(sessions, records, templates, filter)
 
@@ -189,7 +135,7 @@ export default function ActivityScreen() {
           paddingTop: 8
         }}
         keyExtractor={item => item.id}
-        ItemSeparatorComponent={() => <Separator className="mx-4" />}
+        ItemSeparatorComponent={ItemSeparator}
         ListHeaderComponent={
           <FilterBar filter={filter} onFilterChange={setFilter} />
         }
@@ -202,6 +148,7 @@ export default function ActivityScreen() {
           if (item.type === 'session') {
             const { session } = item
             const isInProgress = !session.stoppedAt
+            const canEdit = !isInProgress
             const duration = session.stoppedAt
               ? formatDuration(
                   differenceInMilliseconds(
@@ -214,13 +161,24 @@ export default function ActivityScreen() {
             return (
               <SwipeableRow
                 onDelete={
-                  canDeleteSession(session)
-                    ? () => handleDeleteSession(session.id)
+                  canEdit
+                    ? () => confirmDeleteSession(userId, session.id)
                     : undefined
                 }
                 openRowRef={openRowRef}
               >
-                <ListGroup.Item>
+                <ListGroup.Item
+                  onPress={
+                    canEdit
+                      ? () => {
+                          openRowRef.current?.close()
+                          router.push(
+                            `/activity/edit-session?sessionId=${session.id}`
+                          )
+                        }
+                      : undefined
+                  }
+                >
                   <ListGroup.ItemPrefix>
                     <SymbolView
                       name="bolt.fill"
@@ -241,7 +199,7 @@ export default function ActivityScreen() {
                     variant="soft"
                     color={isInProgress ? 'success' : undefined}
                   >
-                    {isInProgress ? 'Active' : 'Session'}
+                    {isInProgress ? 'Active' : 'Run'}
                   </Chip>
                 </ListGroup.Item>
               </SwipeableRow>
@@ -251,19 +209,22 @@ export default function ActivityScreen() {
           const { record, templateName } = item
           return (
             <SwipeableRow
-              onDelete={
-                canDeleteRecord(record)
-                  ? () => handleDeleteRecord(record.id)
-                  : undefined
-              }
+              onDelete={() => confirmDeleteRecord(userId, record.id)}
               openRowRef={openRowRef}
             >
-              <ListGroup.Item>
+              <ListGroup.Item
+                onPress={() => {
+                  openRowRef.current?.close()
+                  router.push(
+                    `/activity/edit-maintenance?recordId=${record.id}`
+                  )
+                }}
+              >
                 <ListGroup.ItemPrefix>
                   <SymbolView
                     name="wrench.fill"
                     size={16}
-                    tintColor={mutedColor}
+                    tintColor={warningColor}
                   />
                 </ListGroup.ItemPrefix>
                 <ListGroup.ItemContent>
@@ -275,7 +236,7 @@ export default function ActivityScreen() {
                     {record.notes ? ` · ${record.notes}` : ''}
                   </ListGroup.ItemDescription>
                 </ListGroup.ItemContent>
-                <Chip size="sm" variant="soft">
+                <Chip size="sm" variant="soft" color="warning">
                   Maintenance
                 </Chip>
               </ListGroup.Item>

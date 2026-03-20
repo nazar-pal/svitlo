@@ -22,6 +22,10 @@ export function getAllGeneratorSessions() {
   return db.select().from(generatorSessions)
 }
 
+export function getGeneratorSession(id: string) {
+  return db.select().from(generatorSessions).where(eq(generatorSessions.id, id))
+}
+
 export function getGeneratorSessions(generatorId: string) {
   return db
     .select()
