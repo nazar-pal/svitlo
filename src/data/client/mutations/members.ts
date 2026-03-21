@@ -3,7 +3,8 @@ import { and, eq } from 'drizzle-orm'
 import {
   generators,
   generatorUserAssignments,
-  organizationMembers
+  organizationMembers,
+  organizations
 } from '@/data/client/db-schema'
 import { db, powersync } from '@/lib/powersync/database'
 
@@ -17,30 +18,16 @@ import {
 } from './helpers'
 
 /**
- * Remove a member from an organization.
+ * Reassign all of a member's generators to the admin and delete the membership.
  *
- * Per spec §4.5:
- * - All generator assignments for the removed member within the org are deleted
- * - Each generator the employee was assigned to is automatically assigned to the admin
- * - Open sessions started by the removed employee remain open
+ * Shared by removeMember (admin-initiated) and leaveOrganization (self-initiated).
  */
-export async function removeMember(
+async function reassignAndRemoveMember(
+  userId: string,
+  orgId: string,
   adminUserId: string,
   memberId: string
-): Promise<MutationResult> {
-  // Find the member
-  const [member] = await db
-    .select()
-    .from(organizationMembers)
-    .where(eq(organizationMembers.id, memberId))
-    .limit(1)
-
-  if (!member) return fail('Member not found')
-
-  if (!(await isOrgAdmin(adminUserId, member.organizationId)))
-    return fail('Only admin can remove members')
-
-  // Find all generator assignments for this member within the org
+) {
   const assignments = await db
     .select({
       assignmentId: generatorUserAssignments.id,
@@ -53,20 +40,17 @@ export async function removeMember(
     )
     .where(
       and(
-        eq(generatorUserAssignments.userId, member.userId),
-        eq(generators.organizationId, member.organizationId)
+        eq(generatorUserAssignments.userId, userId),
+        eq(generators.organizationId, orgId)
       )
     )
 
-  // Wrap all mutations in a transaction for atomicity
   await powersync.writeTransaction(async tx => {
     for (const a of assignments) {
-      // Delete the member's assignment
       await tx.execute('DELETE FROM generator_user_assignments WHERE id = ?', [
         a.assignmentId
       ])
 
-      // Check if admin is already assigned
       const existing = await tx.getOptional(
         'SELECT id FROM generator_user_assignments WHERE generator_id = ? AND user_id = ? LIMIT 1',
         [a.generatorId, adminUserId]
@@ -80,11 +64,82 @@ export async function removeMember(
       }
     }
 
-    // Delete the member
     await tx.execute('DELETE FROM organization_members WHERE id = ?', [
       memberId
     ])
   })
+}
+
+/**
+ * Remove a member from an organization (admin only).
+ *
+ * Per spec §4.5:
+ * - All generator assignments for the removed member within the org are deleted
+ * - Each generator the employee was assigned to is automatically assigned to the admin
+ * - Open sessions started by the removed employee remain open
+ */
+export async function removeMember(
+  adminUserId: string,
+  memberId: string
+): Promise<MutationResult> {
+  const [member] = await db
+    .select()
+    .from(organizationMembers)
+    .where(eq(organizationMembers.id, memberId))
+    .limit(1)
+
+  if (!member) return fail('Member not found')
+
+  if (!(await isOrgAdmin(adminUserId, member.organizationId)))
+    return fail('Only admin can remove members')
+
+  await reassignAndRemoveMember(
+    member.userId,
+    member.organizationId,
+    adminUserId,
+    memberId
+  )
+
+  return ok
+}
+
+/**
+ * Leave an organization voluntarily (employee only).
+ *
+ * Same cleanup as removeMember:
+ * - All generator assignments for the leaving member within the org are deleted
+ * - Each generator the employee was assigned to is automatically assigned to the admin
+ * - Open sessions started by the leaving employee remain open
+ */
+export async function leaveOrganization(
+  userId: string,
+  orgId: string
+): Promise<MutationResult> {
+  if (await isOrgAdmin(userId, orgId))
+    return fail('Admin cannot leave their own organization')
+
+  const [member] = await db
+    .select({ id: organizationMembers.id })
+    .from(organizationMembers)
+    .where(
+      and(
+        eq(organizationMembers.userId, userId),
+        eq(organizationMembers.organizationId, orgId)
+      )
+    )
+    .limit(1)
+
+  if (!member) return fail('Not a member of this organization')
+
+  const [org] = await db
+    .select({ adminUserId: organizations.adminUserId })
+    .from(organizations)
+    .where(eq(organizations.id, orgId))
+    .limit(1)
+
+  if (!org) return fail('Organization not found')
+
+  await reassignAndRemoveMember(userId, orgId, org.adminUserId, member.id)
 
   return ok
 }

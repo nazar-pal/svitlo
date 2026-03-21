@@ -19,6 +19,7 @@ import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 
 import { DeleteOrgDialog } from '@/components/delete-org-dialog'
+import { LeaveOrgDialog } from '@/components/leave-org-dialog'
 import { InvitationDialog } from '@/components/invitation-dialog'
 import { SectionHeader } from '@/components/section-header'
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
@@ -57,6 +58,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
     []
   )
   const [deleteOrgId, setDeleteOrgId] = useState<string | null>(null)
+  const [leaveOrgId, setLeaveOrgId] = useState<string | null>(null)
 
   const userEmail = localUser?.email ?? ''
   const userName = localUser?.name || 'Unknown'
@@ -139,31 +141,40 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
                       {org.name}
                     </ListGroup.ItemTitle>
                   </ListGroup.ItemContent>
-                  {isAdmin(org.id) ? (
-                    <ListGroup.ItemSuffix>
-                      <Host matchContents>
-                        <SwiftMenu
-                          label="Actions"
-                          systemImage="ellipsis"
-                          modifiers={[labelStyle('iconOnly')]}
-                        >
+                  <ListGroup.ItemSuffix>
+                    <Host matchContents>
+                      <SwiftMenu
+                        label="Actions"
+                        systemImage="ellipsis"
+                        modifiers={[labelStyle('iconOnly')]}
+                      >
+                        {isAdmin(org.id) ? (
+                          <>
+                            <SwiftButton
+                              label="Rename"
+                              systemImage="pencil"
+                              onPress={() =>
+                                router.push(`/organization/${org.id}/rename`)
+                              }
+                            />
+                            <SwiftButton
+                              label="Delete"
+                              systemImage="trash"
+                              role="destructive"
+                              onPress={() => setDeleteOrgId(org.id)}
+                            />
+                          </>
+                        ) : (
                           <SwiftButton
-                            label="Rename"
-                            systemImage="pencil"
-                            onPress={() =>
-                              router.push(`/organization/${org.id}/rename`)
-                            }
-                          />
-                          <SwiftButton
-                            label="Delete"
-                            systemImage="trash"
+                            label="Leave"
+                            systemImage="rectangle.portrait.and.arrow.right"
                             role="destructive"
-                            onPress={() => setDeleteOrgId(org.id)}
+                            onPress={() => setLeaveOrgId(org.id)}
                           />
-                        </SwiftMenu>
-                      </Host>
-                    </ListGroup.ItemSuffix>
-                  ) : null}
+                        )}
+                      </SwiftMenu>
+                    </Host>
+                  </ListGroup.ItemSuffix>
                 </ListGroup.Item>
               </View>
             ))}
@@ -222,11 +233,20 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
       />
 
       <DeleteOrgDialog
-        key={deleteOrgId}
+        key={`delete-${deleteOrgId}`}
         orgId={deleteOrgId}
         onClose={() => setDeleteOrgId(null)}
         onDeleted={() => {
-          // Navigate to dashboard to avoid stale org-specific tab content
+          router.navigate('/(protected)/(drawer)/(tabs)/(dashboard)')
+          navigation.dispatch(DrawerActions.closeDrawer())
+        }}
+      />
+
+      <LeaveOrgDialog
+        key={`leave-${leaveOrgId}`}
+        orgId={leaveOrgId}
+        onClose={() => setLeaveOrgId(null)}
+        onLeft={() => {
           router.navigate('/(protected)/(drawer)/(tabs)/(dashboard)')
           navigation.dispatch(DrawerActions.closeDrawer())
         }}
