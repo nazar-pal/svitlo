@@ -7,9 +7,11 @@ import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { signInSchema, signUpSchema } from '@/data/client/validation'
 import { authClient } from '@/lib/auth/auth-client'
+import { useTranslation } from '@/lib/i18n'
 
 export default function EmailAuthScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -52,7 +54,7 @@ export default function EmailAuthScreen() {
         })
 
     if (result.error) {
-      setError(result.error.message ?? 'Something went wrong')
+      setError(result.error.message ?? t('auth.somethingWentWrong'))
       setIsSubmitting(false)
       return
     }
@@ -78,15 +80,15 @@ export default function EmailAuthScreen() {
     >
       <View className="mx-auto w-full max-w-110 flex-1 justify-center gap-8">
         <Text className="text-foreground text-3xl font-bold">
-          {isSignUp ? 'Create account' : 'Sign in with email'}
+          {isSignUp ? t('auth.createAccount') : t('auth.signInWithEmail')}
         </Text>
 
         <View className="gap-4">
           {isSignUp && (
             <TextField>
-              <Label>Name</Label>
+              <Label>{t('auth.name')}</Label>
               <Input
-                placeholder="Your name"
+                placeholder={t('auth.namePlaceholder')}
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
@@ -98,10 +100,10 @@ export default function EmailAuthScreen() {
           )}
 
           <TextField>
-            <Label>Email</Label>
+            <Label>{t('auth.email')}</Label>
             <Input
               ref={emailRef}
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -114,11 +116,11 @@ export default function EmailAuthScreen() {
           </TextField>
 
           <TextField>
-            <Label>Password</Label>
+            <Label>{t('auth.password')}</Label>
             <Input
               ref={passwordRef}
               placeholder={
-                isSignUp ? 'Create a password' : 'Enter your password'
+                isSignUp ? t('auth.createPassword') : t('auth.enterPassword')
               }
               value={password}
               onChangeText={setPassword}
@@ -130,15 +132,15 @@ export default function EmailAuthScreen() {
                 isSignUp ? confirmPasswordRef.current?.focus() : handleSubmit()
               }
             />
-            {isSignUp && <Description>At least 8 characters</Description>}
+            {isSignUp && <Description>{t('auth.passwordHint')}</Description>}
           </TextField>
 
           {isSignUp && (
             <TextField>
-              <Label>Confirm Password</Label>
+              <Label>{t('auth.confirmPassword')}</Label>
               <Input
                 ref={confirmPasswordRef}
-                placeholder="Confirm your password"
+                placeholder={t('auth.confirmPasswordPlaceholder')}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
@@ -160,18 +162,20 @@ export default function EmailAuthScreen() {
         >
           {isSubmitting
             ? isSignUp
-              ? 'Creating account...'
-              : 'Signing in...'
+              ? t('auth.creatingAccount')
+              : t('auth.signingIn')
             : isSignUp
-              ? 'Create account'
-              : 'Sign in'}
+              ? t('auth.createAccount')
+              : t('auth.signIn')}
         </Button>
 
         <Pressable onPress={toggleMode}>
           <Text className="text-muted text-center text-sm">
-            {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+            {isSignUp
+              ? t('auth.alreadyHaveAccount')
+              : t('auth.dontHaveAccount')}
             <Text className="text-foreground font-semibold">
-              {isSignUp ? 'Sign in' : 'Sign up'}
+              {isSignUp ? t('auth.signIn') : t('auth.signUp')}
             </Text>
           </Text>
         </Pressable>

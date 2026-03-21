@@ -4,16 +4,18 @@ import { Spinner, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
 
 import { useSessionStatus } from '@/lib/auth/session-status-context'
+import { useTranslation } from '@/lib/i18n'
 import { useSyncRejections } from '@/lib/powersync/sync-rejections'
 
 function useSyncState() {
+  const { t } = useTranslation()
   const status = useStatus()
   const { sessionStatus } = useSessionStatus()
   const rejections = useSyncRejections()
 
   if (rejections.length > 0)
     return {
-      label: `${rejections.length} change${rejections.length === 1 ? '' : 's'} could not be synced`,
+      label: t('sync.changesNotSynced', { count: rejections.length }),
       icon: 'exclamationmark.triangle.fill' as const,
       color: 'text-warning' as const,
       loading: false
@@ -24,7 +26,7 @@ function useSyncState() {
     status.dataFlowStatus?.downloadError
   )
     return {
-      label: 'Sync error',
+      label: t('sync.syncError'),
       icon: 'exclamationmark.triangle.fill' as const,
       color: 'text-danger' as const,
       loading: false
@@ -32,7 +34,7 @@ function useSyncState() {
 
   if (status.dataFlowStatus?.uploading)
     return {
-      label: 'Syncing changes…',
+      label: t('sync.syncingChanges'),
       icon: null,
       color: 'text-muted' as const,
       loading: true
@@ -40,7 +42,7 @@ function useSyncState() {
 
   if (sessionStatus === 'expired' && !status.connected)
     return {
-      label: 'Session expired',
+      label: t('sync.sessionExpired'),
       icon: 'exclamationmark.arrow.circlepath' as const,
       color: 'text-warning' as const,
       loading: false
@@ -48,7 +50,7 @@ function useSyncState() {
 
   if (!status.connected && !status.connecting)
     return {
-      label: 'Offline — changes saved locally',
+      label: t('sync.offline'),
       icon: 'wifi.slash' as const,
       color: 'text-muted' as const,
       loading: false
@@ -56,14 +58,14 @@ function useSyncState() {
 
   if (status.connecting && !status.connected)
     return {
-      label: 'Connecting…',
+      label: t('sync.connecting'),
       icon: null,
       color: 'text-muted' as const,
       loading: true
     }
 
   return {
-    label: 'All changes synced',
+    label: t('sync.allSynced'),
     icon: 'checkmark.icloud.fill' as const,
     color: 'text-muted' as const,
     loading: false

@@ -1,5 +1,7 @@
 import { TabStackLayout } from '@/components/navigation/tab-stack-layout'
+import { useTranslation } from '@/lib/i18n'
 
 export default function MaintenanceTabLayout() {
-  return <TabStackLayout title="Maintenance" />
+  const { t } = useTranslation()
+  return <TabStackLayout title={t('tabs.maintenance')} />
 }

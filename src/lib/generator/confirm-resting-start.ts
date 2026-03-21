@@ -1,15 +1,16 @@
 import { Alert } from 'react-native'
 
 import { notifyWarning } from '@/lib/haptics'
+import { t } from '@/lib/i18n'
 
 export function confirmRestingStart(onStart: () => void) {
   Alert.alert(
-    'Generator is Resting',
-    "It's recommended to let the generator rest before starting again. Starting now may reduce its lifespan.",
+    t('generator.generatorIsResting'),
+    t('generator.restingStartWarning'),
     [
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Start Anyway',
+        text: t('generator.startAnyway'),
         style: 'destructive',
         onPress: () => {
           notifyWarning()

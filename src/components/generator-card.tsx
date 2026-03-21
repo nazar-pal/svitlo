@@ -8,6 +8,7 @@ import {
 import { Alert, Text, View } from 'react-native'
 
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
+import { useTranslation } from '@/lib/i18n'
 import { notifySuccess } from '@/lib/haptics'
 import { startSession, stopSession } from '@/data/client/mutations'
 import { GeneratorStatusBadge } from '@/components/generator-status-badge'
@@ -44,11 +45,6 @@ function maintenanceLabelColor(urgency: MaintenanceUrgency): string {
   return 'text-muted'
 }
 
-function maintenanceLabelText(info: NextMaintenanceCardInfo): string {
-  if (info.urgency === 'overdue') return 'overdue'
-  return formatMaintenanceLabel(info)
-}
-
 export function GeneratorCard({
   generator,
   sessions,
@@ -57,6 +53,12 @@ export function GeneratorCard({
   onPress,
   variant = 'detailed'
 }: GeneratorCardProps) {
+  const { t } = useTranslation()
+
+  function maintenanceLabelText(info: NextMaintenanceCardInfo): string {
+    if (info.urgency === 'overdue') return t('generator.overdue')
+    return formatMaintenanceLabel(info)
+  }
   const mutedColor = useThemeColor('muted')
   const { status, openSession, restEndsAt, consecutiveRunHours } =
     computeGeneratorStatus(generator, sessions)
@@ -83,14 +85,14 @@ export function GeneratorCard({
 
   async function handleStart() {
     const result = await startSession(userId, generator.id)
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
     notifySuccess()
   }
 
   async function handleStop() {
     if (!openSession) return
     const result = await stopSession(userId, openSession.id)
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
     notifySuccess()
   }
 
@@ -118,13 +120,15 @@ export function GeneratorCard({
             ) : (
               <View className="flex-row items-center gap-2">
                 <Text className="text-muted text-3.25">
-                  {formatHours(lifetimeHours)} total
+                  {t('generator.total', { hours: formatHours(lifetimeHours) })}
                 </Text>
                 {status === 'resting' && restEndsAt ? (
                   <>
                     <Text className="text-muted text-2.75">·</Text>
                     <Text className="text-muted text-3.25">
-                      rests {formatRestRemaining(restEndsAt)}
+                      {t('generator.rests', {
+                        time: formatRestRemaining(restEndsAt)
+                      })}
                     </Text>
                   </>
                 ) : null}
@@ -150,10 +154,12 @@ export function GeneratorCard({
               {variant === 'compact' ? (
                 <>
                   <Text className="text-muted text-3">
-                    {formatHours(totalRunHours)} elapsed
+                    {t('generator.elapsed', {
+                      hours: formatHours(totalRunHours)
+                    })}
                   </Text>
                   <Text className="text-muted text-3">
-                    {formatHours(maxHours)} max
+                    {t('generator.max', { hours: formatHours(maxHours) })}
                   </Text>
                 </>
               ) : (
@@ -180,10 +186,14 @@ export function GeneratorCard({
             </View>
             <View className="flex-row justify-between">
               <Text className="text-muted text-3">
-                {restCountdown.remainingFormatted} remaining
+                {t('generator.remaining', {
+                  time: restCountdown.remainingFormatted
+                })}
               </Text>
               <Text className="text-muted text-3">
-                {formatHours(generator.requiredRestHours)} required
+                {t('generator.required', {
+                  hours: formatHours(generator.requiredRestHours)
+                })}
               </Text>
             </View>
           </View>
@@ -209,7 +219,7 @@ export function GeneratorCard({
             className="mt-3"
             onPress={handleStart}
           >
-            Start
+            {t('common.start')}
           </Button>
         ) : status === 'running' ? (
           <Button
@@ -218,7 +228,7 @@ export function GeneratorCard({
             className="mt-3"
             onPress={handleStop}
           >
-            Stop
+            {t('common.stop')}
           </Button>
         ) : status === 'resting' ? (
           <Button
@@ -227,7 +237,7 @@ export function GeneratorCard({
             className="mt-3"
             onPress={() => confirmRestingStart(handleStart)}
           >
-            Start
+            {t('common.start')}
           </Button>
         ) : null}
       </Surface>

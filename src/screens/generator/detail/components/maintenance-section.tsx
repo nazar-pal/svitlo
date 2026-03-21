@@ -1,4 +1,4 @@
-import { format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
 import { SymbolView } from 'expo-symbols'
 import {
   ListGroup,
@@ -15,6 +15,7 @@ import type {
   MaintenanceRecord,
   MaintenanceTemplate
 } from '@/data/client/db-schema'
+import { formatDate, useTranslation } from '@/lib/i18n'
 
 interface MaintenanceSectionProps {
   templates: MaintenanceTemplate[]
@@ -37,6 +38,7 @@ export function MaintenanceSection({
   onAddTemplate,
   onRecordMaintenance
 }: MaintenanceSectionProps) {
+  const { t } = useTranslation()
   const foregroundColor = useThemeColor('foreground')
   const mutedColor = useThemeColor('muted')
 
@@ -47,7 +49,7 @@ export function MaintenanceSection({
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
-        <SectionHeader title="Maintenance" />
+        <SectionHeader title={t('tabs.maintenance')} />
         {isAdmin ? (
           <View className="flex-row items-center gap-3">
             {isSuggesting ? (
@@ -74,7 +76,9 @@ export function MaintenanceSection({
 
       {templates.length === 0 ? (
         <Surface variant="secondary" className="items-center py-6">
-          <Text className="text-muted text-sm">No maintenance templates</Text>
+          <Text className="text-muted text-sm">
+            {t('maintenanceTemplate.noTemplates')}
+          </Text>
         </Surface>
       ) : (
         <ListGroup>
@@ -100,22 +104,42 @@ export function MaintenanceSection({
                     <ListGroup.ItemDescription>
                       {template.isOneTime
                         ? template.triggerType === 'hours'
-                          ? `Once at ${template.triggerHoursInterval}h`
+                          ? t('maintenanceTemplate.onceAtHours', {
+                              hours: String(template.triggerHoursInterval)
+                            })
                           : template.triggerType === 'calendar'
-                            ? `Once at ${template.triggerCalendarDays} days`
-                            : `Once at ${template.triggerHoursInterval}h or ${template.triggerCalendarDays} days`
+                            ? t('maintenanceTemplate.onceAtDays', {
+                                days: String(template.triggerCalendarDays)
+                              })
+                            : t('maintenanceTemplate.onceAtBoth', {
+                                hours: String(template.triggerHoursInterval),
+                                days: String(template.triggerCalendarDays)
+                              })
                         : template.triggerType === 'hours'
-                          ? `Every ${template.triggerHoursInterval}h`
+                          ? t('maintenanceTemplate.everyHours', {
+                              hours: String(template.triggerHoursInterval)
+                            })
                           : template.triggerType === 'calendar'
-                            ? `Every ${template.triggerCalendarDays} days`
-                            : `${template.triggerHoursInterval}h or ${template.triggerCalendarDays} days`}
+                            ? t('maintenanceTemplate.everyDays', {
+                                days: String(template.triggerCalendarDays)
+                              })
+                            : t('maintenanceTemplate.everyBoth', {
+                                hours: String(template.triggerHoursInterval),
+                                days: String(template.triggerCalendarDays)
+                              })}
                       {lastRecord
-                        ? ` · Last: ${format(parseISO(lastRecord.performedAt), 'PP')}`
+                        ? ' · ' +
+                          t('maintenanceTemplate.last', {
+                            date: formatDate(
+                              parseISO(lastRecord.performedAt),
+                              'PP'
+                            )
+                          })
                         : null}
                     </ListGroup.ItemDescription>
                     {!lastRecord ? (
                       <Text className="text-warning text-xs">
-                        Never performed
+                        {t('maintenanceTemplate.neverPerformed')}
                       </Text>
                     ) : null}
                   </ListGroup.ItemContent>

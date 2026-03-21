@@ -6,6 +6,7 @@ import { leaveOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
 import { notifyWarning } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
+import { useTranslation } from '@/lib/i18n'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 
 interface LeaveOrgDialogProps {
@@ -19,6 +20,7 @@ export function LeaveOrgDialog({
   onClose,
   onLeft
 }: LeaveOrgDialogProps) {
+  const { t } = useTranslation()
   const { userId } = useUserOrgs()
   const { toast } = useToast()
   const { data: orgs } = useDrizzleQuery(
@@ -31,10 +33,13 @@ export function LeaveOrgDialog({
     if (!orgId) return
 
     const result = await leaveOrganization(userId, orgId)
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
 
     notifyWarning()
-    toast.show({ variant: 'warning', label: `Left "${orgName}"` })
+    toast.show({
+      variant: 'warning',
+      label: t('organization.leftOrg', { name: orgName })
+    })
     onClose()
     onLeft?.()
   }
@@ -58,20 +63,18 @@ export function LeaveOrgDialog({
           <Dialog.Close variant="ghost" className="self-end" />
           <View className="gap-5">
             <View className="gap-1.5">
-              <Dialog.Title>Leave Organization</Dialog.Title>
+              <Dialog.Title>{t('organization.leaveOrg')}</Dialog.Title>
               <Dialog.Description>
-                You will be unassigned from all generators in &ldquo;
-                {orgName}&rdquo;. To rejoin, an admin will need to invite you
-                again.
+                {t('organization.leaveOrgDesc', { name: orgName })}
               </Dialog.Description>
             </View>
 
             <View className="flex-row justify-end gap-3">
               <Button variant="ghost" size="sm" onPress={onClose}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button variant="danger" size="sm" onPress={handleLeave}>
-                Leave
+                {t('drawer.leave')}
               </Button>
             </View>
           </View>

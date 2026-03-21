@@ -17,6 +17,7 @@ import { useState } from 'react'
 import { Alert as RNAlert, Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
+import { useTranslation } from '@/lib/i18n'
 import { AiSourcesList } from '@/components/ai-sources-list'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
@@ -37,6 +38,7 @@ type Step = 'basics' | 'details'
 type Mode = 'ai' | 'manual' | null
 
 export default function CreateGeneratorScreen() {
+  const { t, locale } = useTranslation()
   const router = useRouter()
   const localUser = useLocalUser()
   const { selectedOrgId } = useSelectedOrg()
@@ -62,8 +64,8 @@ export default function CreateGeneratorScreen() {
   function handleNext() {
     setFieldErrors({})
     const errors: Record<string, string> = {}
-    if (!values.title.trim()) errors.title = 'Title is required'
-    if (!values.model.trim()) errors.model = 'Model is required'
+    if (!values.title.trim()) errors.title = t('generator.titleRequired')
+    if (!values.model.trim()) errors.model = t('generator.modelRequired')
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
       return
@@ -76,10 +78,7 @@ export default function CreateGeneratorScreen() {
 
     const networkState = await Network.getNetworkStateAsync()
     if (!networkState.isConnected || !networkState.isInternetReachable) {
-      RNAlert.alert(
-        'Offline',
-        'Internet connection is required for AI suggestions.'
-      )
+      RNAlert.alert(t('aiSuggestions.offline'), t('aiSuggestions.offlineDesc'))
       setMode(null)
       return
     }
@@ -88,12 +87,13 @@ export default function CreateGeneratorScreen() {
     const result = await rpcClient.ai
       .suggestMaintenancePlan({
         generatorModel: values.model,
-        description: values.description || undefined
+        description: values.description || undefined,
+        locale
       })
       .catch((err: unknown) => {
         RNAlert.alert(
-          'Error',
-          err instanceof Error ? err.message : 'Failed to get suggestions'
+          t('common.error'),
+          err instanceof Error ? err.message : t('aiSuggestions.failedToGet')
         )
         return null
       })
@@ -111,7 +111,7 @@ export default function CreateGeneratorScreen() {
 
     setAiSources(result.sources)
     setAiModelInfo(result.modelInfo)
-    setMaintenanceItems(result.tasks.map(t => ({ ...t, selected: true })))
+    setMaintenanceItems(result.tasks.map(task => ({ ...task, selected: true })))
   }
 
   function handleManualMode() {
@@ -191,7 +191,7 @@ export default function CreateGeneratorScreen() {
       <>
         <Stack.Screen
           options={{
-            title: 'New Generator',
+            title: t('generator.newGenerator'),
             headerRight: () => (
               <HeaderSubmitButton
                 systemImage="arrow.right"
@@ -210,14 +210,14 @@ export default function CreateGeneratorScreen() {
         >
           <View className="mx-auto w-full max-w-150 gap-7">
             <Text className="text-muted text-3.75 leading-5.5">
-              Add a generator to start tracking its usage and maintenance.
+              {t('generator.addDesc')}
             </Text>
 
             <View className="gap-5">
               <TextField isInvalid={!!fieldErrors.title}>
-                <Label>Title</Label>
+                <Label>{t('generator.title')}</Label>
                 <Input
-                  placeholder='e.g. "Back Yard Generator"'
+                  placeholder={t('generator.titlePlaceholder')}
                   {...field('title')}
                   autoFocus
                 />
@@ -225,19 +225,22 @@ export default function CreateGeneratorScreen() {
               </TextField>
 
               <TextField isInvalid={!!fieldErrors.model}>
-                <Label>Model</Label>
-                <Input placeholder='e.g. "Honda EU2200i"' {...field('model')} />
+                <Label>{t('generator.model')}</Label>
+                <Input
+                  placeholder={t('generator.modelPlaceholder')}
+                  {...field('model')}
+                />
                 <FieldError>{fieldErrors.model}</FieldError>
               </TextField>
 
               <TextField>
-                <Label>Description</Label>
+                <Label>{t('generator.description')}</Label>
                 <Input
-                  placeholder="Location, serial number, notes..."
+                  placeholder={t('generator.descriptionPlaceholder')}
                   {...field('description')}
                   multiline
                 />
-                <Description>Optional</Description>
+                <Description>{t('common.optional')}</Description>
               </TextField>
             </View>
           </View>
@@ -251,11 +254,11 @@ export default function CreateGeneratorScreen() {
     <>
       <Stack.Screen
         options={{
-          title: 'Generator Details',
+          title: t('generator.generatorDetails'),
           headerLeft: () => (
             <Host matchContents>
               <SwiftButton
-                label="Back"
+                label={t('generator.back')}
                 systemImage="chevron.left"
                 onPress={() => setStep('basics')}
                 modifiers={[labelStyle('iconOnly')]}
@@ -275,7 +278,7 @@ export default function CreateGeneratorScreen() {
       >
         <View className="mx-auto w-full max-w-150 gap-7">
           <Text className="text-muted text-3.75 leading-5.5">
-            {values.model} — configure specs and maintenance schedule.
+            {t('generator.configureDesc', { model: values.model })}
           </Text>
 
           {mode === null ? (
@@ -283,10 +286,9 @@ export default function CreateGeneratorScreen() {
               <PressableFeedback onPress={handleAIMode}>
                 <Card>
                   <Card.Body>
-                    <Card.Title>Auto-fill with AI</Card.Title>
+                    <Card.Title>{t('generator.autoFillAI')}</Card.Title>
                     <Card.Description>
-                      Research your generator model and suggest specs and
-                      maintenance tasks automatically.
+                      {t('generator.autoFillAIDesc')}
                     </Card.Description>
                   </Card.Body>
                 </Card>
@@ -294,9 +296,9 @@ export default function CreateGeneratorScreen() {
               <PressableFeedback onPress={handleManualMode}>
                 <Card>
                   <Card.Body>
-                    <Card.Title>Enter manually</Card.Title>
+                    <Card.Title>{t('generator.enterManually')}</Card.Title>
                     <Card.Description>
-                      Set up generator specs and maintenance tasks yourself.
+                      {t('generator.enterManuallyDesc')}
                     </Card.Description>
                   </Card.Body>
                 </Card>
@@ -308,7 +310,7 @@ export default function CreateGeneratorScreen() {
             <View className="items-center gap-3 py-10">
               <Spinner />
               <Text className="text-muted text-sm">
-                Researching {values.model}...
+                {t('generator.researching', { model: values.model })}
               </Text>
             </View>
           ) : null}
@@ -319,7 +321,7 @@ export default function CreateGeneratorScreen() {
                 <View className="flex-row gap-3">
                   <View className="flex-1">
                     <TextField isInvalid={!!fieldErrors.maxConsecutiveRunHours}>
-                      <Label>Max Run Hours</Label>
+                      <Label>{t('generator.maxRunHours')}</Label>
                       <Input
                         placeholder="8"
                         {...field('maxConsecutiveRunHours')}
@@ -332,7 +334,7 @@ export default function CreateGeneratorScreen() {
                   </View>
                   <View className="flex-1">
                     <TextField isInvalid={!!fieldErrors.requiredRestHours}>
-                      <Label>Rest Hours</Label>
+                      <Label>{t('generator.restHours')}</Label>
                       <Input
                         placeholder="4"
                         {...field('requiredRestHours')}
@@ -344,14 +346,14 @@ export default function CreateGeneratorScreen() {
                 </View>
 
                 <TextField isInvalid={!!fieldErrors.runWarningThresholdPct}>
-                  <Label>Warning Threshold %</Label>
+                  <Label>{t('generator.warningThresholdPct')}</Label>
                   <Input
                     placeholder="80"
                     {...field('runWarningThresholdPct')}
                     keyboardType="number-pad"
                   />
                   <Description>
-                    Warning appears at this percentage of max run hours
+                    {t('generator.warningThresholdDesc')}
                   </Description>
                   <FieldError>{fieldErrors.runWarningThresholdPct}</FieldError>
                 </TextField>
@@ -360,7 +362,7 @@ export default function CreateGeneratorScreen() {
               {maintenanceItems.length > 0 ? (
                 <View className="gap-2">
                   <Text className="text-foreground text-lg font-semibold">
-                    Maintenance Tasks
+                    {t('generator.maintenanceTasks')}
                   </Text>
                   {aiModelInfo ? (
                     <Text className="text-muted text-xs">{aiModelInfo}</Text>
@@ -380,7 +382,7 @@ export default function CreateGeneratorScreen() {
 
               {mode === 'manual' ? (
                 <Button variant="secondary" onPress={addEmptyMaintenanceItem}>
-                  Add Maintenance Task
+                  {t('generator.addMaintenanceTask')}
                 </Button>
               ) : null}
 

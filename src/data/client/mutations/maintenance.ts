@@ -4,6 +4,7 @@ import {
   maintenanceRecords,
   maintenanceTemplates
 } from '@/data/client/db-schema'
+import { t } from '@/lib/i18n'
 import {
   insertMaintenanceRecordSchema,
   insertMaintenanceTemplateSchema,
@@ -32,7 +33,7 @@ export async function createMaintenanceTemplate(
   if (!parsed.success) return fail(parsed.error.issues[0].message)
 
   if (!(await isGeneratorOrgAdmin(userId, parsed.data.generatorId)))
-    return fail('Only admin can create maintenance templates')
+    return fail(t('errors.onlyAdminCanCreateTemplates'))
 
   await db.insert(maintenanceTemplates).values({
     id: newId(),
@@ -53,11 +54,11 @@ export async function createManyMaintenanceTemplates(
   userId: string,
   inputs: InsertMaintenanceTemplateInput[]
 ): Promise<MutationResult> {
-  if (inputs.length === 0) return fail('No templates to create')
+  if (inputs.length === 0) return fail(t('errors.noTemplatesToCreate'))
 
   const generatorId = inputs[0].generatorId
   if (inputs.some(i => i.generatorId !== generatorId))
-    return fail('All templates must belong to the same generator')
+    return fail(t('errors.templatesMustBeSameGenerator'))
 
   for (const input of inputs) {
     const parsed = insertMaintenanceTemplateSchema.safeParse(input)
@@ -66,7 +67,7 @@ export async function createManyMaintenanceTemplates(
   }
 
   if (!(await isGeneratorOrgAdmin(userId, generatorId)))
-    return fail('Only admin can create maintenance templates')
+    return fail(t('errors.onlyAdminCanCreateTemplates'))
 
   await powersync.writeTransaction(async tx => {
     for (const input of inputs) {
@@ -105,10 +106,10 @@ export async function updateMaintenanceTemplate(
     .where(eq(maintenanceTemplates.id, templateId))
     .limit(1)
 
-  if (!template) return fail('Template not found')
+  if (!template) return fail(t('errors.templateNotFound'))
 
   if (!(await isGeneratorOrgAdmin(userId, template.generatorId)))
-    return fail('Only admin can update maintenance templates')
+    return fail(t('errors.onlyAdminCanUpdateTemplates'))
 
   // When updating triggerType, validate that the required companion fields
   // will be present after the update. If they're not in the update payload,
@@ -120,7 +121,7 @@ export async function updateMaintenanceTemplate(
       .where(eq(maintenanceTemplates.id, templateId))
       .limit(1)
 
-    if (!existing) return fail('Template not found')
+    if (!existing) return fail(t('errors.templateNotFound'))
 
     const mergedHours =
       parsed.data.triggerHoursInterval ?? existing.triggerHoursInterval
@@ -135,9 +136,9 @@ export async function updateMaintenanceTemplate(
       parsed.data.triggerType === 'whichever_first'
 
     if (needsHours && mergedHours == null)
-      return fail('Hours interval required for this trigger type')
+      return fail(t('errors.hoursIntervalRequired'))
     if (needsDays && mergedDays == null)
-      return fail('Calendar days required for this trigger type')
+      return fail(t('errors.calendarDaysRequired'))
   }
 
   const { isOneTime, ...rest } = parsed.data
@@ -162,10 +163,10 @@ export async function deleteMaintenanceTemplate(
     .where(eq(maintenanceTemplates.id, templateId))
     .limit(1)
 
-  if (!template) return fail('Template not found')
+  if (!template) return fail(t('errors.templateNotFound'))
 
   if (!(await isGeneratorOrgAdmin(userId, template.generatorId)))
-    return fail('Only admin can delete maintenance templates')
+    return fail(t('errors.onlyAdminCanDeleteTemplates'))
 
   await db
     .delete(maintenanceTemplates)
@@ -186,10 +187,10 @@ export async function deleteMaintenanceRecord(
     .where(eq(maintenanceRecords.id, recordId))
     .limit(1)
 
-  if (!record) return fail('Record not found')
+  if (!record) return fail(t('errors.recordNotFound'))
 
   if (!(await canAccessGenerator(userId, record.generatorId)))
-    return fail('Not authorized for this generator')
+    return fail(t('errors.notAuthorizedForGenerator'))
 
   await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, recordId))
 
@@ -209,13 +210,13 @@ export async function updateMaintenanceRecord(
     .where(eq(maintenanceRecords.id, recordId))
     .limit(1)
 
-  if (!record) return fail('Record not found')
+  if (!record) return fail(t('errors.recordNotFound'))
 
   if (!(await canAccessGenerator(userId, record.generatorId)))
-    return fail('Not authorized for this generator')
+    return fail(t('errors.notAuthorizedForGenerator'))
 
   if (new Date(input.performedAt) > new Date())
-    return fail('Performed time cannot be in the future')
+    return fail(t('errors.performedTimeInFuture'))
 
   await db
     .update(maintenanceRecords)
@@ -236,7 +237,7 @@ export async function recordMaintenance(
   if (!parsed.success) return fail(parsed.error.issues[0].message)
 
   if (!(await canAccessGenerator(userId, parsed.data.generatorId)))
-    return fail('Not authorized for this generator')
+    return fail(t('errors.notAuthorizedForGenerator'))
 
   // Verify template exists and belongs to the generator
   const [template] = await db
@@ -245,9 +246,9 @@ export async function recordMaintenance(
     .where(eq(maintenanceTemplates.id, parsed.data.templateId))
     .limit(1)
 
-  if (!template) return fail('Maintenance template not found')
+  if (!template) return fail(t('errors.maintenanceTemplateNotFound'))
   if (template.generatorId !== parsed.data.generatorId)
-    return fail('Template does not belong to this generator')
+    return fail(t('errors.templateNotForGenerator'))
 
   await db.insert(maintenanceRecords).values({
     id: newId(),

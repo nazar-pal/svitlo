@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Alert, Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
+import { useTranslation } from '@/lib/i18n'
 import { AiSourcesList } from '@/components/ai-sources-list'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
@@ -14,6 +15,7 @@ import { consumePendingSuggestions } from '@/lib/maintenance/suggestions-store'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function AddSuggestionsScreen() {
+  const { t } = useTranslation()
   const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
@@ -27,9 +29,11 @@ export default function AddSuggestionsScreen() {
   if (!data || !generatorId)
     return (
       <>
-        <Stack.Screen options={{ title: 'AI Suggestions' }} />
+        <Stack.Screen options={{ title: t('aiSuggestions.title') }} />
         <View className="bg-background flex-1 items-center justify-center">
-          <Text className="text-muted text-sm">No suggestions available</Text>
+          <Text className="text-muted text-sm">
+            {t('aiSuggestions.noSuggestions')}
+          </Text>
         </View>
       </>
     )
@@ -62,7 +66,7 @@ export default function AddSuggestionsScreen() {
     setIsSaving(false)
 
     if (!result.ok) {
-      Alert.alert('Error', result.error)
+      Alert.alert(t('common.error'), result.error)
       return
     }
 

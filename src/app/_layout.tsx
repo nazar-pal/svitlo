@@ -1,5 +1,6 @@
 import '../global.css'
 
+import '@/lib/i18n'
 import { Stack } from 'expo-router'
 import { HeroUINativeProvider } from 'heroui-native'
 import React from 'react'

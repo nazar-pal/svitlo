@@ -1,28 +1,33 @@
 import { z } from 'zod'
 
+import { t } from '@/lib/i18n'
+
 export const signInSchema = z.object({
   email: z
     .string()
     .trim()
-    .min(1, { error: 'Please enter your email' })
-    .email({ error: 'Please enter a valid email' }),
-  password: z.string().min(1, { error: 'Please enter your password' })
+    .min(1, { error: () => t('validation.enterEmail') })
+    .email({ error: () => t('validation.validEmail') }),
+  password: z.string().min(1, { error: () => t('validation.enterPassword') })
 })
 
 export const signUpSchema = z
   .object({
-    name: z.string().trim().min(1, { error: 'Please enter your name' }),
+    name: z
+      .string()
+      .trim()
+      .min(1, { error: () => t('validation.enterName') }),
     email: z
       .string()
       .trim()
-      .min(1, { error: 'Please enter your email' })
-      .email({ error: 'Please enter a valid email' }),
+      .min(1, { error: () => t('validation.enterEmail') })
+      .email({ error: () => t('validation.validEmail') }),
     password: z
       .string()
-      .min(8, { error: 'Password must be at least 8 characters' }),
+      .min(8, { error: () => t('validation.passwordMinLength') }),
     confirmPassword: z.string()
   })
   .refine(d => d.password === d.confirmPassword, {
     path: ['confirmPassword'],
-    message: 'Passwords do not match'
+    error: () => t('validation.passwordsDoNotMatch')
   })

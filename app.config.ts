@@ -37,7 +37,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'automatic',
   ios: {
     infoPlist: {
-      ITSAppUsesNonExemptEncryption: false
+      ITSAppUsesNonExemptEncryption: false,
+      CFBundleAllowMixedLocalizations: true,
+      CFBundleLocalizations: ['en', 'uk']
     },
     icon: './assets/app.icon',
     supportsTablet: false,
@@ -59,7 +61,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-secure-store',
     'expo-web-browser',
-    'expo-apple-authentication'
+    'expo-apple-authentication',
+    'expo-localization'
   ],
   extra: {
     eas: {

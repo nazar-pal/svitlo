@@ -5,10 +5,12 @@ import { useNavigation } from 'expo-router'
 import { Pressable, View } from 'react-native'
 import Animated, { ZoomIn } from 'react-native-reanimated'
 
+import { useTranslation } from '@/lib/i18n'
 import { usePendingInvitations } from '@/lib/hooks/use-pending-invitations'
 
 export function DrawerTriggerButton() {
   const navigation = useNavigation()
+  const { t } = useTranslation()
   const pendingInvitations = usePendingInvitations()
 
   return (
@@ -17,14 +19,16 @@ export function DrawerTriggerButton() {
       hitSlop={8}
       accessibilityLabel={
         pendingInvitations.length > 0
-          ? `Menu, ${pendingInvitations.length} pending invitation${pendingInvitations.length > 1 ? 's' : ''}`
-          : 'Menu'
+          ? t('drawer.menuWithInvitations', {
+              count: pendingInvitations.length
+            })
+          : t('common.menu')
       }
     >
       <View pointerEvents="none">
         <Host matchContents>
           <SwiftButton
-            label="Menu"
+            label={t('common.menu')}
             systemImage="line.3.horizontal"
             modifiers={[labelStyle('iconOnly')]}
           />

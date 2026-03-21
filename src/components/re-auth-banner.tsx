@@ -6,6 +6,7 @@ import { View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useSessionStatus } from '@/lib/auth/session-status-context'
+import { useTranslation } from '@/lib/i18n'
 
 function usePendingChangesCount(): number {
   const { data } = useQuery<{ count: number }>(
@@ -15,6 +16,7 @@ function usePendingChangesCount(): number {
 }
 
 export function ReAuthBanner() {
+  const { t } = useTranslation()
   const { sessionStatus } = useSessionStatus()
   const router = useRouter()
   const [dismissed, setDismissed] = useState(false)
@@ -25,8 +27,8 @@ export function ReAuthBanner() {
 
   const message =
     pendingCount > 0
-      ? `Session expired — ${pendingCount} change${pendingCount === 1 ? '' : 's'} waiting to sync. Your data is safe.`
-      : 'Session expired — sign in to resume syncing.'
+      ? t('sync.expiredWithChanges', { count: pendingCount })
+      : t('sync.expiredNoChanges')
 
   return (
     <Alert
@@ -44,11 +46,11 @@ export function ReAuthBanner() {
           variant="primary"
           onPress={() => router.push('/(protected)/re-auth')}
         >
-          Sign In
+          {t('common.signIn')}
         </Button>
         {pendingCount === 0 ? (
           <Button size="sm" variant="ghost" onPress={() => setDismissed(true)}>
-            Dismiss
+            {t('sync.dismiss')}
           </Button>
         ) : null}
       </View>

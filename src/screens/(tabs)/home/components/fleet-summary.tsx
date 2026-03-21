@@ -1,10 +1,13 @@
 import {
+  GENERATOR_STATUS_KEYS,
   GENERATOR_STATUS_META,
   type GeneratorStatus,
   type StatusCounts
 } from '@/lib/generator/status'
 import { Chip } from 'heroui-native'
 import { View } from 'react-native'
+
+import { useTranslation } from '@/lib/i18n'
 
 const STATUSES: GeneratorStatus[] = ['running', 'resting', 'available']
 
@@ -15,10 +18,12 @@ const DOT_BG: Record<GeneratorStatus, string> = {
 }
 
 export function FleetSummary(counts: StatusCounts) {
+  const { t } = useTranslation()
+
   return (
     <View className="flex-row gap-2">
       {STATUSES.map(status => {
-        const { label, color } = GENERATOR_STATUS_META[status]
+        const { color } = GENERATOR_STATUS_META[status]
         const empty = counts[status] === 0
         return (
           <Chip
@@ -30,7 +35,7 @@ export function FleetSummary(counts: StatusCounts) {
           >
             <View className={`${DOT_BG[status]} size-1.5 rounded-full`} />
             <Chip.Label>
-              {counts[status]} {label}
+              {counts[status]} {t(GENERATOR_STATUS_KEYS[status])}
             </Chip.Label>
           </Chip>
         )

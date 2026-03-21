@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
+import { useTranslation } from '@/lib/i18n'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
@@ -26,16 +27,17 @@ import { useLocalUser } from '@/lib/powersync'
 const TRIGGER_TYPES = ['hours', 'calendar', 'whichever_first'] as const
 type TriggerType = (typeof TRIGGER_TYPES)[number]
 
-const TRIGGER_LABELS: Record<TriggerType, string> = {
-  hours: 'By Hours',
-  calendar: 'By Calendar',
-  whichever_first: 'Whichever First'
-}
-
 export default function CreateMaintenanceTemplateScreen() {
+  const { t } = useTranslation()
   const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
+
+  const triggerLabels: Record<TriggerType, string> = {
+    hours: t('maintenanceTemplate.byHours'),
+    calendar: t('maintenanceTemplate.byCalendar'),
+    whichever_first: t('maintenanceTemplate.whicheverFirst')
+  }
 
   const { values, field, set, fieldErrors, setFieldErrors } = useFormFields({
     taskName: '',
@@ -101,14 +103,14 @@ export default function CreateMaintenanceTemplateScreen() {
       >
         <View className="mx-auto w-full max-w-150 gap-7">
           <Text className="text-muted text-3.75 leading-5.5">
-            Define a recurring maintenance task for this generator.
+            {t('maintenanceTemplate.defineDesc')}
           </Text>
 
           <View className="gap-5">
             <TextField isInvalid={!!fieldErrors.taskName}>
-              <Label>Task Name</Label>
+              <Label>{t('maintenanceTemplate.taskName')}</Label>
               <Input
-                placeholder='e.g. "Oil Change", "Air Filter"'
+                placeholder={t('maintenanceTemplate.taskNamePlaceholder')}
                 {...field('taskName')}
                 autoFocus
               />
@@ -116,19 +118,19 @@ export default function CreateMaintenanceTemplateScreen() {
             </TextField>
 
             <TextField>
-              <Label>Description</Label>
+              <Label>{t('generator.description')}</Label>
               <Input
-                placeholder="Instructions or notes..."
+                placeholder={t('maintenanceTemplate.instructionsPlaceholder')}
                 {...field('description')}
                 multiline
               />
-              <Description>Optional</Description>
+              <Description>{t('common.optional')}</Description>
             </TextField>
 
             {/* Trigger Type Selector */}
             <View className="gap-2">
               <Text className="text-foreground text-sm font-medium">
-                Trigger Type
+                {t('maintenanceTemplate.triggerType')}
               </Text>
               <Tabs
                 value={values.triggerType}
@@ -141,7 +143,7 @@ export default function CreateMaintenanceTemplateScreen() {
                   <Tabs.Indicator />
                   {TRIGGER_TYPES.map(type => (
                     <Tabs.Trigger key={type} value={type}>
-                      <Tabs.Label>{TRIGGER_LABELS[type]}</Tabs.Label>
+                      <Tabs.Label>{triggerLabels[type]}</Tabs.Label>
                     </Tabs.Trigger>
                   ))}
                 </Tabs.List>
@@ -150,14 +152,16 @@ export default function CreateMaintenanceTemplateScreen() {
 
             {showHours ? (
               <TextField isInvalid={!!fieldErrors.triggerHoursInterval}>
-                <Label>Hours Interval</Label>
+                <Label>{t('maintenanceTemplate.hoursInterval')}</Label>
                 <Input
-                  placeholder="e.g. 100"
+                  placeholder={t(
+                    'maintenanceTemplate.hoursIntervalPlaceholder'
+                  )}
                   {...field('triggerHoursInterval')}
                   keyboardType="decimal-pad"
                 />
                 <Description>
-                  Maintenance due after this many run hours
+                  {t('maintenanceTemplate.hoursIntervalDesc')}
                 </Description>
                 <FieldError>{fieldErrors.triggerHoursInterval}</FieldError>
               </TextField>
@@ -165,13 +169,15 @@ export default function CreateMaintenanceTemplateScreen() {
 
             {showCalendar ? (
               <TextField isInvalid={!!fieldErrors.triggerCalendarDays}>
-                <Label>Calendar Days</Label>
+                <Label>{t('maintenanceTemplate.calendarDays')}</Label>
                 <Input
-                  placeholder="e.g. 30"
+                  placeholder={t('maintenanceTemplate.calendarDaysPlaceholder')}
                   {...field('triggerCalendarDays')}
                   keyboardType="number-pad"
                 />
-                <Description>Maintenance due after this many days</Description>
+                <Description>
+                  {t('maintenanceTemplate.calendarDaysDesc')}
+                </Description>
                 <FieldError>{fieldErrors.triggerCalendarDays}</FieldError>
               </TextField>
             ) : null}

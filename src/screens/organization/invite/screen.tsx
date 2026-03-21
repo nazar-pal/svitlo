@@ -3,6 +3,7 @@ import { Description, FieldError, Input, Label, TextField } from 'heroui-native'
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 
+import { useTranslation } from '@/lib/i18n'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createInvitation } from '@/data/client/mutations'
@@ -11,6 +12,7 @@ import { insertInvitationSchema } from '@/data/client/validation'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function InviteMemberScreen() {
+  const { t } = useTranslation()
   const { id: orgId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
@@ -64,22 +66,20 @@ export default function InviteMemberScreen() {
       >
         <View className="mx-auto w-full max-w-150 gap-7">
           <Text className="text-muted text-3.75 leading-5.5">
-            Enter the email address of the person you want to invite.
+            {t('organization.inviteDesc')}
           </Text>
 
           <TextField isInvalid={!!error}>
-            <Label>Email Address</Label>
+            <Label>{t('organization.emailAddress')}</Label>
             <Input
-              placeholder="employee@example.com"
+              placeholder={t('organization.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoFocus
             />
-            <Description>
-              The invitation will appear when they sign in with this email
-            </Description>
+            <Description>{t('organization.inviteHint')}</Description>
             <FieldError>{error}</FieldError>
           </TextField>
         </View>

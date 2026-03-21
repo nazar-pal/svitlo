@@ -26,14 +26,18 @@ export const aiRouter = {
     .input(
       z.object({
         generatorModel: z.string(),
-        description: z.string().optional()
+        description: z.string().optional(),
+        locale: z.enum(['en', 'uk']).default('en')
       })
     )
     .output(maintenanceSuggestionSchema)
     .handler(async ({ input }) => {
       const prompt = [
         `Generator: ${input.generatorModel}`,
-        input.description ? `Description: ${input.description}` : null
+        input.description ? `Description: ${input.description}` : null,
+        input.locale === 'uk'
+          ? 'Respond with all task names, descriptions, and modelInfo in Ukrainian (uk).'
+          : null
       ]
         .filter(Boolean)
         .join('\n')

@@ -1,18 +1,20 @@
 import { z } from 'zod'
 
+import { t } from '@/lib/i18n'
+
 export const zNonEmptyString = z
   .string()
   .trim()
-  .min(1, { error: 'Must not be empty' })
+  .min(1, { error: () => t('validation.mustNotBeEmpty') })
 
 export const zPositiveReal = z
   .number()
-  .positive({ error: 'Must be greater than 0' })
+  .positive({ error: () => t('validation.mustBePositive') })
 
 export const zPositiveInt = z
   .number()
   .int()
-  .positive({ error: 'Must be a positive integer' })
+  .positive({ error: () => t('validation.mustBePositiveInt') })
 
 export function flattenZodErrors(error: z.ZodError): Record<string, string> {
   const flat = z.flattenError(error).fieldErrors as Record<

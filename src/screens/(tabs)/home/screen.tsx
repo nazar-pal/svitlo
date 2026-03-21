@@ -8,6 +8,8 @@ import { Stack, useRouter } from 'expo-router'
 import { View } from 'react-native'
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated'
 
+import { useTranslation } from '@/lib/i18n'
+
 import { ActiveSessionCard } from './components/active-session-card'
 import { FleetSummary } from './components/fleet-summary'
 import { useHomeData } from './lib/use-home-data'
@@ -18,6 +20,7 @@ type HomeListItem =
 
 export default function HomeScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const {
     userId,
     userOrgs,
@@ -37,20 +40,21 @@ export default function HomeScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <EmptyState
           icon="building.2"
-          title="No Organizations"
-          description="Create an organization or accept an invitation to get started."
-          actionLabel="Go to Members"
+          title={t('home.noOrganizations')}
+          description={t('home.noOrganizationsDesc')}
+          actionLabel={t('home.goToMembers')}
           onAction={() => router.push('/members')}
         />
       </View>
     )
 
   const items: HomeListItem[] = []
-  for (const [title, gens] of [
-    ['Running', grouped.running],
-    ['Resting', grouped.resting],
-    ['Available', grouped.available]
-  ] as const) {
+  const groups: [string, Generator[]][] = [
+    [t('generatorStatus.running'), grouped.running],
+    [t('generatorStatus.resting'), grouped.resting],
+    [t('generatorStatus.available'), grouped.available]
+  ]
+  for (const [title, gens] of groups) {
     if (gens.length === 0) continue
     items.push({ type: 'section-header', key: `header-${title}`, title })
     for (const g of gens) items.push({ type: 'generator', key: g.id, data: g })
@@ -86,7 +90,7 @@ export default function HomeScreen() {
             admin ? (
               <Host matchContents>
                 <SwiftButton
-                  label="Add"
+                  label={t('home.add')}
                   systemImage="plus"
                   modifiers={[labelStyle('iconOnly')]}
                   onPress={() => router.push('/generator/create')}
@@ -100,13 +104,13 @@ export default function HomeScreen() {
         <View className="bg-background flex-1 items-center justify-center px-5 pb-10">
           <EmptyState
             icon="bolt.slash"
-            title="No Generators"
+            title={t('home.noGenerators')}
             description={
               admin
-                ? 'Add your first generator to start tracking.'
-                : 'No generators assigned to you yet.'
+                ? t('home.noGeneratorsAdminDesc')
+                : t('home.noGeneratorsDesc')
             }
-            actionLabel={admin ? 'Add Generator' : undefined}
+            actionLabel={admin ? t('home.addGenerator') : undefined}
             onAction={
               admin ? () => router.push('/generator/create') : undefined
             }

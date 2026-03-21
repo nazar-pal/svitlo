@@ -5,6 +5,7 @@ import React from 'react'
 import { ModalCloseButton } from '@/components/navigation/modal-close-button'
 import { ReAuthBanner } from '@/components/re-auth-banner'
 import { useLocalIdentity } from '@/lib/auth/local-identity-context'
+import { useTranslation } from '@/lib/i18n'
 import { SelectedOrgProvider } from '@/lib/organization/use-selected-org'
 import { PowerSyncProvider } from '@/lib/powersync'
 
@@ -22,6 +23,7 @@ const formSheetOptions = {
 
 export default function ProtectedLayout() {
   const { identity } = useLocalIdentity()
+  const { t } = useTranslation()
 
   if (!identity) return null
 
@@ -53,72 +55,81 @@ export default function ProtectedLayout() {
               ...(glassAvailable
                 ? { headerTransparent: true }
                 : { headerBlurEffect: 'systemMaterial' }),
-              title: 'Activity'
+              title: t('tabs.activity')
             }}
           />
           <Stack.Screen
             name="generator/create"
-            options={{ ...formSheetOptions, title: 'New Generator' }}
+            options={{
+              ...formSheetOptions,
+              title: t('generator.newGenerator')
+            }}
           />
           <Stack.Screen
             name="generator/log-session"
             options={{
               ...formSheetOptions,
-              title: 'Log Past Run'
+              title: t('screens.logPastRun')
             }}
           />
           <Stack.Screen
             name="generator/settings"
-            options={{ ...formSheetOptions, title: 'Settings' }}
+            options={{
+              ...formSheetOptions,
+              title: t('generator.settings')
+            }}
           />
           <Stack.Screen
             name="maintenance/create-template"
-            options={{ ...formSheetOptions, title: 'New Task' }}
+            options={{ ...formSheetOptions, title: t('screens.newTask') }}
           />
           <Stack.Screen
             name="maintenance/add-suggestions"
-            options={{ ...formSheetOptions, title: 'AI Suggestions' }}
+            options={{
+              ...formSheetOptions,
+              title: t('aiSuggestions.title')
+            }}
           />
           <Stack.Screen
             name="maintenance/record"
             options={{
               ...formSheetOptions,
-              title: 'Record Maintenance'
+              title: t('screens.recordMaintenance')
             }}
           />
           <Stack.Screen
             name="activity/edit-session"
             options={{
               ...formSheetOptions,
-              title: 'Edit Run'
+              title: t('screens.editRun')
             }}
           />
           <Stack.Screen
             name="activity/edit-maintenance"
             options={{
               ...formSheetOptions,
-              title: 'Edit Maintenance'
+              title: t('screens.editMaintenance')
             }}
           />
           <Stack.Screen
             name="organization/create"
             options={{
               ...formSheetOptions,
-              title: 'New Organization'
+              title: t('screens.newOrganization')
             }}
           />
           <Stack.Screen
             name="organization/[id]/invite"
             options={{
               ...formSheetOptions,
-              title: 'Invite Member'
+              title: t('screens.inviteMember')
             }}
           />
           <Stack.Screen
             name="organization/[id]/rename"
             options={{
               ...formSheetOptions,
-              title: 'Rename Organization'
+              title: t('screens.renameOrganization')
             }}
           />
         </Stack>

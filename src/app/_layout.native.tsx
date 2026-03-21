@@ -6,6 +6,7 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon'
 import { UpdateChecker } from '@/components/update-checker'
 import { AuthGate } from '@/lib/auth/auth-gate'
 import { LocalIdentityProvider } from '@/lib/auth/local-identity-context'
+import '@/lib/i18n'
 import {
   DarkTheme,
   DefaultTheme,

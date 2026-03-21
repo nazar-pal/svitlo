@@ -5,6 +5,7 @@ import { SkiaProgressBar } from '@/components/skia-progress-bar'
 
 import { confirmRestingStart } from '@/lib/generator/confirm-resting-start'
 import type { RestCountdown } from '@/lib/generator/use-rest-countdown'
+import { useTranslation } from '@/lib/i18n'
 import { formatHours } from '@/lib/utils/time'
 
 interface AvailableStatusCardProps {
@@ -35,13 +36,17 @@ export type StatusCardProps =
   | RestingStatusCardProps
 
 export function StatusCard(props: StatusCardProps) {
+  const { t } = useTranslation()
+
   switch (props.status) {
     case 'available':
       return (
         <View className="gap-4 py-4">
-          <Text className="text-muted text-center text-sm">Ready to run</Text>
+          <Text className="text-muted text-center text-sm">
+            {t('generator.readyToRun')}
+          </Text>
           <Button variant="primary" size="lg" onPress={props.onStart}>
-            Start Generator
+            {t('generator.startGenerator')}
           </Button>
         </View>
       )
@@ -62,6 +67,7 @@ function RunningCard({
   warningThresholdPct,
   onStop
 }: RunningStatusCardProps) {
+  const { t } = useTranslation()
   const totalRunHours = consecutiveRunHours + elapsedHours
   const progress = Math.min(totalRunHours / maxConsecutiveRunHours, 1)
   const warningFraction = warningThresholdPct / 100
@@ -91,16 +97,16 @@ function RunningCard({
         </View>
         <View className="flex-row justify-between">
           <Text className="text-muted text-3">
-            {formatHours(totalRunHours)} elapsed
+            {t('generator.elapsed', { hours: formatHours(totalRunHours) })}
           </Text>
           <Text className="text-muted text-3">
-            {formatHours(maxConsecutiveRunHours)} max
+            {t('generator.max', { hours: formatHours(maxConsecutiveRunHours) })}
           </Text>
         </View>
       </View>
 
       <Button variant="danger" size="lg" onPress={onStop}>
-        Stop Generator
+        {t('generator.stopGenerator')}
       </Button>
     </View>
   )
@@ -111,6 +117,7 @@ function RestingCard({
   requiredRestHours,
   onStart
 }: RestingStatusCardProps) {
+  const { t } = useTranslation()
   const restedHours = requiredRestHours * countdown.progress
 
   return (
@@ -133,10 +140,10 @@ function RestingCard({
         </View>
         <View className="flex-row justify-between">
           <Text className="text-muted text-3">
-            {formatHours(restedHours)} rested
+            {t('generator.rested', { hours: formatHours(restedHours) })}
           </Text>
           <Text className="text-muted text-3">
-            {formatHours(requiredRestHours)} required
+            {t('generator.required', { hours: formatHours(requiredRestHours) })}
           </Text>
         </View>
       </View>
@@ -146,7 +153,7 @@ function RestingCard({
         size="lg"
         onPress={() => confirmRestingStart(onStart)}
       >
-        Start Generator
+        {t('generator.startGenerator')}
       </Button>
     </View>
   )

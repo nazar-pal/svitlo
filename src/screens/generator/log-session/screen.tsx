@@ -4,6 +4,7 @@ import { Card } from 'heroui-native'
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 
+import { useTranslation } from '@/lib/i18n'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { logManualSession } from '@/data/client/mutations'
@@ -13,6 +14,7 @@ import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function LogSessionScreen() {
+  const { t } = useTranslation()
   const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
@@ -62,20 +64,19 @@ export default function LogSessionScreen() {
       >
         <View className="mx-auto w-full max-w-150 gap-7">
           <Text className="text-muted text-3.75 leading-5.5">
-            Retroactively record a generator run by specifying the start and end
-            times.
+            {t('generator.logSessionDesc')}
           </Text>
 
           <Card>
             <Card.Body>
-              <Card.Title>{generator?.title ?? 'Loading...'}</Card.Title>
+              <Card.Title>{generator?.title ?? t('common.loading')}</Card.Title>
               <Card.Description>{generator?.model ?? ''}</Card.Description>
             </Card.Body>
           </Card>
 
           <View className="gap-2">
             <Text className="text-muted ml-1 text-sm font-medium">
-              Start Time
+              {t('generator.startTime')}
             </Text>
             <Host matchContents>
               <DatePicker
@@ -89,7 +90,7 @@ export default function LogSessionScreen() {
 
           <View className="gap-2">
             <Text className="text-muted ml-1 text-sm font-medium">
-              End Time
+              {t('generator.endTime')}
             </Text>
             <Host matchContents>
               <DatePicker

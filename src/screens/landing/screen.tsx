@@ -1,67 +1,12 @@
 import { Image, Linking, Pressable, ScrollView, Text, View } from 'react-native'
 
+import { useTranslation } from '@/lib/i18n'
+
 const appStoreUrl = 'https://apps.apple.com/app/id6743439804'
 
-const features = [
-  {
-    icon: '\u26A1',
-    title: 'One-Tap Sessions',
-    description:
-      'Start and stop generator sessions with one tap. Track total runtime automatically.'
-  },
-  {
-    icon: '\uD83D\uDD27',
-    title: 'Smart Maintenance',
-    description:
-      'Schedule maintenance by runtime hours or calendar dates. Never miss a service interval.'
-  },
-  {
-    icon: '\u2728',
-    title: 'AI-Powered Suggestions',
-    description:
-      'Get AI-generated maintenance templates tailored to your generator type and usage patterns.'
-  },
-  {
-    icon: '\uD83D\uDC65',
-    title: 'Team Management',
-    description:
-      'Create organizations, invite team members, and control access with role-based permissions.'
-  },
-  {
-    icon: '\uD83D\uDCF6',
-    title: 'Works Offline',
-    description:
-      'All data is stored locally and syncs automatically when you\u2019re back online.'
-  },
-  {
-    icon: '\u23F1\uFE0F',
-    title: 'Run Limits & Rest',
-    description:
-      'Set maximum run times and required rest periods. Get warned before limits are reached.'
-  }
-] as const
-
-const steps = [
-  {
-    number: '1',
-    title: 'Add Your Generators',
-    description:
-      'Set up generators with run limits, rest periods, and maintenance schedules.'
-  },
-  {
-    number: '2',
-    title: 'Track Sessions',
-    description: 'Start and stop sessions to log runtime hours automatically.'
-  },
-  {
-    number: '3',
-    title: 'Stay on Schedule',
-    description:
-      'Get maintenance reminders based on hours or calendar intervals.'
-  }
-] as const
-
 function AppStoreButton() {
+  const { t } = useTranslation()
+
   return (
     <Pressable
       onPress={() => Linking.openURL(appStoreUrl)}
@@ -69,14 +14,57 @@ function AppStoreButton() {
     >
       <Text className="text-2xl text-white">&#xF8FF;</Text>
       <View>
-        <Text className="text-xs text-white/80">Download on the</Text>
-        <Text className="text-lg font-semibold text-white">App Store</Text>
+        <Text className="text-xs text-white/80">{t('landing.downloadOn')}</Text>
+        <Text className="text-lg font-semibold text-white">
+          {t('landing.appStore')}
+        </Text>
       </View>
     </Pressable>
   )
 }
 
+const FEATURES = [
+  {
+    icon: '\u26A1',
+    titleKey: 'landing.feature1Title',
+    descKey: 'landing.feature1Desc'
+  },
+  {
+    icon: '\uD83D\uDD27',
+    titleKey: 'landing.feature2Title',
+    descKey: 'landing.feature2Desc'
+  },
+  {
+    icon: '\u2728',
+    titleKey: 'landing.feature3Title',
+    descKey: 'landing.feature3Desc'
+  },
+  {
+    icon: '\uD83D\uDC65',
+    titleKey: 'landing.feature4Title',
+    descKey: 'landing.feature4Desc'
+  },
+  {
+    icon: '\uD83D\uDCF6',
+    titleKey: 'landing.feature5Title',
+    descKey: 'landing.feature5Desc'
+  },
+  {
+    icon: '\u23F1\uFE0F',
+    titleKey: 'landing.feature6Title',
+    descKey: 'landing.feature6Desc'
+  }
+] as const
+
+const STEPS = [
+  { number: '1', titleKey: 'landing.step1Title', descKey: 'landing.step1Desc' },
+  { number: '2', titleKey: 'landing.step2Title', descKey: 'landing.step2Desc' },
+  { number: '3', titleKey: 'landing.step3Title', descKey: 'landing.step3Desc' }
+] as const
+
 export default function LandingScreen() {
+  const { t } = useTranslation()
+
   return (
     <ScrollView className="flex-1 bg-white">
       {/* Hero */}
@@ -89,8 +77,7 @@ export default function LandingScreen() {
           Svitlo
         </Text>
         <Text className="mb-10 max-w-130 text-center text-xl leading-8 text-gray-500">
-          Track, maintain, and manage your power generators {'\u2014'} all from
-          one app.
+          {t('landing.tagline')}
         </Text>
         <AppStoreButton />
       </View>
@@ -99,25 +86,24 @@ export default function LandingScreen() {
       <View className="border-t border-gray-100 bg-gray-50 px-6 py-20">
         <View className="mx-auto w-full max-w-270">
           <Text className="mb-3 text-center text-3xl font-bold tracking-tight text-gray-900">
-            Everything You Need
+            {t('landing.featuresTitle')}
           </Text>
           <Text className="mb-12 text-center text-lg text-gray-500">
-            From session tracking to AI-powered maintenance {'\u2014'} all in
-            one place.
+            {t('landing.featuresSubtitle')}
           </Text>
 
           <View className="flex-row flex-wrap justify-center gap-5">
-            {features.map(feature => (
+            {FEATURES.map(f => (
               <View
-                key={feature.title}
+                key={f.titleKey}
                 className="min-w-75 flex-1 basis-[30%] rounded-2xl border border-gray-200 bg-white p-6"
               >
-                <Text className="mb-3 text-3xl">{feature.icon}</Text>
+                <Text className="mb-3 text-3xl">{f.icon}</Text>
                 <Text className="mb-2 text-lg font-semibold text-gray-900">
-                  {feature.title}
+                  {t(f.titleKey)}
                 </Text>
                 <Text className="text-base leading-6 text-gray-500">
-                  {feature.description}
+                  {t(f.descKey)}
                 </Text>
               </View>
             ))}
@@ -129,25 +115,25 @@ export default function LandingScreen() {
       <View className="border-t border-gray-100 px-6 py-20">
         <View className="mx-auto w-full max-w-270">
           <Text className="mb-12 text-center text-3xl font-bold tracking-tight text-gray-900">
-            How It Works
+            {t('landing.howItWorksTitle')}
           </Text>
 
           <View className="flex-row flex-wrap justify-center gap-10">
-            {steps.map(step => (
+            {STEPS.map(s => (
               <View
-                key={step.number}
+                key={s.number}
                 className="min-w-60 flex-1 basis-[28%] items-center gap-4"
               >
                 <View className="h-14 w-14 items-center justify-center rounded-full bg-[#208AEF]">
                   <Text className="text-xl font-bold text-white">
-                    {step.number}
+                    {s.number}
                   </Text>
                 </View>
                 <Text className="text-xl font-semibold text-gray-900">
-                  {step.title}
+                  {t(s.titleKey)}
                 </Text>
                 <Text className="text-center text-base leading-6 text-gray-500">
-                  {step.description}
+                  {t(s.descKey)}
                 </Text>
               </View>
             ))}
@@ -159,13 +145,10 @@ export default function LandingScreen() {
       <View className="items-center bg-[#208AEF] px-6 py-20">
         <View className="mx-auto max-w-160 items-center">
           <Text className="mb-3 text-3xl font-bold text-white">
-            Powered by AI
+            {t('landing.aiTitle')}
           </Text>
           <Text className="mb-6 text-center text-lg leading-8 text-white/90">
-            Svitlo uses AI to generate maintenance templates tailored to your
-            generator{'\u2019'}s make, model, and fuel type. It also helps you
-            set up new generators faster by suggesting run limits and rest
-            periods based on manufacturer recommendations.
+            {t('landing.aiDesc')}
           </Text>
         </View>
       </View>
@@ -173,10 +156,10 @@ export default function LandingScreen() {
       {/* Footer CTA */}
       <View className="items-center bg-gray-900 px-6 py-20">
         <Text className="mb-3 text-3xl font-bold text-white">
-          Ready to Get Started?
+          {t('landing.ctaTitle')}
         </Text>
         <Text className="mb-8 max-w-120 text-center text-lg text-gray-400">
-          Download Svitlo and take control of your generator maintenance today.
+          {t('landing.ctaDesc')}
         </Text>
         <AppStoreButton />
         <Pressable
@@ -184,7 +167,7 @@ export default function LandingScreen() {
           className="mt-8"
         >
           <Text className="text-sm text-gray-500 underline">
-            Privacy Policy
+            {t('auth.privacyPolicy')}
           </Text>
         </Pressable>
       </View>

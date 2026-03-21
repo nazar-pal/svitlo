@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { t } from '@/lib/i18n'
 import { zNonEmptyString, zPositiveInt, zPositiveReal } from './helpers'
 
 const triggerTypeEnum = z.enum(['hours', 'calendar', 'whichever_first'])
@@ -23,14 +24,14 @@ function refineTriggerFields(
     ctx.addIssue({
       code: 'custom',
       path: ['triggerHoursInterval'],
-      message: `Required when trigger type is "${data.triggerType}"`
+      message: t('validation.required')
     })
 
   if (needsDays && data.triggerCalendarDays == null)
     ctx.addIssue({
       code: 'custom',
       path: ['triggerCalendarDays'],
-      message: `Required when trigger type is "${data.triggerType}"`
+      message: t('validation.required')
     })
 }
 

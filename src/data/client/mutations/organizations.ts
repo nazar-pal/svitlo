@@ -5,6 +5,7 @@ import {
   organizationMembers,
   organizations
 } from '@/data/client/db-schema'
+import { t } from '@/lib/i18n'
 import {
   insertInvitationSchema,
   insertOrganizationSchema,
@@ -49,7 +50,7 @@ export async function createInvitation(
   if (!parsed.success) return fail(parsed.error.issues[0].message)
 
   if (!(await isOrgAdmin(userId, parsed.data.organizationId)))
-    return fail('Only admin can invite')
+    return fail(t('errors.onlyAdminCanInvite'))
 
   // Check no duplicate invitation
   const [existing] = await db
@@ -63,7 +64,7 @@ export async function createInvitation(
     )
     .limit(1)
 
-  if (existing) return fail('Invitation already sent to this email')
+  if (existing) return fail(t('errors.invitationAlreadySent'))
 
   await db.insert(invitations).values({
     id: newId(),
@@ -87,9 +88,9 @@ export async function acceptInvitation(
     .where(eq(invitations.id, invitationId))
     .limit(1)
 
-  if (!invitation) return fail('Invitation not found')
+  if (!invitation) return fail(t('errors.invitationNotFound'))
   if (invitation.inviteeEmail.toLowerCase() !== userEmail.toLowerCase())
-    return fail('This invitation is not for you')
+    return fail(t('errors.invitationNotForYou'))
 
   // Check not already a member
   const [existing] = await db
@@ -103,7 +104,7 @@ export async function acceptInvitation(
     )
     .limit(1)
 
-  if (existing) return fail('Already a member of this organization')
+  if (existing) return fail(t('errors.alreadyMember'))
 
   // Insert member and delete invitation
   await db.insert(organizationMembers).values({
@@ -128,9 +129,9 @@ export async function declineInvitation(
     .where(eq(invitations.id, invitationId))
     .limit(1)
 
-  if (!invitation) return fail('Invitation not found')
+  if (!invitation) return fail(t('errors.invitationNotFound'))
   if (invitation.inviteeEmail.toLowerCase() !== userEmail.toLowerCase())
-    return fail('This invitation is not for you')
+    return fail(t('errors.invitationNotForYou'))
 
   await db.delete(invitations).where(eq(invitations.id, invitationId))
 
@@ -147,10 +148,10 @@ export async function cancelInvitation(
     .where(eq(invitations.id, invitationId))
     .limit(1)
 
-  if (!invitation) return fail('Invitation not found')
+  if (!invitation) return fail(t('errors.invitationNotFound'))
 
   if (!(await isOrgAdmin(userId, invitation.organizationId)))
-    return fail('Only admin can cancel invitations')
+    return fail(t('errors.onlyAdminCanCancelInvitations'))
 
   await db.delete(invitations).where(eq(invitations.id, invitationId))
 
@@ -166,7 +167,7 @@ export async function renameOrganization(
   if (!parsed.success) return fail(parsed.error.issues[0].message)
 
   if (!(await isOrgAdmin(userId, orgId)))
-    return fail('Only admin can rename organization')
+    return fail(t('errors.onlyAdminCanRenameOrg'))
 
   await db
     .update(organizations)
@@ -181,7 +182,7 @@ export async function deleteOrganization(
   orgId: string
 ): Promise<MutationResult> {
   if (!(await isOrgAdmin(userId, orgId)))
-    return fail('Only admin can delete organization')
+    return fail(t('errors.onlyAdminCanDeleteOrg'))
 
   await powersync.writeTransaction(async tx => {
     // Cascade delete leaves-first (client SQLite has no FK constraints)

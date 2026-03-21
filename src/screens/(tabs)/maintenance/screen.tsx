@@ -11,6 +11,7 @@ import { ScrollView, Text, View } from 'react-native'
 import { EmptyState } from '@/components/empty-state'
 import { GeneratorScopeMenu } from '@/components/generator-scope-menu'
 import { SectionHeader } from '@/components/section-header'
+import { useTranslation } from '@/lib/i18n'
 import {
   formatMaintenanceLabel,
   type MaintenanceItemInfo
@@ -21,6 +22,7 @@ import { useMaintenanceTabData } from './lib/use-maintenance-tab-data'
 
 export default function MaintenanceScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const {
     userOrgs,
     admin,
@@ -40,9 +42,9 @@ export default function MaintenanceScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <EmptyState
           icon="building.2"
-          title="No Organizations"
-          description="Create an organization or accept an invitation to get started."
-          actionLabel="Go to Members"
+          title={t('home.noOrganizations')}
+          description={t('home.noOrganizationsDesc')}
+          actionLabel={t('home.goToMembers')}
           onAction={() => router.push('/members')}
         />
       </View>
@@ -67,8 +69,8 @@ export default function MaintenanceScreen() {
         <View className="bg-background flex-1 items-center justify-center px-5 pb-10">
           <EmptyState
             icon="wrench"
-            title="No Maintenance"
-            description="Add maintenance templates to your generators to track service schedules."
+            title={t('maintenanceTab.noMaintenance')}
+            description={t('maintenanceTab.noMaintenanceDesc')}
           />
         </View>
       </>
@@ -84,9 +86,9 @@ export default function MaintenanceScreen() {
       >
         <View className="mx-auto w-full max-w-150">
           {[
-            { title: 'Overdue', items: overdue },
-            { title: 'Due Soon', items: dueSoon },
-            { title: 'Upcoming', items: upcoming }
+            { title: t('maintenanceTab.overdue'), items: overdue },
+            { title: t('maintenanceTab.dueSoon'), items: dueSoon },
+            { title: t('maintenanceTab.upcoming'), items: upcoming }
           ].map(({ title, items }) =>
             items.length > 0 ? (
               <View key={title} className="mb-6">
@@ -128,6 +130,7 @@ function MaintenanceListItem({
   onPress: () => void
   onRecord: () => void
 }) {
+  const { t } = useTranslation()
   const [mutedColor, dangerColor, warningColor] = useThemeColor([
     'muted',
     'danger',
@@ -177,7 +180,7 @@ function MaintenanceListItem({
               {item.taskName}
             </Text>
             <Text className="text-muted text-3.25" numberOfLines={1}>
-              {generator?.title ?? 'Unknown generator'}
+              {generator?.title ?? t('maintenanceTab.unknownGenerator')}
               {' · '}
               <Text className={statusColorClass}>{statusText}</Text>
             </Text>
@@ -189,7 +192,7 @@ function MaintenanceListItem({
               size="sm"
               onPress={onRecord}
             >
-              Record
+              {t('maintenanceTab.record')}
             </Button>
           ) : (
             <SymbolView name="chevron.right" size={14} tintColor={mutedColor} />

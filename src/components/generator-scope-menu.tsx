@@ -7,6 +7,7 @@ import {
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 
 import type { Generator } from '@/data/client/db-schema'
+import { useTranslation } from '@/lib/i18n'
 
 interface GeneratorScopeMenuProps {
   admin: boolean
@@ -21,6 +22,7 @@ export function GeneratorScopeMenu({
   effectiveScope,
   onSelect
 }: GeneratorScopeMenuProps) {
+  const { t } = useTranslation()
   if (availableGenerators.length <= 1) return null
 
   const isFiltered = effectiveScope !== (admin ? 'org' : 'my')
@@ -34,24 +36,24 @@ export function GeneratorScopeMenu({
   return (
     <Host matchContents>
       <SwiftMenu
-        label="Filter"
+        label={t('scope.filter')}
         systemImage={scopeIcon}
         modifiers={[labelStyle('iconOnly')]}
       >
         {admin ? (
           <SwiftButton
-            label="Organization"
+            label={t('scope.organization')}
             systemImage={effectiveScope === 'org' ? 'checkmark' : undefined}
             onPress={() => onSelect('org')}
           />
         ) : null}
         <SwiftButton
-          label="My Generators"
+          label={t('scope.myGenerators')}
           systemImage={effectiveScope === 'my' ? 'checkmark' : undefined}
           onPress={() => onSelect('my')}
         />
         <SwiftDivider />
-        <SwiftMenu label="Generator">
+        <SwiftMenu label={t('scope.generator')}>
           {availableGenerators.map(g => (
             <SwiftButton
               key={g.id}

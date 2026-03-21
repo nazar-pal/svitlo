@@ -15,6 +15,7 @@ import { deleteOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
 import { notifyWarning } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
+import { useTranslation } from '@/lib/i18n'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 
 interface DeleteOrgDialogProps {
@@ -28,6 +29,7 @@ export function DeleteOrgDialog({
   onClose,
   onDeleted
 }: DeleteOrgDialogProps) {
+  const { t } = useTranslation()
   const { userId } = useUserOrgs()
   const { toast } = useToast()
   const { data: orgs } = useDrizzleQuery(
@@ -48,10 +50,13 @@ export function DeleteOrgDialog({
     if (!orgId || !canDelete) return
 
     const result = await deleteOrganization(userId, orgId)
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
 
     notifyWarning()
-    toast.show({ variant: 'warning', label: `"${orgName}" deleted` })
+    toast.show({
+      variant: 'warning',
+      label: t('organization.orgDeleted', { name: orgName })
+    })
     close()
     onDeleted?.()
   }
@@ -75,15 +80,16 @@ export function DeleteOrgDialog({
           <Dialog.Close variant="ghost" className="self-end" />
           <View className="gap-5">
             <View className="gap-1.5">
-              <Dialog.Title>Delete Organization</Dialog.Title>
+              <Dialog.Title>{t('organization.deleteOrg')}</Dialog.Title>
               <Dialog.Description>
-                This will permanently delete all generators, runs, maintenance
-                records, and member associations. This action cannot be undone.
+                {t('organization.deleteOrgDesc')}
               </Dialog.Description>
             </View>
 
             <TextField isInvalid={confirmText.length > 0 && !canDelete}>
-              <Label>Type &ldquo;{orgName}&rdquo; to confirm</Label>
+              <Label>
+                {t('organization.typeToConfirm', { name: orgName })}
+              </Label>
               <Input
                 value={confirmText}
                 onChangeText={setConfirmText}
@@ -92,13 +98,13 @@ export function DeleteOrgDialog({
                 autoCorrect={false}
               />
               {confirmText.length > 0 && !canDelete ? (
-                <FieldError>Name does not match</FieldError>
+                <FieldError>{t('organization.nameDoesNotMatch')}</FieldError>
               ) : null}
             </TextField>
 
             <View className="flex-row justify-end gap-3">
               <Button variant="ghost" size="sm" onPress={close}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="danger"
@@ -106,7 +112,7 @@ export function DeleteOrgDialog({
                 isDisabled={!canDelete}
                 onPress={handleDelete}
               >
-                Delete
+                {t('common.delete')}
               </Button>
             </View>
           </View>

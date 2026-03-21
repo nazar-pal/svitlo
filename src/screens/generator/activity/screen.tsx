@@ -1,4 +1,4 @@
-import { differenceInMilliseconds, format, parseISO } from 'date-fns'
+import { differenceInMilliseconds, parseISO } from 'date-fns'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { Chip, ListGroup, Separator, Tabs, useThemeColor } from 'heroui-native'
@@ -7,6 +7,7 @@ import { Text, View } from 'react-native'
 import type { SwipeableRowRef } from '@/components/swipeable-row'
 import Animated, { LinearTransition } from 'react-native-reanimated'
 
+import { formatDate, t, useTranslation } from '@/lib/i18n'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import type { GeneratorSession } from '@/data/client/db-schema/generators'
 import type { MaintenanceRecord } from '@/data/client/db-schema/maintenance'
@@ -20,7 +21,7 @@ import {
   confirmDeleteRecord,
   confirmDeleteSession
 } from '@/lib/activity/confirm-delete'
-import { type Filter, FILTERS, FILTER_LABELS } from '@/lib/activity'
+import { type Filter, FILTERS, filterLabel } from '@/lib/activity'
 import { selection } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
@@ -51,7 +52,7 @@ function buildActivityItems(
   templates: { id: string; taskName: string }[],
   filter: Filter
 ): ActivityListItem[] {
-  const templateMap = new Map(templates.map(t => [t.id, t.taskName]))
+  const templateMap = new Map(templates.map(tmpl => [tmpl.id, tmpl.taskName]))
 
   const items: ActivityListItem[] = []
 
@@ -71,7 +72,8 @@ function buildActivityItems(
         id: record.id,
         timestamp: record.performedAt,
         record,
-        templateName: templateMap.get(record.templateId) ?? 'Unknown task'
+        templateName:
+          templateMap.get(record.templateId) ?? t('activity.unknownTask')
       })
 
   items.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
@@ -79,6 +81,7 @@ function buildActivityItems(
 }
 
 export default function ActivityScreen() {
+  const { t } = useTranslation()
   const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
   const router = useRouter()
   const [filter, setFilter] = useState<Filter>('all')
@@ -114,7 +117,7 @@ export default function ActivityScreen() {
     <>
       <Stack.Screen
         options={{
-          title: 'Activity',
+          title: t('tabs.activity'),
           headerRight: () => (
             <HeaderSubmitButton
               systemImage="plus"
@@ -142,7 +145,9 @@ export default function ActivityScreen() {
         }
         ListEmptyComponent={
           <View className="items-center pt-8">
-            <Text className="text-muted text-sm">No activity recorded</Text>
+            <Text className="text-muted text-sm">
+              {t('activity.noActivityRecorded')}
+            </Text>
           </View>
         }
         renderItem={({ item }) => {
@@ -157,7 +162,7 @@ export default function ActivityScreen() {
                     parseISO(session.startedAt)
                   )
                 )
-              : 'In progress'
+              : t('activity.inProgress')
 
             return (
               <SwipeableRow
@@ -189,7 +194,10 @@ export default function ActivityScreen() {
                   </ListGroup.ItemPrefix>
                   <ListGroup.ItemContent>
                     <ListGroup.ItemTitle>
-                      {format(parseISO(session.startedAt), 'MMM d, HH:mm')}
+                      {formatDate(
+                        parseISO(session.startedAt),
+                        t('formats.dateTimeShort')
+                      )}
                     </ListGroup.ItemTitle>
                     <ListGroup.ItemDescription>
                       {resolveUserName(session.startedByUserId)} · {duration}
@@ -200,7 +208,7 @@ export default function ActivityScreen() {
                     variant="soft"
                     color={isInProgress ? 'success' : undefined}
                   >
-                    {isInProgress ? 'Active' : 'Run'}
+                    {isInProgress ? t('activity.active') : t('activity.run')}
                   </Chip>
                 </ListGroup.Item>
               </SwipeableRow>
@@ -230,7 +238,10 @@ export default function ActivityScreen() {
                 </ListGroup.ItemPrefix>
                 <ListGroup.ItemContent>
                   <ListGroup.ItemTitle>
-                    {format(parseISO(record.performedAt), 'MMM d, HH:mm')}
+                    {formatDate(
+                      parseISO(record.performedAt),
+                      t('formats.dateTimeShort')
+                    )}
                   </ListGroup.ItemTitle>
                   <ListGroup.ItemDescription>
                     {resolveUserName(record.performedByUserId)} · {templateName}
@@ -238,7 +249,7 @@ export default function ActivityScreen() {
                   </ListGroup.ItemDescription>
                 </ListGroup.ItemContent>
                 <Chip size="sm" variant="soft" color="warning">
-                  Maintenance
+                  {t('activity.maintenance')}
                 </Chip>
               </ListGroup.Item>
             </SwipeableRow>
@@ -269,7 +280,7 @@ function FilterBar({
           <Tabs.Indicator />
           {FILTERS.map(f => (
             <Tabs.Trigger key={f} value={f}>
-              <Tabs.Label>{FILTER_LABELS[f]}</Tabs.Label>
+              <Tabs.Label>{filterLabel(f)}</Tabs.Label>
             </Tabs.Trigger>
           ))}
         </Tabs.List>

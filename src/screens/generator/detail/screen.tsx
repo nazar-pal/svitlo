@@ -30,6 +30,7 @@ import { formatHours } from '@/lib/utils/time'
 
 import type { ActivityItem } from '@/lib/generator/activity-item'
 import { setPendingSuggestions } from '@/lib/maintenance/suggestions-store'
+import { useTranslation } from '@/lib/i18n'
 import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 import { isLiquidGlassAvailable } from 'expo-glass-effect'
@@ -40,6 +41,7 @@ import type { StatusCardProps } from './components/status-card'
 import { StatusCard } from './components/status-card'
 
 export default function GeneratorDetailScreen() {
+  const { t, locale } = useTranslation()
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
@@ -107,7 +109,8 @@ export default function GeneratorDetailScreen() {
       performedByUserId: r.performedByUserId,
       performedAt: r.performedAt,
       templateName:
-        templates.find(t => t.id === r.templateId)?.taskName ?? 'Unknown task',
+        templates.find(tmpl => tmpl.id === r.templateId)?.taskName ??
+        t('common.unknown'),
       notes: r.notes
     }))
   ]
@@ -120,24 +123,21 @@ export default function GeneratorDetailScreen() {
 
   async function handleStartSession() {
     const result = await startSession(userId, id)
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
     notifySuccess()
   }
 
   async function handleStopSession() {
     if (!statusInfo?.openSession) return
     const result = await stopSession(userId, statusInfo.openSession.id)
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
     notifySuccess()
   }
 
   async function handleSuggestMaintenance() {
     const networkState = await Network.getNetworkStateAsync()
     if (!networkState.isConnected || !networkState.isInternetReachable) {
-      Alert.alert(
-        'Offline',
-        'Internet connection is required for AI suggestions.'
-      )
+      Alert.alert(t('aiSuggestions.offline'), t('aiSuggestions.offlineDesc'))
       return
     }
 
@@ -145,12 +145,15 @@ export default function GeneratorDetailScreen() {
     const result = await rpcClient.ai
       .suggestMaintenancePlan({
         generatorModel: generator.model,
-        description: generator.description ?? undefined
+        description: generator.description ?? undefined,
+        locale
       })
       .catch((error: unknown) => {
         Alert.alert(
-          'Error',
-          error instanceof Error ? error.message : 'Failed to get suggestions'
+          t('common.error'),
+          error instanceof Error
+            ? error.message
+            : t('aiSuggestions.failedToGet')
         )
         return null
       })
@@ -202,7 +205,7 @@ export default function GeneratorDetailScreen() {
             isAdmin ? (
               <Host matchContents>
                 <SwiftButton
-                  label="Settings"
+                  label={t('generator.settings')}
                   systemImage="gearshape"
                   modifiers={[labelStyle('iconOnly')]}
                   onPress={() =>
@@ -221,7 +224,9 @@ export default function GeneratorDetailScreen() {
             {generator.description ? ` · ${generator.description}` : ''}
           </Text>
           <Text className="text-muted text-3.25">
-            {formatHours(lifetimeHours)} lifetime hours
+            {t('generator.lifetimeHours', {
+              hours: formatHours(lifetimeHours)
+            })}
           </Text>
         </View>
 

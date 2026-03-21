@@ -8,6 +8,7 @@ import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
 import { getAllOrganizations, getAllUsers } from '@/data/client/queries'
 import { notifySuccess, notifyWarning } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
+import { useTranslation } from '@/lib/i18n'
 import { usePendingInvitations } from '@/lib/hooks/use-pending-invitations'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
@@ -31,6 +32,7 @@ export function InvitationDialog({
   invitationIds,
   onClose
 }: InvitationDialogProps) {
+  const { t } = useTranslation()
   const localUser = useLocalUser()
   const { userId } = useUserOrgs()
   const userEmail = localUser?.email ?? ''
@@ -56,17 +58,19 @@ export function InvitationDialog({
     if (!inv) continue
     detailsCacheRef.current.set(id, {
       orgName:
-        allOrgs.find(o => o.id === inv.organizationId)?.name ?? 'Unknown',
+        allOrgs.find(o => o.id === inv.organizationId)?.name ??
+        t('common.unknown'),
       inviterName:
-        allUsers.find(u => u.id === inv.invitedByUserId)?.name ?? 'Unknown'
+        allUsers.find(u => u.id === inv.invitedByUserId)?.name ??
+        t('common.unknown')
     })
   }
 
   if (!isOpen) detailsCacheRef.current.clear()
 
   const details = currentId ? detailsCacheRef.current.get(currentId) : undefined
-  const orgName = details?.orgName ?? 'Unknown'
-  const inviterName = details?.inviterName ?? 'Unknown'
+  const orgName = details?.orgName ?? t('common.unknown')
+  const inviterName = details?.inviterName ?? t('common.unknown')
 
   function advance() {
     if (step + 1 < total) setStep(prev => prev + 1)
@@ -81,7 +85,7 @@ export function InvitationDialog({
   async function handleAccept() {
     if (!currentId) return
     const result = await acceptInvitation(userId, userEmail, currentId)
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
     advance()
     notifySuccess()
   }
@@ -89,7 +93,7 @@ export function InvitationDialog({
   async function handleDecline() {
     if (!currentId) return
     const result = await declineInvitation(userEmail, currentId)
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
     advance()
     notifyWarning()
   }
@@ -120,19 +124,22 @@ export function InvitationDialog({
               exiting={total > 1 ? slideOutToLeft : undefined}
             >
               <View className="mb-5 gap-1.5">
-                <Dialog.Title>Organization Invitation</Dialog.Title>
+                <Dialog.Title>{t('organization.orgInvitation')}</Dialog.Title>
                 {details && (
                   <Dialog.Description>
-                    {inviterName} invited you to join {orgName}
+                    {t('organization.invitedToJoin', {
+                      inviter: inviterName,
+                      org: orgName
+                    })}
                   </Dialog.Description>
                 )}
               </View>
               <View className="flex-row justify-end gap-3">
                 <Button variant="ghost" size="sm" onPress={handleDecline}>
-                  Decline
+                  {t('organization.decline')}
                 </Button>
                 <Button variant="primary" size="sm" onPress={handleAccept}>
-                  Accept
+                  {t('organization.accept')}
                 </Button>
               </View>
             </Animated.View>

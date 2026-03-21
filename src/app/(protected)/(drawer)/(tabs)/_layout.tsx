@@ -4,6 +4,7 @@ import { useThemeColor } from 'heroui-native'
 import { DynamicColorIOS } from 'react-native'
 
 import { InvitationWatcher } from '@/components/invitation-watcher'
+import { useTranslation } from '@/lib/i18n'
 
 export const unstable_settings = {
   initialRouteName: '(home)'
@@ -11,6 +12,7 @@ export const unstable_settings = {
 
 export default function AppTabs() {
   const [accentColor] = useThemeColor(['accent'])
+  const { t } = useTranslation()
 
   const dynamicLabelAndIconColor = isLiquidGlassAvailable()
     ? DynamicColorIOS({ light: '#000', dark: '#FFF' })
@@ -32,21 +34,21 @@ export default function AppTabs() {
       >
         <NativeTabs.Trigger name="(home)">
           <NativeTabs.Trigger.Label selectedStyle={{ color: accentColor }}>
-            Home
+            {t('tabs.home')}
           </NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon sf="house.fill" />
         </NativeTabs.Trigger>
 
         <NativeTabs.Trigger name="maintenance-tab">
           <NativeTabs.Trigger.Label selectedStyle={{ color: accentColor }}>
-            Maintenance
+            {t('tabs.maintenance')}
           </NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon sf="wrench.and.screwdriver.fill" />
         </NativeTabs.Trigger>
 
         <NativeTabs.Trigger name="activity">
           <NativeTabs.Trigger.Label selectedStyle={{ color: accentColor }}>
-            Activity
+            {t('tabs.activity')}
           </NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon sf="clock.arrow.circlepath" />
         </NativeTabs.Trigger>
@@ -56,7 +58,7 @@ export default function AppTabs() {
           role={isLiquidGlassAvailable() ? 'search' : undefined}
         >
           <NativeTabs.Trigger.Label selectedStyle={{ color: accentColor }}>
-            Members
+            {t('tabs.members')}
           </NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon sf="person.2.fill" />
         </NativeTabs.Trigger>

@@ -4,6 +4,7 @@ import { Card } from 'heroui-native'
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 
+import { useTranslation } from '@/lib/i18n'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { updateSession } from '@/data/client/mutations'
@@ -13,6 +14,7 @@ import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function EditSessionScreen() {
+  const { t } = useTranslation()
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
@@ -78,7 +80,7 @@ export default function EditSessionScreen() {
 
           <View className="gap-2">
             <Text className="text-muted ml-1 text-sm font-medium">
-              Start Time
+              {t('edit.startTime')}
             </Text>
             <Host matchContents>
               <DatePicker
@@ -92,7 +94,7 @@ export default function EditSessionScreen() {
 
           <View className="gap-2">
             <Text className="text-muted ml-1 text-sm font-medium">
-              End Time
+              {t('edit.endTime')}
             </Text>
             <Host matchContents>
               <DatePicker

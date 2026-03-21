@@ -10,9 +10,11 @@ import { signInSchema } from '@/data/client/validation'
 import { authClient } from '@/lib/auth/auth-client'
 import { useLocalIdentity } from '@/lib/auth/local-identity-context'
 import { useAppleSignIn } from '@/lib/auth/use-apple-sign-in'
+import { useTranslation } from '@/lib/i18n'
 
 export default function ReAuthScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const { identity } = useLocalIdentity()
 
   const [showEmailForm, setShowEmailForm] = useState(false)
@@ -24,11 +26,9 @@ export default function ReAuthScreen() {
 
   async function handleAccountMismatch(newUserId: string | undefined) {
     if (newUserId && identity?.userId && newUserId !== identity.userId) {
-      Alert.alert(
-        'Different account detected',
-        'You signed in with a different account than the one stored on this device. To switch accounts, please sign out first. Your current sign-in has been cancelled.',
-        [{ text: 'OK' }]
-      )
+      Alert.alert(t('auth.differentAccount'), t('auth.differentAccountDesc'), [
+        { text: t('common.ok') }
+      ])
       await authClient.signOut()
       return true
     }
@@ -61,7 +61,7 @@ export default function ReAuthScreen() {
     })
 
     if (result.error) {
-      setEmailError(result.error.message ?? 'Something went wrong')
+      setEmailError(result.error.message ?? t('auth.somethingWentWrong'))
       setIsEmailSubmitting(false)
       return
     }
@@ -87,11 +87,10 @@ export default function ReAuthScreen() {
       <View className="mx-auto w-full max-w-110 flex-1 justify-center gap-6">
         <View className="gap-3">
           <Text className="text-foreground text-center text-3xl font-semibold">
-            Session expired
+            {t('auth.sessionExpired')}
           </Text>
           <Text className="text-muted text-center text-base leading-6">
-            Sign in again to resume syncing your data. Your local data is safe
-            and will not be lost.
+            {t('auth.sessionExpiredDesc')}
           </Text>
         </View>
 
@@ -104,9 +103,9 @@ export default function ReAuthScreen() {
         {showEmailForm ? (
           <View className="gap-4">
             <TextField>
-              <Label>Email</Label>
+              <Label>{t('auth.email')}</Label>
               <Input
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -119,10 +118,10 @@ export default function ReAuthScreen() {
             </TextField>
 
             <TextField>
-              <Label>Password</Label>
+              <Label>{t('auth.password')}</Label>
               <Input
                 ref={passwordRef}
-                placeholder="Enter your password"
+                placeholder={t('auth.enterPassword')}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -140,19 +139,19 @@ export default function ReAuthScreen() {
               isDisabled={isEmailSubmitting}
               onPress={handleEmailSignIn}
             >
-              {isEmailSubmitting ? 'Signing in...' : 'Sign in'}
+              {isEmailSubmitting ? t('auth.signingIn') : t('auth.signIn')}
             </Button>
           </View>
         ) : (
           <Pressable onPress={() => setShowEmailForm(true)}>
             <Text className="text-muted text-center text-xs">
-              Signed in with email?
+              {t('auth.signedInWithEmail')}
             </Text>
           </Pressable>
         )}
 
         <Button variant="ghost" onPress={() => router.back()}>
-          Not now
+          {t('auth.notNow')}
         </Button>
       </View>
     </KeyboardAwareScrollView>

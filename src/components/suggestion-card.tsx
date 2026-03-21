@@ -8,6 +8,7 @@ import {
 } from 'heroui-native'
 import { Pressable, Text, View } from 'react-native'
 
+import { useTranslation } from '@/lib/i18n'
 import { selection } from '@/lib/haptics'
 
 export interface EditableItem {
@@ -23,12 +24,6 @@ export interface EditableItem {
 const TRIGGER_TYPES = ['hours', 'calendar', 'whichever_first'] as const
 type TriggerType = (typeof TRIGGER_TYPES)[number]
 
-const TRIGGER_LABELS: Record<TriggerType, string> = {
-  hours: 'Hours',
-  calendar: 'Calendar',
-  whichever_first: 'First'
-}
-
 export function SuggestionCard({
   item,
   onToggle,
@@ -38,6 +33,12 @@ export function SuggestionCard({
   onToggle: () => void
   onUpdate: (update: Partial<EditableItem>) => void
 }) {
+  const { t } = useTranslation()
+  const triggerShortLabels: Record<TriggerType, string> = {
+    hours: t('maintenanceTemplate.hours'),
+    calendar: t('maintenanceTemplate.calendar'),
+    whichever_first: t('maintenanceTemplate.first')
+  }
   const showHours =
     item.triggerType === 'hours' || item.triggerType === 'whichever_first'
   const showCalendar =
@@ -64,7 +65,7 @@ export function SuggestionCard({
       {item.selected ? (
         <View className="mt-3 ml-9 gap-3">
           <TextField>
-            <Label>Task Name</Label>
+            <Label>{t('maintenanceTemplate.taskName')}</Label>
             <Input
               value={item.taskName}
               onChangeText={v => onUpdate({ taskName: v })}
@@ -72,7 +73,7 @@ export function SuggestionCard({
           </TextField>
 
           <TextField>
-            <Label>Description</Label>
+            <Label>{t('generator.description')}</Label>
             <Input
               value={item.description}
               onChangeText={v => onUpdate({ description: v })}
@@ -82,7 +83,7 @@ export function SuggestionCard({
 
           <View className="gap-2">
             <Text className="text-foreground text-sm font-medium">
-              Trigger Type
+              {t('maintenanceTemplate.triggerType')}
             </Text>
             <Tabs
               value={item.triggerType}
@@ -95,7 +96,7 @@ export function SuggestionCard({
                 <Tabs.Indicator />
                 {TRIGGER_TYPES.map(type => (
                   <Tabs.Trigger key={type} value={type}>
-                    <Tabs.Label>{TRIGGER_LABELS[type]}</Tabs.Label>
+                    <Tabs.Label>{triggerShortLabels[type]}</Tabs.Label>
                   </Tabs.Trigger>
                 ))}
               </Tabs.List>
@@ -104,7 +105,7 @@ export function SuggestionCard({
 
           {showHours ? (
             <TextField>
-              <Label>Hours Interval</Label>
+              <Label>{t('maintenanceTemplate.hoursInterval')}</Label>
               <Input
                 value={item.triggerHoursInterval?.toString() ?? ''}
                 onChangeText={v =>
@@ -112,13 +113,15 @@ export function SuggestionCard({
                 }
                 keyboardType="decimal-pad"
               />
-              <Description>Run hours between maintenance</Description>
+              <Description>
+                {t('maintenanceTemplate.runHoursBetween')}
+              </Description>
             </TextField>
           ) : null}
 
           {showCalendar ? (
             <TextField>
-              <Label>Calendar Days</Label>
+              <Label>{t('maintenanceTemplate.calendarDays')}</Label>
               <Input
                 value={item.triggerCalendarDays?.toString() ?? ''}
                 onChangeText={v =>
@@ -126,7 +129,7 @@ export function SuggestionCard({
                 }
                 keyboardType="number-pad"
               />
-              <Description>Days between maintenance</Description>
+              <Description>{t('maintenanceTemplate.daysBetween')}</Description>
             </TextField>
           ) : null}
 
@@ -138,7 +141,9 @@ export function SuggestionCard({
             className="flex-row items-center gap-3"
           >
             <Checkbox isSelected={item.isOneTime} />
-            <Text className="text-foreground text-sm">One-time task</Text>
+            <Text className="text-foreground text-sm">
+              {t('maintenanceTemplate.oneTimeTask')}
+            </Text>
           </Pressable>
         </View>
       ) : null}

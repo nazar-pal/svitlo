@@ -1,6 +1,7 @@
 import { EmptyState } from '@/components/empty-state'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { SectionHeader } from '@/components/section-header'
+import { useTranslation } from '@/lib/i18n'
 import { cancelInvitation, removeMember } from '@/data/client/mutations'
 import {
   getAllUsers,
@@ -26,6 +27,7 @@ import { Alert, ScrollView, View } from 'react-native'
 
 export default function MembersScreen() {
   const { selectedOrgId } = useSelectedOrg()
+  const { t } = useTranslation()
   const foregroundColor = useThemeColor('foreground')
   const router = useRouter()
   const { q } = useLocalSearchParams<{ q?: string }>()
@@ -62,27 +64,23 @@ export default function MembersScreen() {
   }
 
   async function handleRemoveMember(memberId: string) {
-    Alert.alert(
-      'Remove Member',
-      'This will remove the member and reassign their generators to you.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            const result = await removeMember(userId, memberId)
-            if (!result.ok) return Alert.alert('Error', result.error)
-            notifyWarning()
-          }
+    Alert.alert(t('members.removeMember'), t('members.removeMemberDesc'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.remove'),
+        style: 'destructive',
+        onPress: async () => {
+          const result = await removeMember(userId, memberId)
+          if (!result.ok) return Alert.alert(t('common.error'), result.error)
+          notifyWarning()
         }
-      ]
-    )
+      }
+    ])
   }
 
   async function handleCancelInvitation(invitationId: string) {
     const result = await cancelInvitation(userId, invitationId)
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
     notifyWarning()
   }
 
@@ -144,7 +142,7 @@ export default function MembersScreen() {
                 tintColor: foregroundColor,
                 textColor: foregroundColor,
                 hintTextColor: foregroundColor,
-                placeholder: 'Search members',
+                placeholder: t('members.searchMembers'),
                 autoCapitalize: 'none',
                 onChangeText: e => router.setParams({ q: e.nativeEvent.text })
               }
@@ -171,21 +169,27 @@ export default function MembersScreen() {
           {hasNoResults ? (
             <EmptyState
               icon="magnifyingglass"
-              title={`No results for "${searchText}"`}
+              title={t('members.noResults', { query: searchText })}
             />
           ) : (
             <>
               {/* Members */}
               <View className="gap-2">
                 <SectionHeader
-                  title={query ? 'Members' : `Members (${allPeople.length})`}
+                  title={
+                    query
+                      ? t('members.members')
+                      : t('members.membersCount', { count: allPeople.length })
+                  }
                 />
                 <ListGroup>
                   {filteredPeople.length === 0 ? (
                     <ListGroup.Item>
                       <ListGroup.ItemContent>
                         <ListGroup.ItemTitle className="text-muted">
-                          {query ? 'No matching members' : 'No members yet'}
+                          {query
+                            ? t('members.noMatchingMembers')
+                            : t('members.noMembersYet')}
                         </ListGroup.ItemTitle>
                       </ListGroup.ItemContent>
                     </ListGroup.Item>
@@ -218,7 +222,7 @@ export default function MembersScreen() {
                                       variant="soft"
                                       color="warning"
                                     >
-                                      Admin
+                                      {t('members.admin')}
                                     </Chip>
                                   )}
                                   {person.isYou && (
@@ -227,7 +231,7 @@ export default function MembersScreen() {
                                       variant="soft"
                                       color="accent"
                                     >
-                                      You
+                                      {t('members.you')}
                                     </Chip>
                                   )}
                                 </View>
@@ -239,7 +243,7 @@ export default function MembersScreen() {
                                 variant="danger-soft"
                                 onPress={() => handleRemoveMember(memberId)}
                               >
-                                Remove
+                                {t('common.remove')}
                               </Button>
                             )}
                           </ListGroup.Item>
@@ -253,7 +257,7 @@ export default function MembersScreen() {
               {/* Pending Org Invitations (Admin only) */}
               {isAdmin && filteredInvitations.length > 0 ? (
                 <View className="gap-2">
-                  <SectionHeader title="Pending Invitations" />
+                  <SectionHeader title={t('members.pendingInvitations')} />
                   <ListGroup>
                     {filteredInvitations.map((inv, index) => (
                       <View key={inv.id}>
@@ -276,7 +280,7 @@ export default function MembersScreen() {
                             variant="danger-soft"
                             onPress={() => handleCancelInvitation(inv.id)}
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </Button>
                         </ListGroup.Item>
                       </View>

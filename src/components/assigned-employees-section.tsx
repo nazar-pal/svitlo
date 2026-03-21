@@ -7,6 +7,7 @@ import type {
   GeneratorUserAssignment,
   OrganizationMember
 } from '@/data/client/db-schema'
+import { useTranslation } from '@/lib/i18n'
 
 interface AssignedEmployeesSectionProps {
   assignments: GeneratorUserAssignment[]
@@ -23,11 +24,12 @@ export function AssignedEmployeesSection({
   onAssign,
   onUnassign
 }: AssignedEmployeesSectionProps) {
+  const { t } = useTranslation()
   const foregroundColor = useThemeColor('foreground')
 
   return (
     <View className="gap-2">
-      <SectionHeader title="Assigned Employees" />
+      <SectionHeader title={t('employees.assignedEmployees')} />
       <ListGroup>
         {assignments.map((assignment, index) => (
           <View key={assignment.id}>
@@ -50,7 +52,7 @@ export function AssignedEmployeesSection({
                 variant="danger-soft"
                 onPress={() => onUnassign(assignment.userId)}
               >
-                Remove
+                {t('common.remove')}
               </Button>
             </ListGroup.Item>
           </View>
@@ -59,7 +61,7 @@ export function AssignedEmployeesSection({
           <ListGroup.Item>
             <ListGroup.ItemContent>
               <ListGroup.ItemTitle className="text-muted">
-                No employees assigned
+                {t('employees.noEmployeesAssigned')}
               </ListGroup.ItemTitle>
             </ListGroup.ItemContent>
           </ListGroup.Item>

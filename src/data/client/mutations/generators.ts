@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 
 import { generators } from '@/data/client/db-schema'
+import { t } from '@/lib/i18n'
 import {
   insertGeneratorSchema,
   insertMaintenanceTemplateSchema,
@@ -30,7 +31,7 @@ export async function updateGenerator(
   if (!parsed.success) return fail(parsed.error.issues[0].message)
 
   if (!(await isGeneratorOrgAdmin(userId, generatorId)))
-    return fail('Only admin can update generators')
+    return fail(t('errors.onlyAdminCanUpdateGenerators'))
 
   await db
     .update(generators)
@@ -49,7 +50,7 @@ export async function createGeneratorWithMaintenance(
   if (!parsed.success) return fail(parsed.error.issues[0].message)
 
   if (!(await isOrgAdmin(userId, parsed.data.organizationId)))
-    return fail('Only admin can create generators')
+    return fail(t('errors.onlyAdminCanCreateGenerators'))
 
   const generatorId = newId()
   const now = nowISO()
@@ -109,7 +110,7 @@ export async function deleteGenerator(
   generatorId: string
 ): Promise<MutationResult> {
   if (!(await isGeneratorOrgAdmin(userId, generatorId)))
-    return fail('Only admin can delete generators')
+    return fail(t('errors.onlyAdminCanDeleteGenerators'))
 
   await db.delete(generators).where(eq(generators.id, generatorId))
 

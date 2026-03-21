@@ -3,6 +3,7 @@ import { FieldError, Input, Label, TextField } from 'heroui-native'
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 
+import { useTranslation } from '@/lib/i18n'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createOrganization } from '@/data/client/mutations'
@@ -11,6 +12,7 @@ import { notifySuccess } from '@/lib/haptics'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function CreateOrganizationScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const localUser = useLocalUser()
   const [name, setName] = useState('')
@@ -52,13 +54,13 @@ export default function CreateOrganizationScreen() {
       >
         <View className="mx-auto w-full max-w-150 gap-7">
           <Text className="text-muted text-3.75 leading-5.5">
-            Create an organization to start managing generators.
+            {t('organization.createDesc')}
           </Text>
 
           <TextField isInvalid={!!error}>
-            <Label>Organization Name</Label>
+            <Label>{t('organization.organizationName')}</Label>
             <Input
-              placeholder="e.g. My Workshop"
+              placeholder={t('organization.namePlaceholder')}
               value={name}
               onChangeText={setName}
               autoFocus

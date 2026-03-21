@@ -10,6 +10,7 @@ import {
   getAllUsers
 } from '@/data/client/queries'
 import type { Filter } from '@/lib/activity'
+import { t } from '@/lib/i18n'
 import { useGeneratorScope } from '@/lib/generator/use-generator-scope'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { getUserName } from '@/lib/utils/get-user-name'
@@ -85,7 +86,7 @@ function buildActivityItems(
   filter: Filter,
   resolveUserName: (uid: string) => string
 ): ActivityItem[] {
-  const templateMap = new Map(templates.map(t => [t.id, t.taskName]))
+  const templateMap = new Map(templates.map(tmpl => [tmpl.id, tmpl.taskName]))
   const generatorMap = new Map(generators.map(g => [g.id, g.title]))
 
   const items: ActivityItem[] = []
@@ -98,10 +99,12 @@ function buildActivityItems(
         type: 'session',
         id: session.id,
         timestamp: session.startedAt,
-        generatorTitle: generatorMap.get(session.generatorId) ?? 'Unknown',
+        generatorTitle:
+          generatorMap.get(session.generatorId) ??
+          t('activity.unknownGenerator'),
         userName: resolveUserName(session.startedByUserId),
         duration: isInProgress
-          ? 'In progress'
+          ? t('activity.inProgress')
           : formatDuration(
               differenceInMilliseconds(
                 parseISO(session.stoppedAt!),
@@ -120,10 +123,13 @@ function buildActivityItems(
         type: 'maintenance',
         id: record.id,
         timestamp: record.performedAt,
-        generatorTitle: generatorMap.get(record.generatorId) ?? 'Unknown',
+        generatorTitle:
+          generatorMap.get(record.generatorId) ??
+          t('activity.unknownGenerator'),
         userName: resolveUserName(record.performedByUserId),
         record,
-        templateName: templateMap.get(record.templateId) ?? 'Unknown task'
+        templateName:
+          templateMap.get(record.templateId) ?? t('activity.unknownTask')
       })
     }
 

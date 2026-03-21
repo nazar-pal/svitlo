@@ -6,6 +6,7 @@ import {
   organizationMembers,
   organizations
 } from '@/data/client/db-schema'
+import { t } from '@/lib/i18n'
 import { db, powersync } from '@/lib/powersync/database'
 
 import {
@@ -88,10 +89,10 @@ export async function removeMember(
     .where(eq(organizationMembers.id, memberId))
     .limit(1)
 
-  if (!member) return fail('Member not found')
+  if (!member) return fail(t('errors.memberNotFound'))
 
   if (!(await isOrgAdmin(adminUserId, member.organizationId)))
-    return fail('Only admin can remove members')
+    return fail(t('errors.onlyAdminCanRemoveMembers'))
 
   await reassignAndRemoveMember(
     member.userId,
@@ -115,8 +116,7 @@ export async function leaveOrganization(
   userId: string,
   orgId: string
 ): Promise<MutationResult> {
-  if (await isOrgAdmin(userId, orgId))
-    return fail('Admin cannot leave their own organization')
+  if (await isOrgAdmin(userId, orgId)) return fail(t('errors.adminCannotLeave'))
 
   const [member] = await db
     .select({ id: organizationMembers.id })
@@ -129,7 +129,7 @@ export async function leaveOrganization(
     )
     .limit(1)
 
-  if (!member) return fail('Not a member of this organization')
+  if (!member) return fail(t('errors.notMemberOfOrg'))
 
   const [org] = await db
     .select({ adminUserId: organizations.adminUserId })
@@ -137,7 +137,7 @@ export async function leaveOrganization(
     .where(eq(organizations.id, orgId))
     .limit(1)
 
-  if (!org) return fail('Organization not found')
+  if (!org) return fail(t('errors.organizationNotFound'))
 
   await reassignAndRemoveMember(userId, orgId, org.adminUserId, member.id)
 

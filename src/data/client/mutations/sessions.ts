@@ -1,6 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm'
 
 import { generators, generatorSessions } from '@/data/client/db-schema'
+import { t } from '@/lib/i18n'
 import { db } from '@/lib/powersync/database'
 
 import {
@@ -23,11 +24,11 @@ export async function startSession(
     .where(eq(generators.id, generatorId))
     .limit(1)
 
-  if (!gen) return fail('Generator not found')
+  if (!gen) return fail(t('errors.generatorNotFound'))
 
   // Check access
   if (!(await canAccessGenerator(userId, generatorId)))
-    return fail('Not authorized for this generator')
+    return fail(t('errors.notAuthorizedForGenerator'))
 
   // Check no open session exists (generator is not running)
   const [openSession] = await db
@@ -41,7 +42,7 @@ export async function startSession(
     )
     .limit(1)
 
-  if (openSession) return fail('Generator already has an active session')
+  if (openSession) return fail(t('errors.generatorAlreadyActive'))
 
   // Insert new session
   const now = nowISO()
@@ -69,11 +70,11 @@ export async function deleteSession(
     .where(eq(generatorSessions.id, sessionId))
     .limit(1)
 
-  if (!session) return fail('Session not found')
-  if (!session.stoppedAt) return fail('Cannot delete an in-progress session')
+  if (!session) return fail(t('errors.sessionNotFound'))
+  if (!session.stoppedAt) return fail(t('errors.cannotDeleteActiveSession'))
 
   if (!(await canAccessGenerator(userId, session.generatorId)))
-    return fail('Not authorized for this generator')
+    return fail(t('errors.notAuthorizedForGenerator'))
 
   await db.delete(generatorSessions).where(eq(generatorSessions.id, sessionId))
 
@@ -91,11 +92,11 @@ export async function stopSession(
     .where(eq(generatorSessions.id, sessionId))
     .limit(1)
 
-  if (!session) return fail('Session not found')
-  if (session.stoppedAt) return fail('Session is already stopped')
+  if (!session) return fail(t('errors.sessionNotFound'))
+  if (session.stoppedAt) return fail(t('errors.sessionAlreadyStopped'))
 
   if (!(await canAccessGenerator(userId, session.generatorId)))
-    return fail('Not authorized for this generator')
+    return fail(t('errors.notAuthorizedForGenerator'))
 
   // Stop the session
   await db
@@ -122,17 +123,17 @@ export async function updateSession(
     .where(eq(generatorSessions.id, sessionId))
     .limit(1)
 
-  if (!session) return fail('Session not found')
-  if (!session.stoppedAt) return fail('Cannot edit an in-progress session')
+  if (!session) return fail(t('errors.sessionNotFound'))
+  if (!session.stoppedAt) return fail(t('errors.cannotEditActiveSession'))
 
   if (!(await canAccessGenerator(userId, session.generatorId)))
-    return fail('Not authorized for this generator')
+    return fail(t('errors.notAuthorizedForGenerator'))
 
   if (input.startedAt >= input.stoppedAt)
-    return fail('Start time must be before end time')
+    return fail(t('errors.startBeforeEnd'))
 
   if (new Date(input.stoppedAt) > new Date())
-    return fail('End time cannot be in the future')
+    return fail(t('errors.endTimeInFuture'))
 
   await db
     .update(generatorSessions)
@@ -158,15 +159,14 @@ export async function logManualSession(
     .where(eq(generators.id, generatorId))
     .limit(1)
 
-  if (!gen) return fail('Generator not found')
+  if (!gen) return fail(t('errors.generatorNotFound'))
 
   if (!(await canAccessGenerator(userId, generatorId)))
-    return fail('Not authorized for this generator')
+    return fail(t('errors.notAuthorizedForGenerator'))
 
-  if (startedAt >= stoppedAt) return fail('Start time must be before end time')
+  if (startedAt >= stoppedAt) return fail(t('errors.startBeforeEnd'))
 
-  if (new Date(stoppedAt) > new Date())
-    return fail('End time cannot be in the future')
+  if (new Date(stoppedAt) > new Date()) return fail(t('errors.endTimeInFuture'))
 
   await db.insert(generatorSessions).values({
     id: newId(),

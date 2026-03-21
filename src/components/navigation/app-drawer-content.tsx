@@ -19,6 +19,7 @@ import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 
 import { DeleteOrgDialog } from '@/components/delete-org-dialog'
+import { LanguageMenu } from '@/components/language-menu'
 import { LeaveOrgDialog } from '@/components/leave-org-dialog'
 import { InvitationDialog } from '@/components/invitation-dialog'
 import { SectionHeader } from '@/components/section-header'
@@ -30,6 +31,7 @@ import { useSignOut } from '@/lib/auth/use-sign-out'
 import { selection } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { usePendingInvitations } from '@/lib/hooks/use-pending-invitations'
+import { useTranslation } from '@/lib/i18n'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
@@ -59,20 +61,21 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
   )
   const [deleteOrgId, setDeleteOrgId] = useState<string | null>(null)
   const [leaveOrgId, setLeaveOrgId] = useState<string | null>(null)
+  const { t } = useTranslation()
 
   const userEmail = localUser?.email ?? ''
-  const userName = localUser?.name || 'Unknown'
+  const userName = localUser?.name || t('common.unknown')
 
   const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
   const pendingInvitations = usePendingInvitations()
   const { data: allUsers } = useDrizzleQuery(getAllUsers())
 
   function getOrgName(orgId: string): string {
-    return allOrgs.find(o => o.id === orgId)?.name ?? 'Unknown'
+    return allOrgs.find(o => o.id === orgId)?.name ?? t('common.unknown')
   }
 
   function getInviterName(userId: string): string {
-    return allUsers.find(u => u.id === userId)?.name ?? 'Unknown'
+    return allUsers.find(u => u.id === userId)?.name ?? t('common.unknown')
   }
 
   return (
@@ -89,7 +92,11 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
           {userName}
         </Text>
         <Text className="text-muted text-sm">{userEmail}</Text>
-        <SyncStatusIndicator />
+        <View className="flex-row items-center gap-2">
+          <SyncStatusIndicator />
+          <Text className="text-muted text-xs">·</Text>
+          <LanguageMenu />
+        </View>
       </View>
 
       {/* Scrollable middle — Organizations & Invitations */}
@@ -100,7 +107,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
       >
         {/* Organization */}
         <View className="gap-2">
-          <SectionHeader title="Organization" />
+          <SectionHeader title={t('drawer.organization')} />
           <ListGroup>
             {userOrgs.map((org, index) => (
               <View key={org.id}>
@@ -144,21 +151,21 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
                   <ListGroup.ItemSuffix>
                     <Host matchContents>
                       <SwiftMenu
-                        label="Actions"
+                        label={t('common.actions')}
                         systemImage="ellipsis"
                         modifiers={[labelStyle('iconOnly')]}
                       >
                         {isAdmin(org.id) ? (
                           <>
                             <SwiftButton
-                              label="Rename"
+                              label={t('drawer.rename')}
                               systemImage="pencil"
                               onPress={() =>
                                 router.push(`/organization/${org.id}/rename`)
                               }
                             />
                             <SwiftButton
-                              label="Delete"
+                              label={t('drawer.delete')}
                               systemImage="trash"
                               role="destructive"
                               onPress={() => setDeleteOrgId(org.id)}
@@ -166,7 +173,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
                           </>
                         ) : (
                           <SwiftButton
-                            label="Leave"
+                            label={t('drawer.leave')}
                             systemImage="rectangle.portrait.and.arrow.right"
                             role="destructive"
                             onPress={() => setLeaveOrgId(org.id)}
@@ -184,7 +191,9 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
                 <SymbolView name="plus" size={20} tintColor={foregroundColor} />
               </ListGroup.ItemPrefix>
               <ListGroup.ItemContent>
-                <ListGroup.ItemTitle>Create Organization</ListGroup.ItemTitle>
+                <ListGroup.ItemTitle>
+                  {t('drawer.createOrganization')}
+                </ListGroup.ItemTitle>
               </ListGroup.ItemContent>
             </ListGroup.Item>
           </ListGroup>
@@ -193,7 +202,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
         {/* Invitations */}
         {pendingInvitations.length > 0 ? (
           <View className="gap-2">
-            <SectionHeader title="Invitations" />
+            <SectionHeader title={t('drawer.invitations')} />
             <ListGroup>
               {pendingInvitations.map((inv, index) => (
                 <View key={inv.id}>
@@ -213,7 +222,9 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
                         {getOrgName(inv.organizationId)}
                       </ListGroup.ItemTitle>
                       <ListGroup.ItemDescription>
-                        Invited by {getInviterName(inv.invitedByUserId)}
+                        {t('drawer.invitedBy', {
+                          name: getInviterName(inv.invitedByUserId)
+                        })}
                       </ListGroup.ItemDescription>
                     </ListGroup.ItemContent>
                     <ListGroup.ItemSuffix
@@ -259,11 +270,11 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
             variant="primary"
             onPress={() => router.push('/(protected)/re-auth')}
           >
-            Sign In
+            {t('common.signIn')}
           </Button>
         ) : null}
         <Button variant="danger-soft" onPress={handleSignOut}>
-          Sign Out
+          {t('common.signOut')}
         </Button>
       </View>
     </SafeAreaView>

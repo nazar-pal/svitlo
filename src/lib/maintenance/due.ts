@@ -5,6 +5,7 @@ import type {
   MaintenanceRecord,
   MaintenanceTemplate
 } from '@/data/client/db-schema/maintenance'
+import { t } from '@/lib/i18n'
 import { formatHours, hoursBetween } from '@/lib/utils/time'
 
 export type MaintenanceUrgency = 'overdue' | 'due_soon' | 'ok'
@@ -259,18 +260,22 @@ export function formatMaintenanceLabel(
     const overdueDays = daysRemaining !== null ? -daysRemaining : null
     if (overdueHours !== null && overdueDays !== null)
       return overdueHours >= overdueDays * 24
-        ? `${formatHours(overdueHours)} overdue`
-        : `${Math.ceil(overdueDays)}d overdue`
-    if (overdueHours !== null) return `${formatHours(overdueHours)} overdue`
-    if (overdueDays !== null) return `${Math.ceil(overdueDays)}d overdue`
-    return 'overdue'
+        ? t('due.overdueHours', { hours: formatHours(overdueHours) })
+        : t('due.overdueDays', { days: String(Math.ceil(overdueDays)) })
+    if (overdueHours !== null)
+      return t('due.overdueHours', { hours: formatHours(overdueHours) })
+    if (overdueDays !== null)
+      return t('due.overdueDays', { days: String(Math.ceil(overdueDays)) })
+    return t('due.overdue')
   }
 
   if (hoursRemaining !== null && daysRemaining !== null)
     return hoursRemaining <= daysRemaining * 24
-      ? `in ${formatHours(hoursRemaining)}`
-      : `in ${Math.round(daysRemaining)}d`
-  if (hoursRemaining !== null) return `in ${formatHours(hoursRemaining)}`
-  if (daysRemaining !== null) return `in ${Math.round(daysRemaining)}d`
+      ? t('due.inHours', { hours: formatHours(hoursRemaining) })
+      : t('due.inDays', { days: String(Math.round(daysRemaining)) })
+  if (hoursRemaining !== null)
+    return t('due.inHours', { hours: formatHours(hoursRemaining) })
+  if (daysRemaining !== null)
+    return t('due.inDays', { days: String(Math.round(daysRemaining)) })
   return ''
 }

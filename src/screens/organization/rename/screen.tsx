@@ -3,6 +3,7 @@ import { FieldError, Input, Label, TextField } from 'heroui-native'
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 
+import { useTranslation } from '@/lib/i18n'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { renameOrganization } from '@/data/client/mutations'
@@ -13,6 +14,7 @@ import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function RenameOrganizationScreen() {
+  const { t } = useTranslation()
   const { id: orgId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
@@ -65,13 +67,13 @@ export default function RenameOrganizationScreen() {
       >
         <View className="mx-auto w-full max-w-150 gap-7">
           <Text className="text-muted text-3.75 leading-5.5">
-            Change the name of your organization.
+            {t('organization.renameDesc')}
           </Text>
 
           <TextField isInvalid={!!error}>
-            <Label>Organization Name</Label>
+            <Label>{t('organization.organizationName')}</Label>
             <Input
-              placeholder="e.g. My Workshop"
+              placeholder={t('organization.namePlaceholder')}
               value={displayName}
               onChangeText={setName}
               autoFocus

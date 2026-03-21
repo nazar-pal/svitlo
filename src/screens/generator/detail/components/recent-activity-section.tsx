@@ -1,8 +1,9 @@
-import { differenceInMilliseconds, format, parseISO } from 'date-fns'
+import { differenceInMilliseconds, parseISO } from 'date-fns'
 import { Button, Chip, ListGroup, Separator, Surface } from 'heroui-native'
 import { Text, View } from 'react-native'
 
 import { SectionHeader } from '@/components/section-header'
+import { formatDate, useTranslation } from '@/lib/i18n'
 
 import type {
   ActivityItem,
@@ -22,17 +23,21 @@ export function RecentActivitySection({
   getUserName,
   onViewAll
 }: RecentActivitySectionProps) {
+  const { t } = useTranslation()
+
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
-        <SectionHeader title="Recent Activity" />
+        <SectionHeader title={t('activity.recentActivity')} />
         <Button size="sm" variant="ghost" onPress={onViewAll}>
-          View All
+          {t('activity.viewAll')}
         </Button>
       </View>
       {items.length === 0 ? (
         <Surface variant="secondary" className="items-center py-6">
-          <Text className="text-muted text-sm">No activity recorded</Text>
+          <Text className="text-muted text-sm">
+            {t('activity.noActivityRecorded')}
+          </Text>
         </Surface>
       ) : (
         <ListGroup>
@@ -59,6 +64,7 @@ function SessionItem({
   item: SessionActivity
   getUserName: (userId: string) => string
 }) {
+  const { t } = useTranslation()
   const duration = item.stoppedAt
     ? formatDuration(
         differenceInMilliseconds(
@@ -66,20 +72,20 @@ function SessionItem({
           parseISO(item.startedAt)
         )
       )
-    : 'In progress'
+    : t('activity.inProgress')
 
   return (
     <ListGroup.Item>
       <ListGroup.ItemContent>
         <ListGroup.ItemTitle>
-          {format(parseISO(item.startedAt), 'MMM d, HH:mm')}
+          {formatDate(parseISO(item.startedAt), t('formats.dateTimeShort'))}
         </ListGroup.ItemTitle>
         <ListGroup.ItemDescription>
           {getUserName(item.startedByUserId)} · {duration}
         </ListGroup.ItemDescription>
       </ListGroup.ItemContent>
       <Chip size="sm" variant="soft">
-        Session
+        {t('activity.session')}
       </Chip>
     </ListGroup.Item>
   )
@@ -92,18 +98,20 @@ function MaintenanceItem({
   item: MaintenanceActivity
   getUserName: (userId: string) => string
 }) {
+  const { t } = useTranslation()
+
   return (
     <ListGroup.Item>
       <ListGroup.ItemContent>
         <ListGroup.ItemTitle>
-          {format(parseISO(item.performedAt), 'MMM d, HH:mm')}
+          {formatDate(parseISO(item.performedAt), t('formats.dateTimeShort'))}
         </ListGroup.ItemTitle>
         <ListGroup.ItemDescription>
           {getUserName(item.performedByUserId)} · {item.templateName}
         </ListGroup.ItemDescription>
       </ListGroup.ItemContent>
       <Chip size="sm" variant="soft">
-        Maintenance
+        {t('activity.maintenance')}
       </Chip>
     </ListGroup.Item>
   )

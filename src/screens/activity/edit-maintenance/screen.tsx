@@ -4,6 +4,7 @@ import { Card, TextArea } from 'heroui-native'
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 
+import { useTranslation } from '@/lib/i18n'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
@@ -18,6 +19,7 @@ import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function EditMaintenanceScreen() {
+  const { t } = useTranslation()
   const { recordId } = useLocalSearchParams<{ recordId: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
@@ -89,7 +91,7 @@ export default function EditMaintenanceScreen() {
 
           <View className="gap-2">
             <Text className="text-muted ml-1 text-sm font-medium">
-              Performed At
+              {t('edit.performedAt')}
             </Text>
             <Host matchContents>
               <DatePicker
@@ -102,11 +104,13 @@ export default function EditMaintenanceScreen() {
           </View>
 
           <View className="gap-2">
-            <Text className="text-muted ml-1 text-sm font-medium">Notes</Text>
+            <Text className="text-muted ml-1 text-sm font-medium">
+              {t('edit.notes')}
+            </Text>
             <TextArea
               value={effectiveNotes}
               onChangeText={setNotes}
-              placeholder="Optional notes..."
+              placeholder={t('edit.optionalNotes')}
             />
           </View>
 

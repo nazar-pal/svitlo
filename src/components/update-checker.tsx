@@ -3,6 +3,8 @@ import { useEffect, useRef } from 'react'
 import { AppState } from 'react-native'
 import { useToast } from 'heroui-native'
 
+import { t } from '@/lib/i18n'
+
 export function UpdateChecker() {
   const { toast } = useToast()
   const toastShownRef = useRef(false)
@@ -33,9 +35,9 @@ export function UpdateChecker() {
     toast.show({
       variant: 'accent',
       placement: 'bottom',
-      label: 'Update Available',
-      description: 'Restart to get the latest version',
-      actionLabel: 'Restart',
+      label: t('update.available'),
+      description: t('update.restartDesc'),
+      actionLabel: t('update.restart'),
       duration: 'persistent',
       onActionPress: ({ hide }) => {
         hide()

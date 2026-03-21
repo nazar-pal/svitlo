@@ -1,5 +1,7 @@
 import { addHours, compareDesc, isFuture, parseISO } from 'date-fns'
 
+import type { ParseKeys } from 'i18next'
+
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
 import { hoursBetween } from '@/lib/utils/time'
 
@@ -18,10 +20,16 @@ export interface GroupedGenerators {
 }
 
 export const GENERATOR_STATUS_META = {
-  running: { label: 'Running', color: 'success' },
-  resting: { label: 'Resting', color: 'warning' },
-  available: { label: 'Available', color: 'accent' }
-} as const satisfies Record<GeneratorStatus, { label: string; color: string }>
+  running: { color: 'success' },
+  resting: { color: 'warning' },
+  available: { color: 'accent' }
+} as const satisfies Record<GeneratorStatus, { color: string }>
+
+export const GENERATOR_STATUS_KEYS = {
+  running: 'generatorStatus.running',
+  resting: 'generatorStatus.resting',
+  available: 'generatorStatus.available'
+} as const satisfies Record<GeneratorStatus, ParseKeys>
 
 interface GeneratorStatusInfo {
   status: GeneratorStatus

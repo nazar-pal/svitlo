@@ -3,6 +3,7 @@ import { Card, Description, Input, Label, TextField } from 'heroui-native'
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 
+import { useTranslation } from '@/lib/i18n'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
@@ -13,6 +14,7 @@ import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function RecordMaintenanceScreen() {
+  const { t } = useTranslation()
   const { templateId, generatorId } = useLocalSearchParams<{
     templateId: string
     generatorId: string
@@ -70,27 +72,29 @@ export default function RecordMaintenanceScreen() {
       >
         <View className="mx-auto w-full max-w-150 gap-7">
           <Text className="text-muted text-3.75 leading-5.5">
-            Log that this maintenance work has been completed.
+            {t('maintenanceRecord.logDesc')}
           </Text>
 
           <Card>
             <Card.Body>
-              <Card.Title>{template?.taskName ?? 'Loading...'}</Card.Title>
+              <Card.Title>
+                {template?.taskName ?? t('common.loading')}
+              </Card.Title>
               <Card.Description>
-                {generator?.title ?? 'Loading...'}
+                {generator?.title ?? t('common.loading')}
               </Card.Description>
             </Card.Body>
           </Card>
 
           <TextField>
-            <Label>Notes</Label>
+            <Label>{t('maintenanceRecord.notes')}</Label>
             <Input
-              placeholder="Any observations or details..."
+              placeholder={t('maintenanceRecord.notesPlaceholder')}
               value={notes}
               onChangeText={setNotes}
               multiline
             />
-            <Description>Optional</Description>
+            <Description>{t('common.optional')}</Description>
           </TextField>
 
           <FormError message={error} />

@@ -2,6 +2,7 @@ import { useToast } from 'heroui-native'
 import { useEffect, useRef, useState } from 'react'
 
 import { InvitationDialog } from '@/components/invitation-dialog'
+import { t } from '@/lib/i18n'
 import { usePendingInvitations } from '@/lib/hooks/use-pending-invitations'
 
 export function InvitationWatcher() {
@@ -30,15 +31,12 @@ export function InvitationWatcher() {
     showToast(newIds)
 
     function showToast(ids: string[]) {
-      const plural = ids.length > 1
       toastRef.current.show({
         variant: 'accent',
         placement: 'top',
-        label: plural ? `${ids.length} New Invitations` : 'New Invitation',
-        description: plural
-          ? `You have ${ids.length} pending organization invitations`
-          : 'You have a pending organization invitation',
-        actionLabel: 'View',
+        label: t('invitations.new', { count: ids.length }),
+        description: t('invitations.pending', { count: ids.length }),
+        actionLabel: t('invitations.view'),
         duration: 5000,
         onActionPress: ({ hide }) => {
           hide()

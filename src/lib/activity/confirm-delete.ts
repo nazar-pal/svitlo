@@ -2,16 +2,17 @@ import { Alert } from 'react-native'
 
 import { deleteMaintenanceRecord, deleteSession } from '@/data/client/mutations'
 import { notifyWarning } from '@/lib/haptics'
+import { t } from '@/lib/i18n'
 
 export function confirmDeleteSession(userId: string, sessionId: string) {
-  Alert.alert('Delete Run', 'Are you sure you want to delete this run?', [
-    { text: 'Cancel', style: 'cancel' },
+  Alert.alert(t('generator.deleteRun'), t('generator.deleteRunConfirm'), [
+    { text: t('common.cancel'), style: 'cancel' },
     {
-      text: 'Delete',
+      text: t('common.delete'),
       style: 'destructive',
       onPress: async () => {
         const result = await deleteSession(userId, sessionId)
-        if (!result.ok) return Alert.alert('Error', result.error)
+        if (!result.ok) return Alert.alert(t('common.error'), result.error)
         notifyWarning()
       }
     }
@@ -19,20 +20,16 @@ export function confirmDeleteSession(userId: string, sessionId: string) {
 }
 
 export function confirmDeleteRecord(userId: string, recordId: string) {
-  Alert.alert(
-    'Delete Record',
-    'Are you sure you want to delete this maintenance record?',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          const result = await deleteMaintenanceRecord(userId, recordId)
-          if (!result.ok) return Alert.alert('Error', result.error)
-          notifyWarning()
-        }
+  Alert.alert(t('generator.deleteRecord'), t('generator.deleteRecordConfirm'), [
+    { text: t('common.cancel'), style: 'cancel' },
+    {
+      text: t('common.delete'),
+      style: 'destructive',
+      onPress: async () => {
+        const result = await deleteMaintenanceRecord(userId, recordId)
+        if (!result.ok) return Alert.alert(t('common.error'), result.error)
+        notifyWarning()
       }
-    ]
-  )
+    }
+  ])
 }

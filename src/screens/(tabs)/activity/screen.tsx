@@ -1,7 +1,7 @@
 import { Host, Picker, Text as SwiftText } from '@expo/ui/swift-ui'
 import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers'
 import { useScrollToTop } from '@react-navigation/native'
-import { format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
 import { BlurView } from 'expo-blur'
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect'
 import { Stack, useRouter } from 'expo-router'
@@ -26,11 +26,12 @@ import { scheduleOnRN } from 'react-native-worklets'
 import { EmptyState } from '@/components/empty-state'
 import { GeneratorScopeMenu } from '@/components/generator-scope-menu'
 import { SwipeableRow } from '@/components/swipeable-row'
+import { formatDate, useTranslation } from '@/lib/i18n'
 import {
   confirmDeleteRecord,
   confirmDeleteSession
 } from '@/lib/activity/confirm-delete'
-import { type Filter, FILTERS, FILTER_LABELS } from '@/lib/activity'
+import { type Filter, FILTERS, filterLabel } from '@/lib/activity'
 import { selection } from '@/lib/haptics'
 import { type ActivityItem, useActivityData } from './lib/use-activity-data'
 
@@ -38,6 +39,7 @@ const ItemSeparator = () => <Separator className="mx-4" />
 
 export default function ActivityScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const [filter, setFilter] = useState<Filter>('all')
   const [mutedColor, successColor, warningColor, backgroundColor] =
     useThemeColor(['muted', 'success', 'warning', 'background'])
@@ -151,7 +153,7 @@ export default function ActivityScreen() {
       >
         {FILTERS.map((f, i) => (
           <SwiftText key={f} modifiers={[tag(i)]}>
-            {FILTER_LABELS[f]}
+            {filterLabel(f)}
           </SwiftText>
         ))}
       </Picker>
@@ -203,9 +205,9 @@ export default function ActivityScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <EmptyState
           icon="building.2"
-          title="No Organizations"
-          description="Create an organization or accept an invitation to get started."
-          actionLabel="Go to Members"
+          title={t('home.noOrganizations')}
+          description={t('home.noOrganizationsDesc')}
+          actionLabel={t('home.goToMembers')}
           onAction={() => router.push('/members')}
         />
       </View>
@@ -245,8 +247,8 @@ export default function ActivityScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="clock.arrow.circlepath"
-            title="No Activity"
-            description="Activity from generator runs and maintenance will appear here."
+            title={t('activity.noActivity')}
+            description={t('activity.noActivityDesc')}
           />
         }
         renderItem={renderItem}
@@ -266,6 +268,7 @@ function SessionItem({
   successColor: string
   onPress?: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <Animated.View entering={FadeIn.duration(200)}>
       <ListGroup.Item onPress={onPress}>
@@ -279,8 +282,9 @@ function SessionItem({
         <ListGroup.ItemContent>
           <ListGroup.ItemTitle>{item.generatorTitle}</ListGroup.ItemTitle>
           <ListGroup.ItemDescription>
-            {item.userName} · {format(parseISO(item.timestamp), 'MMM d, HH:mm')}{' '}
-            · {item.duration}
+            {item.userName} ·{' '}
+            {formatDate(parseISO(item.timestamp), t('formats.dateTimeShort'))} ·{' '}
+            {item.duration}
           </ListGroup.ItemDescription>
         </ListGroup.ItemContent>
         <Chip
@@ -288,7 +292,7 @@ function SessionItem({
           variant="soft"
           color={item.isInProgress ? 'success' : undefined}
         >
-          {item.isInProgress ? 'Active' : 'Run'}
+          {item.isInProgress ? t('activity.active') : t('activity.run')}
         </Chip>
       </ListGroup.Item>
     </Animated.View>
@@ -304,6 +308,7 @@ function MaintenanceItem({
   warningColor: string
   onPress?: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <Animated.View entering={FadeIn.duration(200)}>
       <ListGroup.Item onPress={onPress}>
@@ -313,13 +318,14 @@ function MaintenanceItem({
         <ListGroup.ItemContent>
           <ListGroup.ItemTitle>{item.generatorTitle}</ListGroup.ItemTitle>
           <ListGroup.ItemDescription>
-            {item.userName} · {format(parseISO(item.timestamp), 'MMM d, HH:mm')}{' '}
-            · {item.templateName}
+            {item.userName} ·{' '}
+            {formatDate(parseISO(item.timestamp), t('formats.dateTimeShort'))} ·{' '}
+            {item.templateName}
             {item.record.notes ? ` · ${item.record.notes}` : ''}
           </ListGroup.ItemDescription>
         </ListGroup.ItemContent>
         <Chip size="sm" variant="soft" color="warning">
-          Maintenance
+          {t('activity.maintenance')}
         </Chip>
       </ListGroup.Item>
     </Animated.View>

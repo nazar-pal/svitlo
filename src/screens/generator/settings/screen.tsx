@@ -37,6 +37,7 @@ import { useLocalUser } from '@/lib/powersync'
 import { getUserName } from '@/lib/utils/get-user-name'
 import { useState } from 'react'
 
+import { useTranslation } from '@/lib/i18n'
 import { AssignedEmployeesSection } from '@/components/assigned-employees-section'
 
 export default function GeneratorSettingsScreen() {
@@ -51,6 +52,7 @@ export default function GeneratorSettingsScreen() {
 }
 
 function SettingsForm({ generator }: { generator: Generator }) {
+  const { t } = useTranslation()
   const router = useRouter()
   const localUser = useLocalUser()
   const userId = localUser?.id ?? ''
@@ -127,16 +129,16 @@ function SettingsForm({ generator }: { generator: Generator }) {
 
   function handleDelete() {
     Alert.alert(
-      'Delete Generator',
-      `Are you sure you want to delete "${generator.title}"? This cannot be undone.`,
+      t('generator.deleteGenerator'),
+      t('generator.deleteGeneratorConfirm', { title: generator.title }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             const result = await deleteGenerator(userId, generatorId)
-            if (!result.ok) return Alert.alert('Error', result.error)
+            if (!result.ok) return Alert.alert(t('common.error'), result.error)
             notifyWarning()
             router.dismissAll()
           }
@@ -151,15 +153,15 @@ function SettingsForm({ generator }: { generator: Generator }) {
       generatorId,
       targetUserId
     )
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
     notifySuccess()
   }
 
   function handleUnassign(targetUserId: string) {
-    Alert.alert('Unassign', 'Remove this user from this generator?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('generator.unassign'), t('generator.unassignConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Remove',
+        text: t('common.remove'),
         style: 'destructive',
         onPress: async () => {
           const result = await unassignUserFromGenerator(
@@ -167,7 +169,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
             generatorId,
             targetUserId
           )
-          if (!result.ok) return Alert.alert('Error', result.error)
+          if (!result.ok) return Alert.alert(t('common.error'), result.error)
           notifyWarning()
         }
       }
@@ -178,7 +180,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
     <>
       <Stack.Screen
         options={{
-          title: 'Settings',
+          title: t('generator.settings'),
           headerRight: () => <HeaderSubmitButton onPress={handleSave} />
         }}
       />
@@ -193,31 +195,37 @@ function SettingsForm({ generator }: { generator: Generator }) {
         <View className="mx-auto w-full max-w-150 gap-7">
           <View className="gap-5">
             <TextField isInvalid={!!fieldErrors.title}>
-              <Label>Title</Label>
-              <Input placeholder="Generator title" {...field('title')} />
+              <Label>{t('generator.title')}</Label>
+              <Input
+                placeholder={t('generator.generatorTitle')}
+                {...field('title')}
+              />
               <FieldError>{fieldErrors.title}</FieldError>
             </TextField>
 
             <TextField isInvalid={!!fieldErrors.model}>
-              <Label>Model</Label>
-              <Input placeholder="Generator model" {...field('model')} />
+              <Label>{t('generator.model')}</Label>
+              <Input
+                placeholder={t('generator.generatorModel')}
+                {...field('model')}
+              />
               <FieldError>{fieldErrors.model}</FieldError>
             </TextField>
 
             <TextField>
-              <Label>Description</Label>
+              <Label>{t('generator.description')}</Label>
               <Input
-                placeholder="Location, serial number, notes..."
+                placeholder={t('generator.descriptionPlaceholder')}
                 {...field('description')}
                 multiline
               />
-              <Description>Optional</Description>
+              <Description>{t('common.optional')}</Description>
             </TextField>
 
             <View className="flex-row gap-3">
               <View className="flex-1">
                 <TextField isInvalid={!!fieldErrors.maxConsecutiveRunHours}>
-                  <Label>Max Run Hours</Label>
+                  <Label>{t('generator.maxRunHours')}</Label>
                   <Input
                     placeholder="8"
                     {...field('maxConsecutiveRunHours')}
@@ -228,7 +236,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
               </View>
               <View className="flex-1">
                 <TextField isInvalid={!!fieldErrors.requiredRestHours}>
-                  <Label>Rest Hours</Label>
+                  <Label>{t('generator.restHours')}</Label>
                   <Input
                     placeholder="4"
                     {...field('requiredRestHours')}
@@ -240,15 +248,13 @@ function SettingsForm({ generator }: { generator: Generator }) {
             </View>
 
             <TextField isInvalid={!!fieldErrors.runWarningThresholdPct}>
-              <Label>Warning Threshold %</Label>
+              <Label>{t('generator.warningThresholdPct')}</Label>
               <Input
                 placeholder="80"
                 {...field('runWarningThresholdPct')}
                 keyboardType="number-pad"
               />
-              <Description>
-                Warning appears at this percentage of max run hours
-              </Description>
+              <Description>{t('generator.warningThresholdDesc')}</Description>
               <FieldError>{fieldErrors.runWarningThresholdPct}</FieldError>
             </TextField>
           </View>
@@ -264,7 +270,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
           <FormError message={error} />
 
           <Button variant="danger" size="lg" onPress={handleDelete}>
-            Delete Generator
+            {t('generator.deleteGenerator')}
           </Button>
         </View>
       </KeyboardAwareScrollView>

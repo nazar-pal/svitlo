@@ -4,6 +4,7 @@ import { Alert, Text, View } from 'react-native'
 
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
+import { useTranslation } from '@/lib/i18n'
 import { notifySuccess } from '@/lib/haptics'
 import { stopSession } from '@/data/client/mutations'
 import { computeGeneratorStatus } from '@/lib/generator/status'
@@ -26,6 +27,7 @@ export function ActiveSessionCard({
   sessions,
   userId
 }: ActiveSessionCardProps) {
+  const { t } = useTranslation()
   const successColor = useThemeColor('success')
   const { consecutiveRunHours } = computeGeneratorStatus(generator, sessions)
   const elapsedHours = useElapsedHours(session.startedAt)
@@ -38,7 +40,7 @@ export function ActiveSessionCard({
 
   async function handleStop() {
     const result = await stopSession(userId, session.id)
-    if (!result.ok) return Alert.alert('Error', result.error)
+    if (!result.ok) return Alert.alert(t('common.error'), result.error)
     notifySuccess()
   }
 
@@ -49,7 +51,7 @@ export function ActiveSessionCard({
           <SymbolView name="bolt.fill" size={14} tintColor={successColor} />
         </View>
         <Text className="text-success text-xs font-semibold tracking-wide uppercase">
-          My Active Session
+          {t('home.myActiveSession')}
         </Text>
       </View>
 
@@ -78,14 +80,16 @@ export function ActiveSessionCard({
         </View>
         <View className="flex-row justify-between">
           <Text className="text-muted text-3">
-            {formatHours(totalRunHours)} elapsed
+            {t('generator.elapsed', { hours: formatHours(totalRunHours) })}
           </Text>
-          <Text className="text-muted text-3">{formatHours(maxHours)} max</Text>
+          <Text className="text-muted text-3">
+            {t('generator.max', { hours: formatHours(maxHours) })}
+          </Text>
         </View>
       </View>
 
       <Button variant="danger" size="lg" onPress={handleStop}>
-        Stop Generator
+        {t('home.stopGenerator')}
       </Button>
     </Surface>
   )
