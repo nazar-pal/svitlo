@@ -7,14 +7,11 @@ import {
   getAllGeneratorSessions,
   getAllMaintenanceRecords,
   getAllMaintenanceTemplates,
-  getAllUsers,
-  getGeneratorsByOrg,
-  getUserAssignments
+  getAllUsers
 } from '@/data/client/queries'
 import type { Filter } from '@/lib/activity'
+import { useGeneratorScope } from '@/lib/generator/use-generator-scope'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useSelectedOrg } from '@/lib/organization/use-selected-org'
-import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { getUserName } from '@/lib/utils/get-user-name'
 import { formatDuration } from '@/lib/utils/time'
 import { differenceInMilliseconds, parseISO } from 'date-fns'
@@ -40,45 +37,21 @@ export type ActivityItem =
       templateName: string
     }
 
-export function useActivityData(filter: Filter, generatorScope: string | null) {
-  const { selectedOrgId } = useSelectedOrg()
-  const { userOrgs, isAdmin, userId } = useUserOrgs()
-  const admin = isAdmin(selectedOrgId)
-
-  const { data: generators } = useDrizzleQuery(
-    selectedOrgId ? getGeneratorsByOrg(selectedOrgId) : undefined
-  )
-
-  const { data: myAssignments } = useDrizzleQuery(
-    userId ? getUserAssignments(userId) : undefined
-  )
+export function useActivityData(filter: Filter) {
+  const {
+    userOrgs,
+    admin,
+    userId,
+    availableGenerators,
+    effectiveScope,
+    visibleGeneratorIds,
+    setGeneratorScope
+  } = useGeneratorScope()
 
   const { data: allSessions } = useDrizzleQuery(getAllGeneratorSessions())
   const { data: allRecords } = useDrizzleQuery(getAllMaintenanceRecords())
   const { data: allTemplates } = useDrizzleQuery(getAllMaintenanceTemplates())
   const { data: users } = useDrizzleQuery(getAllUsers())
-
-  const orgGeneratorIds = new Set(generators.map(g => g.id))
-  const myGeneratorIds = new Set(
-    myAssignments
-      .filter(a => orgGeneratorIds.has(a.generatorId))
-      .map(a => a.generatorId)
-  )
-
-  const availableGenerators = admin
-    ? generators
-    : generators.filter(g => myGeneratorIds.has(g.id))
-
-  const effectiveScope = generatorScope ?? (admin ? 'org' : 'my')
-
-  const visibleGeneratorIds =
-    effectiveScope === 'org'
-      ? admin
-        ? orgGeneratorIds
-        : myGeneratorIds
-      : effectiveScope === 'my'
-        ? myGeneratorIds
-        : new Set([effectiveScope])
 
   const resolveUserName = (uid: string) => getUserName(users, uid)
 
@@ -86,7 +59,7 @@ export function useActivityData(filter: Filter, generatorScope: string | null) {
     allSessions,
     allRecords,
     allTemplates,
-    generators,
+    availableGenerators,
     visibleGeneratorIds,
     filter,
     resolveUserName
@@ -98,7 +71,8 @@ export function useActivityData(filter: Filter, generatorScope: string | null) {
     userId: userId ?? '',
     items,
     availableGenerators,
-    effectiveScope
+    effectiveScope,
+    setGeneratorScope
   }
 }
 

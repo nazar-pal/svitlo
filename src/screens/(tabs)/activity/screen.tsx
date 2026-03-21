@@ -1,12 +1,5 @@
-import {
-  Host,
-  Picker,
-  Button as SwiftButton,
-  Divider as SwiftDivider,
-  Menu as SwiftMenu,
-  Text as SwiftText
-} from '@expo/ui/swift-ui'
-import { labelStyle, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers'
+import { Host, Picker, Text as SwiftText } from '@expo/ui/swift-ui'
+import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers'
 import { useScrollToTop } from '@react-navigation/native'
 import { format, parseISO } from 'date-fns'
 import { BlurView } from 'expo-blur'
@@ -31,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
 import { EmptyState } from '@/components/empty-state'
+import { GeneratorScopeMenu } from '@/components/generator-scope-menu'
 import { SwipeableRow } from '@/components/swipeable-row'
 import {
   confirmDeleteRecord,
@@ -45,7 +39,6 @@ const ItemSeparator = () => <Separator className="mx-4" />
 export default function ActivityScreen() {
   const router = useRouter()
   const [filter, setFilter] = useState<Filter>('all')
-  const [generatorScope, setGeneratorScope] = useState<string | null>(null)
   const [mutedColor, successColor, warningColor, backgroundColor] =
     useThemeColor(['muted', 'success', 'warning', 'background'])
   const isLiquidGlass = isLiquidGlassAvailable()
@@ -57,8 +50,9 @@ export default function ActivityScreen() {
     userId,
     items,
     availableGenerators,
-    effectiveScope
-  } = useActivityData(filter, generatorScope)
+    effectiveScope,
+    setGeneratorScope
+  } = useActivityData(filter)
 
   const scrollRef = useRef<FlatList<ActivityItem>>(null)
   useScrollToTop(
@@ -222,46 +216,14 @@ export default function ActivityScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerRight: () =>
-            availableGenerators.length > 1 ? (
-              <Host matchContents>
-                <SwiftMenu
-                  label="Filter"
-                  systemImage="line.3.horizontal.decrease"
-                  modifiers={[labelStyle('iconOnly')]}
-                >
-                  {admin ? (
-                    <SwiftButton
-                      label="Organization"
-                      systemImage={
-                        effectiveScope === 'org' ? 'checkmark' : undefined
-                      }
-                      onPress={() => setGeneratorScope('org')}
-                    />
-                  ) : null}
-                  <SwiftButton
-                    label="My Generators"
-                    systemImage={
-                      effectiveScope === 'my' ? 'checkmark' : undefined
-                    }
-                    onPress={() => setGeneratorScope('my')}
-                  />
-                  <SwiftDivider />
-                  <SwiftMenu label="Generator">
-                    {availableGenerators.map(g => (
-                      <SwiftButton
-                        key={g.id}
-                        label={g.title}
-                        systemImage={
-                          effectiveScope === g.id ? 'checkmark' : undefined
-                        }
-                        onPress={() => setGeneratorScope(g.id)}
-                      />
-                    ))}
-                  </SwiftMenu>
-                </SwiftMenu>
-              </Host>
-            ) : null
+          headerRight: () => (
+            <GeneratorScopeMenu
+              admin={admin}
+              availableGenerators={availableGenerators}
+              effectiveScope={effectiveScope}
+              onSelect={setGeneratorScope}
+            />
+          )
         }}
       />
       <Animated.FlatList

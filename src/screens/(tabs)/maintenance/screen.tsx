@@ -9,6 +9,7 @@ import { Stack, useRouter } from 'expo-router'
 import { ScrollView, Text, View } from 'react-native'
 
 import { EmptyState } from '@/components/empty-state'
+import { GeneratorScopeMenu } from '@/components/generator-scope-menu'
 import { SectionHeader } from '@/components/section-header'
 import {
   formatMaintenanceLabel,
@@ -20,8 +21,18 @@ import { useMaintenanceTabData } from './lib/use-maintenance-tab-data'
 
 export default function MaintenanceScreen() {
   const router = useRouter()
-  const { userOrgs, overdue, dueSoon, upcoming, isEmpty, generatorsById } =
-    useMaintenanceTabData()
+  const {
+    userOrgs,
+    admin,
+    availableGenerators,
+    effectiveScope,
+    setGeneratorScope,
+    overdue,
+    dueSoon,
+    upcoming,
+    isEmpty,
+    generatorsById
+  } = useMaintenanceTabData()
 
   if (userOrgs.length === 0)
     return (
@@ -37,10 +48,19 @@ export default function MaintenanceScreen() {
       </View>
     )
 
+  const headerRight = () => (
+    <GeneratorScopeMenu
+      admin={admin}
+      availableGenerators={availableGenerators}
+      effectiveScope={effectiveScope}
+      onSelect={setGeneratorScope}
+    />
+  )
+
   if (isEmpty)
     return (
       <>
-        <Stack.Screen options={{ headerShown: true }} />
+        <Stack.Screen options={{ headerShown: true, headerRight }} />
         <View className="bg-background flex-1 items-center justify-center px-5 pb-10">
           <EmptyState
             icon="wrench"
@@ -53,7 +73,7 @@ export default function MaintenanceScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true }} />
+      <Stack.Screen options={{ headerShown: true, headerRight }} />
       <ScrollView
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"

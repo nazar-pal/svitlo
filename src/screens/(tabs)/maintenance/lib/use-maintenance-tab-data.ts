@@ -1,40 +1,45 @@
 import {
   getAllGeneratorSessions,
   getAllMaintenanceRecords,
-  getAllMaintenanceTemplates,
-  getGeneratorsByOrg
+  getAllMaintenanceTemplates
 } from '@/data/client/queries'
+import { useGeneratorScope } from '@/lib/generator/use-generator-scope'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
   computeAllMaintenanceItems,
   type MaintenanceItemInfo
 } from '@/lib/maintenance/due'
-import { useSelectedOrg } from '@/lib/organization/use-selected-org'
-import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { groupBy } from '@/lib/utils/group-by'
 
 import type { Generator } from '@/data/client/db-schema'
 
 export function useMaintenanceTabData() {
-  const { selectedOrgId } = useSelectedOrg()
-  const { userOrgs } = useUserOrgs()
+  const {
+    userOrgs,
+    admin,
+    availableGenerators,
+    effectiveScope,
+    visibleGeneratorIds,
+    setGeneratorScope
+  } = useGeneratorScope()
 
-  const { data: generators } = useDrizzleQuery(
-    selectedOrgId ? getGeneratorsByOrg(selectedOrgId) : undefined
-  )
   const { data: allTemplates } = useDrizzleQuery(getAllMaintenanceTemplates())
   const { data: allRecords } = useDrizzleQuery(getAllMaintenanceRecords())
   const { data: allSessions } = useDrizzleQuery(getAllGeneratorSessions())
+
+  const visibleGenerators = availableGenerators.filter(g =>
+    visibleGeneratorIds.has(g.id)
+  )
 
   const templatesByGenerator = groupBy(allTemplates, t => t.generatorId)
   const recordsByGenerator = groupBy(allRecords, r => r.generatorId)
   const sessionsByGenerator = groupBy(allSessions, s => s.generatorId)
 
   const generatorsById = new Map<string, Generator>(
-    generators.map(g => [g.id, g])
+    visibleGenerators.map(g => [g.id, g])
   )
 
-  const allItems: MaintenanceItemInfo[] = generators.flatMap(gen =>
+  const allItems: MaintenanceItemInfo[] = visibleGenerators.flatMap(gen =>
     computeAllMaintenanceItems(
       templatesByGenerator.get(gen.id) ?? [],
       recordsByGenerator.get(gen.id) ?? [],
@@ -52,6 +57,10 @@ export function useMaintenanceTabData() {
 
   return {
     userOrgs,
+    admin,
+    availableGenerators,
+    effectiveScope,
+    setGeneratorScope,
     overdue,
     dueSoon,
     upcoming,
