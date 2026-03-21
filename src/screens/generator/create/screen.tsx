@@ -10,7 +10,6 @@ import {
   Input,
   Label,
   PressableFeedback,
-  Spinner,
   TextField
 } from 'heroui-native'
 import { useState } from 'react'
@@ -18,6 +17,7 @@ import { Alert as RNAlert, Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { useTranslation } from '@/lib/i18n'
+import { AiLoader } from '@/components/ai-loader'
 import { AiSourcesList } from '@/components/ai-sources-list'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
@@ -307,12 +307,9 @@ export default function CreateGeneratorScreen() {
           ) : null}
 
           {isLoadingAI ? (
-            <View className="items-center gap-3 py-10">
-              <Spinner />
-              <Text className="text-muted text-sm">
-                {t('generator.researching', { model: values.model })}
-              </Text>
-            </View>
+            <AiLoader
+              label={t('generator.researching', { model: values.model })}
+            />
           ) : null}
 
           {mode !== null && !isLoadingAI ? (
