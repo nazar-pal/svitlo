@@ -4,7 +4,7 @@ import { SymbolView } from 'expo-symbols'
 import { Chip, ListGroup, Separator, Tabs, useThemeColor } from 'heroui-native'
 import { useRef, useState } from 'react'
 import { Text, View } from 'react-native'
-import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
+import type { SwipeableRowRef } from '@/components/swipeable-row'
 import Animated, { LinearTransition } from 'react-native-reanimated'
 
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
@@ -82,7 +82,7 @@ export default function ActivityScreen() {
   const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
   const router = useRouter()
   const [filter, setFilter] = useState<Filter>('all')
-  const openRowRef = useRef<SwipeableMethods | null>(null)
+  const openRowRef = useRef<SwipeableRowRef | null>(null)
   const localUser = useLocalUser()
   const [mutedColor, successColor, warningColor] = useThemeColor([
     'muted',
@@ -128,6 +128,7 @@ export default function ActivityScreen() {
       <Animated.FlatList
         data={items}
         contentInsetAdjustmentBehavior="automatic"
+        onScrollBeginDrag={() => openRowRef.current?.close()}
         itemLayoutAnimation={LinearTransition}
         contentContainerStyle={{
           paddingHorizontal: 20,

@@ -2,6 +2,9 @@ import * as Haptics from 'expo-haptics'
 
 export const selection = () => Haptics.selectionAsync()
 
+export const impactLight = () =>
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+
 export const impactMedium = () =>
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
 

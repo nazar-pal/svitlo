@@ -17,7 +17,7 @@ import { Chip, ListGroup, Separator, useThemeColor } from 'heroui-native'
 import { useRef, useState } from 'react'
 import { View } from 'react-native'
 import { FlatList } from 'react-native-gesture-handler'
-import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
+import type { SwipeableRowRef } from '@/components/swipeable-row'
 import Animated, {
   Extrapolation,
   FadeIn,
@@ -49,7 +49,7 @@ export default function ActivityScreen() {
   const [mutedColor, successColor, warningColor, backgroundColor] =
     useThemeColor(['muted', 'success', 'warning', 'background'])
   const isLiquidGlass = isLiquidGlassAvailable()
-  const openRowRef = useRef<SwipeableMethods | null>(null)
+  const openRowRef = useRef<SwipeableRowRef | null>(null)
 
   const {
     userOrgs,
@@ -84,6 +84,8 @@ export default function ActivityScreen() {
     )
     scheduleOnRN(setIsScrolledDown, event.contentOffset.y > 10)
   })
+
+  const closeOpenRow = () => openRowRef.current?.close()
 
   const stickyHeaderStyle = useAnimatedStyle(() => {
     return {
@@ -268,6 +270,7 @@ export default function ActivityScreen() {
         contentInsetAdjustmentBehavior="automatic"
         scrollToOverflowEnabled
         onScroll={scrollHandler}
+        onScrollBeginDrag={closeOpenRow}
         data={items}
         itemLayoutAnimation={LinearTransition}
         keyExtractor={(item: ActivityItem) => item.id}
