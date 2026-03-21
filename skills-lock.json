@@ -44,7 +44,7 @@
     "heroui-native": {
       "source": "heroui-inc/heroui",
       "sourceType": "github",
-      "computedHash": "e92d38f7d624847f666ff8ea3e545d708551e8ed65f043ac6fd4a19bb3964767"
+      "computedHash": "a9d9dbd7a39a31b03052b5267f3e6e21dd40b1e34cb2928c4e8a67ced7a427f0"
     },
     "native-data-fetching": {
       "source": "expo/skills",
