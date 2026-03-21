@@ -218,7 +218,9 @@ export const en = {
     noSuggestions: 'No suggestions available',
     offline: 'Offline',
     offlineDesc: 'Internet connection is required for AI suggestions.',
-    failedToGet: 'Failed to get suggestions'
+    failedToGet: 'Failed to get suggestions',
+    genericWarning:
+      "This is a generic maintenance template. Verify the values against your generator's documentation."
   },
 
   organization: {

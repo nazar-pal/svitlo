@@ -3,6 +3,7 @@ import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 import * as Network from 'expo-network'
 import { Stack, useRouter } from 'expo-router'
 import {
+  Alert,
   Button,
   Card,
   Description,
@@ -58,6 +59,7 @@ export default function CreateGeneratorScreen() {
   const [isLoadingAI, setIsLoadingAI] = useState(false)
   const [aiSources, setAiSources] = useState<string[]>([])
   const [aiModelInfo, setAiModelInfo] = useState('')
+  const [aiIsGeneric, setAiIsGeneric] = useState(false)
 
   const [error, setError] = useState('')
 
@@ -84,6 +86,7 @@ export default function CreateGeneratorScreen() {
     }
 
     setIsLoadingAI(true)
+    setAiIsGeneric(false)
     const result = await rpcClient.ai
       .suggestMaintenancePlan({
         generatorModel: values.model,
@@ -111,6 +114,7 @@ export default function CreateGeneratorScreen() {
 
     setAiSources(result.sources)
     setAiModelInfo(result.modelInfo)
+    setAiIsGeneric(result.isGeneric)
     setMaintenanceItems(result.tasks.map(task => ({ ...task, selected: true })))
   }
 
@@ -355,6 +359,17 @@ export default function CreateGeneratorScreen() {
                   <FieldError>{fieldErrors.runWarningThresholdPct}</FieldError>
                 </TextField>
               </View>
+
+              {aiIsGeneric ? (
+                <Alert status="warning">
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Description>
+                      {t('aiSuggestions.genericWarning')}
+                    </Alert.Description>
+                  </Alert.Content>
+                </Alert>
+              ) : null}
 
               {maintenanceItems.length > 0 ? (
                 <View className="gap-2">

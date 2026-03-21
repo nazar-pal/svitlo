@@ -13,6 +13,7 @@ export interface SuggestionsData {
   tasks: MaintenanceSuggestion[]
   sources: string[]
   modelInfo: string
+  isGeneric: boolean
 }
 
 let pendingSuggestions: SuggestionsData | null = null

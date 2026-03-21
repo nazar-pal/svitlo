@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { Alert } from 'heroui-native'
 import { useState } from 'react'
-import { Alert, Text, View } from 'react-native'
+import { Alert as RNAlert, Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { useTranslation } from '@/lib/i18n'
@@ -66,7 +67,7 @@ export default function AddSuggestionsScreen() {
     setIsSaving(false)
 
     if (!result.ok) {
-      Alert.alert(t('common.error'), result.error)
+      RNAlert.alert(t('common.error'), result.error)
       return
     }
 
@@ -96,6 +97,17 @@ export default function AddSuggestionsScreen() {
       >
         <View className="mx-auto w-full max-w-150 gap-4">
           <Text className="text-muted text-xs">{data.modelInfo}</Text>
+
+          {data.isGeneric ? (
+            <Alert status="warning">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Description>
+                  {t('aiSuggestions.genericWarning')}
+                </Alert.Description>
+              </Alert.Content>
+            </Alert>
+          ) : null}
 
           {items.map((item, index) => (
             <SuggestionCard
