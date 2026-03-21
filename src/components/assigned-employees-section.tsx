@@ -67,8 +67,9 @@ export function AssignedEmployeesSection({
         {unassignedMembers.length > 0 ? (
           <>
             <Separator className="mx-4" />
-            {unassignedMembers.map(member => (
+            {unassignedMembers.map((member, index) => (
               <View key={member.id}>
+                {index > 0 ? <Separator className="mx-4" /> : null}
                 <ListGroup.Item onPress={() => onAssign(member.userId)}>
                   <ListGroup.ItemPrefix>
                     <SymbolView

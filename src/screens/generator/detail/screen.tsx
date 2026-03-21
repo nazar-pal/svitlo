@@ -3,22 +3,15 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Alert, ScrollView, Text, View } from 'react-native'
 
-import {
-  assignUserToGenerator,
-  startSession,
-  stopSession,
-  unassignUserFromGenerator
-} from '@/data/client/mutations'
-import { notifySuccess, notifyWarning } from '@/lib/haptics'
+import { startSession, stopSession } from '@/data/client/mutations'
+import { notifySuccess } from '@/lib/haptics'
 import {
   getAllOrganizations,
   getAllUsers,
   getGenerator,
-  getGeneratorAssignments,
   getGeneratorSessions,
   getMaintenanceRecords,
-  getMaintenanceTemplates,
-  getOrgMembers
+  getMaintenanceTemplates
 } from '@/data/client/queries'
 import { rpcClient } from '@/data/rpc-client'
 import {
@@ -37,10 +30,10 @@ import { formatHours } from '@/lib/utils/time'
 
 import type { ActivityItem } from '@/lib/generator/activity-item'
 import { setPendingSuggestions } from '@/lib/maintenance/suggestions-store'
+import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
+import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 import { isLiquidGlassAvailable } from 'expo-glass-effect'
 import { useThemeColor } from 'heroui-native'
-import { AssignedEmployeesSection } from './components/assigned-employees-section'
-import { ConfigurationSection } from './components/configuration-section'
 import { MaintenanceSection } from './components/maintenance-section'
 import { RecentActivitySection } from './components/recent-activity-section'
 import type { StatusCardProps } from './components/status-card'
@@ -72,17 +65,9 @@ export default function GeneratorDetailScreen() {
     id ? getMaintenanceRecords(id) : undefined
   )
 
-  const { data: assignments } = useDrizzleQuery(
-    id ? getGeneratorAssignments(id) : undefined
-  )
-
   const { data: users } = useDrizzleQuery(getAllUsers())
 
   const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
-
-  const { data: orgMembers } = useDrizzleQuery(
-    generator ? getOrgMembers(generator.organizationId) : undefined
-  )
 
   // --- Computed state ---
 
@@ -103,11 +88,6 @@ export default function GeneratorDetailScreen() {
   const org = allOrgs.find(o => o.id === generator.organizationId)
   const isAdmin = org?.adminUserId === userId
   const lifetimeHours = computeLifetimeHours(sessions)
-
-  const assignedUserIds = new Set(assignments.map(a => a.userId))
-  const unassignedMembers = orgMembers.filter(
-    m => !assignedUserIds.has(m.userId)
-  )
 
   // --- Activity feed ---
 
@@ -149,31 +129,6 @@ export default function GeneratorDetailScreen() {
     const result = await stopSession(userId, statusInfo.openSession.id)
     if (!result.ok) return Alert.alert('Error', result.error)
     notifySuccess()
-  }
-
-  async function handleAssign(targetUserId: string) {
-    const result = await assignUserToGenerator(userId, id, targetUserId)
-    if (!result.ok) return Alert.alert('Error', result.error)
-    notifySuccess()
-  }
-
-  function handleUnassign(targetUserId: string) {
-    Alert.alert('Unassign', 'Remove this user from this generator?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          const result = await unassignUserFromGenerator(
-            userId,
-            id,
-            targetUserId
-          )
-          if (!result.ok) return Alert.alert('Error', result.error)
-          notifyWarning()
-        }
-      }
-    ])
   }
 
   async function handleSuggestMaintenance() {
@@ -242,7 +197,20 @@ export default function GeneratorDetailScreen() {
             backgroundColor: isLiquidGlassAvailable()
               ? 'transparent'
               : backgroundColor
-          }
+          },
+          headerRight: () =>
+            isAdmin ? (
+              <Host matchContents>
+                <SwiftButton
+                  label="Settings"
+                  systemImage="gearshape"
+                  modifiers={[labelStyle('iconOnly')]}
+                  onPress={() =>
+                    router.push(`/generator/settings?generatorId=${id}`)
+                  }
+                />
+              </Host>
+            ) : null
         }}
       />
       <View className="mx-auto w-full max-w-150 gap-6">
@@ -283,24 +251,6 @@ export default function GeneratorDetailScreen() {
               `/maintenance/record?templateId=${templateId}&generatorId=${id}`
             )
           }
-        />
-
-        {/* Assigned Employees (Admin only) */}
-        {isAdmin ? (
-          <AssignedEmployeesSection
-            assignments={assignments}
-            unassignedMembers={unassignedMembers}
-            getUserName={resolveUserName}
-            onAssign={handleAssign}
-            onUnassign={handleUnassign}
-          />
-        ) : null}
-
-        {/* Configuration (static, at bottom) */}
-        <ConfigurationSection
-          maxConsecutiveRunHours={generator.maxConsecutiveRunHours}
-          requiredRestHours={generator.requiredRestHours}
-          runWarningThresholdPct={generator.runWarningThresholdPct}
         />
       </View>
     </ScrollView>

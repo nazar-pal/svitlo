@@ -1,28 +1,26 @@
 import { EmptyState } from '@/components/empty-state'
 import { GeneratorCard } from '@/components/generator-card'
-import { useGeneratorListData } from '@/lib/generator/use-generator-list-data'
-import { useSelectedOrg } from '@/lib/organization/use-selected-org'
-import { useUserOrgs } from '@/lib/organization/use-user-orgs'
-import { usePowerSync } from '@/lib/powersync'
 import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 import { Stack, useRouter } from 'expo-router'
 import { View } from 'react-native'
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated'
 
-export default function GeneratorsScreen() {
+import { ActiveSessionCard } from './components/active-session-card'
+import { useHomeData } from './lib/use-home-data'
+
+export default function HomeScreen() {
   const router = useRouter()
-  const { userId } = usePowerSync()
-  const { selectedOrgId } = useSelectedOrg()
-  const { userOrgs, isAdmin } = useUserOrgs()
-
-  const admin = isAdmin(selectedOrgId)
-
   const {
-    generators: orgGenerators,
+    userId,
+    userOrgs,
+    admin,
+    generators,
     sessionsByGenerator,
-    nextMaintenanceByGenerator
-  } = useGeneratorListData()
+    nextMaintenanceByGenerator,
+    myActiveSession,
+    myActiveGenerator
+  } = useHomeData()
 
   if (userOrgs.length === 0)
     return (
@@ -57,19 +55,32 @@ export default function GeneratorsScreen() {
         }}
       />
       <Animated.FlatList
-        className="flex-1"
+        className="bg-background flex-1"
         contentContainerClassName="px-5 pb-10"
         contentInsetAdjustmentBehavior="automatic"
-        data={orgGenerators}
+        data={generators.filter(g => g.id !== myActiveGenerator?.id)}
         keyExtractor={item => item.id}
         itemLayoutAnimation={LinearTransition}
+        ListHeaderComponent={
+          myActiveGenerator && myActiveSession ? (
+            <View className="mb-3">
+              <ActiveSessionCard
+                generator={myActiveGenerator}
+                session={myActiveSession}
+                sessions={sessionsByGenerator.get(myActiveGenerator.id) ?? []}
+                userId={userId}
+              />
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
           <Animated.View className="mb-3" entering={FadeIn.duration(200)}>
             <GeneratorCard
+              variant="compact"
               generator={item}
               sessions={sessionsByGenerator.get(item.id) ?? []}
               nextMaintenance={nextMaintenanceByGenerator.get(item.id) ?? null}
-              userId={userId ?? ''}
+              userId={userId}
               onPress={() => router.push(`/generator/${item.id}`)}
             />
           </Animated.View>

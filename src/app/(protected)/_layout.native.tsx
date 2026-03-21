@@ -68,6 +68,10 @@ export default function ProtectedLayout() {
             }}
           />
           <Stack.Screen
+            name="generator/settings"
+            options={{ ...formSheetOptions, title: 'Settings' }}
+          />
+          <Stack.Screen
             name="maintenance/create-template"
             options={{ ...formSheetOptions, title: 'New Task' }}
           />

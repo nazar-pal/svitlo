@@ -149,9 +149,9 @@ export default function CreateGeneratorScreen() {
       title: values.title,
       model: values.model,
       description: values.description || undefined,
-      maxConsecutiveRunHours: parseFloat(values.maxConsecutiveRunHours) || 0,
-      requiredRestHours: parseFloat(values.requiredRestHours) || 0,
-      runWarningThresholdPct: parseInt(values.runWarningThresholdPct, 10) || 80
+      maxConsecutiveRunHours: Number(values.maxConsecutiveRunHours),
+      requiredRestHours: Number(values.requiredRestHours),
+      runWarningThresholdPct: Number(values.runWarningThresholdPct)
     }
 
     const parsed = insertGeneratorSchema.safeParse(input)

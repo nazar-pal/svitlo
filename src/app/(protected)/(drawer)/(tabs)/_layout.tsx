@@ -6,7 +6,7 @@ import { DynamicColorIOS } from 'react-native'
 import { InvitationWatcher } from '@/components/invitation-watcher'
 
 export const unstable_settings = {
-  initialRouteName: '(dashboard)'
+  initialRouteName: '(home)'
 }
 
 export default function AppTabs() {
@@ -30,18 +30,18 @@ export default function AppTabs() {
         indicatorColor={accentColor + '25'}
         disableTransparentOnScrollEdge={true} // Used to prevent transparent background on iOS 18 and older
       >
-        <NativeTabs.Trigger name="(dashboard)">
+        <NativeTabs.Trigger name="(home)">
           <NativeTabs.Trigger.Label selectedStyle={{ color: accentColor }}>
-            Dashboard
+            Home
           </NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="square.grid.2x2.fill" />
+          <NativeTabs.Trigger.Icon sf="house.fill" />
         </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="generators">
+        <NativeTabs.Trigger name="maintenance-tab">
           <NativeTabs.Trigger.Label selectedStyle={{ color: accentColor }}>
-            Generators
+            Maintenance
           </NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="bolt.fill" />
+          <NativeTabs.Trigger.Icon sf="wrench.and.screwdriver.fill" />
         </NativeTabs.Trigger>
 
         <NativeTabs.Trigger name="activity">

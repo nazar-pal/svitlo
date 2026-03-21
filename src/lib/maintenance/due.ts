@@ -166,77 +166,106 @@ export function computeNextMaintenance(
   records: MaintenanceRecord[],
   sessions: GeneratorSession[]
 ): NextMaintenanceCardInfo | null {
-  if (templates.length === 0) return null
+  const items = computeAllMaintenanceItems(templates, records, sessions)
+  if (items.length === 0) return null
+  const { generatorId: _, ...best } = items[0]
+  return best
+}
+
+export interface MaintenanceItemInfo extends NextMaintenanceCardInfo {
+  generatorId: string
+}
+
+/**
+ * Compute due status for ALL maintenance templates, sorted by urgency.
+ * Unlike `computeNextMaintenance` which returns only the most urgent item,
+ * this returns every template's status.
+ */
+export function computeAllMaintenanceItems(
+  templates: MaintenanceTemplate[],
+  records: MaintenanceRecord[],
+  sessions: GeneratorSession[]
+): MaintenanceItemInfo[] {
+  if (templates.length === 0) return []
 
   const now = new Date().toISOString()
 
-  interface Candidate extends NextMaintenanceCardInfo {
-    sortValue: number
-  }
+  const items: (MaintenanceItemInfo & { sortValue: number })[] = templates.map(
+    template => {
+      const lastRecord = lastRecordForTemplate(records, template.id)
+      const lastPerformedAt = lastRecord?.performedAt ?? null
 
-  const candidates: Candidate[] = templates.map(template => {
-    const lastRecord = lastRecordForTemplate(records, template.id)
-    const lastPerformedAt = lastRecord?.performedAt ?? null
+      if (template.isOneTime && lastRecord)
+        return {
+          templateId: template.id,
+          generatorId: template.generatorId,
+          taskName: template.taskName,
+          urgency: 'ok' as const,
+          sortValue: Infinity,
+          hoursRemaining: null,
+          daysRemaining: null
+        }
 
-    if (template.isOneTime && lastRecord)
+      const { hoursRemaining, daysRemaining } = computeRemaining(
+        template,
+        lastPerformedAt,
+        sessions,
+        now
+      )
+
+      const urgency = urgencyFromRemaining(
+        { hoursRemaining, daysRemaining },
+        template
+      )
+
+      let sortValue: number
+      if (hoursRemaining !== null && daysRemaining !== null)
+        sortValue = Math.min(hoursRemaining, daysRemaining * 24)
+      else if (hoursRemaining !== null) sortValue = hoursRemaining
+      else sortValue = (daysRemaining ?? Infinity) * 24
+
       return {
         templateId: template.id,
+        generatorId: template.generatorId,
         taskName: template.taskName,
-        urgency: 'ok' as const,
-        sortValue: Infinity,
-        hoursRemaining: null,
-        daysRemaining: null
+        urgency,
+        sortValue,
+        hoursRemaining,
+        daysRemaining
       }
-
-    const { hoursRemaining, daysRemaining } = computeRemaining(
-      template,
-      lastPerformedAt,
-      sessions,
-      now
-    )
-
-    const urgency = urgencyFromRemaining(
-      { hoursRemaining, daysRemaining },
-      template
-    )
-
-    let sortValue: number
-    if (hoursRemaining !== null && daysRemaining !== null)
-      sortValue = Math.min(hoursRemaining, daysRemaining * 24)
-    else if (hoursRemaining !== null) sortValue = hoursRemaining
-    else sortValue = (daysRemaining ?? Infinity) * 24
-
-    return {
-      templateId: template.id,
-      taskName: template.taskName,
-      urgency,
-      sortValue,
-      hoursRemaining,
-      daysRemaining
     }
-  })
+  )
 
   const urgencyRank = { overdue: 0, due_soon: 1, ok: 2 } as const
-  candidates.sort((a, b) => {
+  items.sort((a, b) => {
     const tierDiff = urgencyRank[a.urgency] - urgencyRank[b.urgency]
     if (tierDiff !== 0) return tierDiff
     return a.sortValue - b.sortValue
   })
 
-  const best = candidates[0]
-  return {
-    templateId: best.templateId,
-    taskName: best.taskName,
-    urgency: best.urgency,
-    hoursRemaining: best.hoursRemaining,
-    daysRemaining: best.daysRemaining
-  }
+  return items.map(({ sortValue: _, ...rest }) => rest)
 }
 
 export function formatMaintenanceLabel(
   info: Pick<NextMaintenanceCardInfo, 'hoursRemaining' | 'daysRemaining'>
 ): string {
   const { hoursRemaining, daysRemaining } = info
+  const isOverdue =
+    (hoursRemaining !== null && hoursRemaining < 0) ||
+    (daysRemaining !== null && daysRemaining < 0)
+
+  if (isOverdue) {
+    const overdueHours = hoursRemaining !== null ? -hoursRemaining : null
+    const overdueDays = daysRemaining !== null ? -daysRemaining : null
+    if (overdueHours !== null && overdueDays !== null)
+      return overdueHours >= overdueDays * 24
+        ? `${formatHours(overdueHours)} overdue`
+        : `${Math.ceil(overdueDays)}d overdue`
+    if (overdueHours !== null) return `${formatHours(overdueHours)} overdue`
+    if (overdueDays !== null) return `${Math.ceil(overdueDays)}d overdue`
+    return 'overdue'
+  }
+
   if (hoursRemaining !== null && daysRemaining !== null)
     return hoursRemaining <= daysRemaining * 24
       ? `in ${formatHours(hoursRemaining)}`

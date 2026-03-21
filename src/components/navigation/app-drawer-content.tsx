@@ -237,7 +237,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
         orgId={deleteOrgId}
         onClose={() => setDeleteOrgId(null)}
         onDeleted={() => {
-          router.navigate('/(protected)/(drawer)/(tabs)/(dashboard)')
+          router.navigate('/(protected)/(drawer)/(tabs)/(home)')
           navigation.dispatch(DrawerActions.closeDrawer())
         }}
       />
@@ -247,7 +247,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
         orgId={leaveOrgId}
         onClose={() => setLeaveOrgId(null)}
         onLeft={() => {
-          router.navigate('/(protected)/(drawer)/(tabs)/(dashboard)')
+          router.navigate('/(protected)/(drawer)/(tabs)/(home)')
           navigation.dispatch(DrawerActions.closeDrawer())
         }}
       />
