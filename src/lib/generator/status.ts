@@ -3,7 +3,25 @@ import { addHours, compareDesc, isFuture, parseISO } from 'date-fns'
 import type { Generator, GeneratorSession } from '@/data/client/db-schema'
 import { hoursBetween } from '@/lib/utils/time'
 
-type GeneratorStatus = 'running' | 'resting' | 'available'
+export type GeneratorStatus = 'running' | 'resting' | 'available'
+
+export interface StatusCounts {
+  running: number
+  resting: number
+  available: number
+}
+
+export interface GroupedGenerators {
+  running: Generator[]
+  resting: Generator[]
+  available: Generator[]
+}
+
+export const GENERATOR_STATUS_META = {
+  running: { label: 'Running', color: 'success' },
+  resting: { label: 'Resting', color: 'warning' },
+  available: { label: 'Available', color: 'accent' }
+} as const satisfies Record<GeneratorStatus, { label: string; color: string }>
 
 interface GeneratorStatusInfo {
   status: GeneratorStatus
