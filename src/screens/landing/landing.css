@@ -1,0 +1,227 @@
+/* ── Web base ── */
+
+:root {
+  --brand-blue: #208AEF;
+  --brand-indigo: #6366F1;
+  --dark-bg: #080c18;
+  --dark-bg-deep: #050810;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+}
+
+/* ── Landing — layout ── */
+
+.landing-section {
+  padding: 96px 24px;
+}
+
+.landing-container {
+  margin: 0 auto;
+}
+
+.landing-container--sm { max-width: 580px; }
+.landing-container--md { max-width: 640px; }
+.landing-container--lg { max-width: 900px; }
+.landing-container--xl { max-width: 1040px; }
+
+.landing-centered {
+  text-align: center;
+}
+
+/* ── Landing — typography ── */
+
+.landing-section-title {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #111;
+}
+
+.landing-section-title--light {
+  color: #fff;
+}
+
+.landing-section-subtitle {
+  margin: 0;
+  text-align: center;
+  font-size: 18px;
+  color: #888;
+}
+
+.landing-section-subtitle--light {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.landing-card-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+}
+
+.landing-card-title--light {
+  color: #fff;
+}
+
+.landing-card-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #888;
+}
+
+.landing-card-body--light {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.landing-icon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 16px;
+}
+
+/* ── Landing — grid ── */
+
+.landing-grid {
+  display: grid;
+  gap: 20px;
+}
+
+/* ── Landing — animations ── */
+
+@keyframes landing-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* ── Landing — backgrounds ── */
+
+.landing-hero-bg {
+  background-color: var(--dark-bg);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    radial-gradient(ellipse 80% 60% at 50% -30%, rgba(32, 138, 239, 0.25), transparent),
+    radial-gradient(ellipse 60% 50% at 85% 50%, rgba(99, 102, 241, 0.12), transparent),
+    radial-gradient(ellipse 50% 60% at 10% 90%, rgba(32, 138, 239, 0.08), transparent);
+  background-size: 48px 48px, 48px 48px, auto, auto, auto;
+}
+
+.landing-gradient-text {
+  background: linear-gradient(135deg, #60a5fa, var(--brand-blue), #818cf8, #60a5fa);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: landing-gradient 8s ease-in-out infinite;
+}
+
+.landing-float {
+  animation: landing-float 5s ease-in-out infinite;
+}
+
+.landing-icon-glow {
+  box-shadow: 0 0 60px rgba(32, 138, 239, 0.3), 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.landing-dark-section {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(32, 138, 239, 0.06), transparent),
+    var(--dark-bg);
+}
+
+/* ── Landing — interactive ── */
+
+.landing-app-store-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 28px;
+  border-radius: 14px;
+  background-color: #fff;
+  color: #111;
+  text-decoration: none;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.landing-app-store-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 32px rgba(32, 138, 239, 0.25);
+}
+
+.landing-feature-card {
+  padding: 28px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background-color: #fff;
+  cursor: default;
+  transition: box-shadow 0.3s, transform 0.3s;
+}
+.landing-feature-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.landing-use-case-card {
+  padding: 28px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+  transition: border-color 0.3s, background-color 0.3s;
+}
+.landing-use-case-card:hover {
+  border-color: rgba(32, 138, 239, 0.3);
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.landing-step-number {
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background-color: var(--brand-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(32, 138, 239, 0.3);
+}
+
+.landing-learn-more {
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+  color: rgba(255, 255, 255, 0.4);
+}
+.landing-learn-more:hover {
+  color: #fff;
+}
+
+.landing-privacy-link {
+  font-size: 13px;
+  text-decoration: underline;
+  transition: color 0.2s;
+  color: rgba(255, 255, 255, 0.3);
+}
+.landing-privacy-link:hover {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.landing-locale-btn {
+  transition: background-color 0.2s, color 0.2s;
+}
+.landing-locale-btn:not(.active):hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}

@@ -498,6 +498,36 @@ export const en = {
     aiTitle: 'Powered by AI',
     aiDesc:
       'Svitlo uses AI to generate maintenance templates tailored to your generator\u2019s make, model, and fuel type. It also helps you set up new generators faster by suggesting run limits and rest periods based on manufacturer recommendations.',
+    heroTitle: 'Keep the Power Running',
+    learnMore: 'Learn More',
+    stat1Label: 'Offline-First',
+    stat1Desc: 'Works without internet',
+    stat2Label: 'AI-Powered',
+    stat2Desc: 'Smart maintenance',
+    stat3Label: 'Team Ready',
+    stat3Desc: 'Multi-user access',
+    stat4Label: 'Real-Time',
+    stat4Desc: 'Live session tracking',
+    useCasesTitle: 'Built for Every Scenario',
+    useCasesSubtitle:
+      'From a single home backup to a fleet of industrial generators.',
+    useCase1Title: 'Construction Sites',
+    useCase1Desc:
+      'Track multiple generators across job sites. Know exactly when each unit needs service.',
+    useCase2Title: 'Agriculture & Farms',
+    useCase2Desc:
+      'Keep irrigation and farm equipment generators running reliably through every season.',
+    useCase3Title: 'Homes & Offices',
+    useCase3Desc:
+      'Monitor your backup power and get maintenance alerts before outages strike.',
+    useCase4Title: 'Events & Venues',
+    useCase4Desc:
+      'Coordinate generator operations for festivals, markets, and outdoor events.',
+    madeInUkraine: 'Made in Ukraine',
+    madeInUkraineDesc:
+      'Born from real experience managing generators during power outages. Built for reliability when it matters most.',
+    free: 'Free to get started.',
+    copyright: '\u00A9 {{year}} Svitlo',
     ctaTitle: 'Ready to Get Started?',
     ctaDesc:
       'Download Svitlo and take control of your generator maintenance today.'

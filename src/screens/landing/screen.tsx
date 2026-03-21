@@ -1,27 +1,13 @@
-import { Image, Linking, Pressable, ScrollView, Text, View } from 'react-native'
+import './landing.css'
+
+import { motion } from 'motion/react'
 
 import { useTranslation } from '@/lib/i18n'
 
-const appStoreUrl = 'https://apps.apple.com/app/id6743439804'
+const APP_STORE_URL = 'https://apps.apple.com/app/id6743439804'
+const CURRENT_YEAR = String(new Date().getFullYear())
 
-function AppStoreButton() {
-  const { t } = useTranslation()
-
-  return (
-    <Pressable
-      onPress={() => Linking.openURL(appStoreUrl)}
-      className="flex-row items-center gap-3 rounded-xl bg-black px-6 py-3"
-    >
-      <Text className="text-2xl text-white">&#xF8FF;</Text>
-      <View>
-        <Text className="text-xs text-white/80">{t('landing.downloadOn')}</Text>
-        <Text className="text-lg font-semibold text-white">
-          {t('landing.appStore')}
-        </Text>
-      </View>
-    </Pressable>
-  )
-}
+const iconSrc: string = require('../../../assets/images/icon.png')
 
 const FEATURES = [
   {
@@ -62,115 +48,503 @@ const STEPS = [
   { number: '3', titleKey: 'landing.step3Title', descKey: 'landing.step3Desc' }
 ] as const
 
+const STATS = [
+  {
+    icon: '\uD83D\uDCF6',
+    labelKey: 'landing.stat1Label',
+    descKey: 'landing.stat1Desc'
+  },
+  {
+    icon: '\u2728',
+    labelKey: 'landing.stat2Label',
+    descKey: 'landing.stat2Desc'
+  },
+  {
+    icon: '\uD83D\uDC65',
+    labelKey: 'landing.stat3Label',
+    descKey: 'landing.stat3Desc'
+  },
+  {
+    icon: '\u23F1',
+    labelKey: 'landing.stat4Label',
+    descKey: 'landing.stat4Desc'
+  }
+] as const
+
+const USE_CASES = [
+  {
+    icon: '\uD83C\uDFD7\uFE0F',
+    titleKey: 'landing.useCase1Title',
+    descKey: 'landing.useCase1Desc'
+  },
+  {
+    icon: '\uD83C\uDF3E',
+    titleKey: 'landing.useCase2Title',
+    descKey: 'landing.useCase2Desc'
+  },
+  {
+    icon: '\uD83C\uDFE0',
+    titleKey: 'landing.useCase3Title',
+    descKey: 'landing.useCase3Desc'
+  },
+  {
+    icon: '\uD83C\uDFAA',
+    titleKey: 'landing.useCase4Title',
+    descKey: 'landing.useCase4Desc'
+  }
+] as const
+
+const fadeInUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, amount: 0.15 },
+  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const }
+})
+
+function AppleIcon() {
+  return (
+    <svg width="22" height="26" viewBox="0 0 384 512" fill="currentColor">
+      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+    </svg>
+  )
+}
+
+function AppStoreButton({
+  label,
+  sublabel
+}: {
+  label: string
+  sublabel: string
+}) {
+  return (
+    <a
+      href={APP_STORE_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="landing-app-store-btn"
+    >
+      <AppleIcon />
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 500, opacity: 0.6 }}>
+          {sublabel}
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.2 }}>
+          {label}
+        </div>
+      </div>
+    </a>
+  )
+}
+
 export default function LandingScreen() {
   const { t } = useTranslation()
 
   return (
-    <ScrollView className="flex-1 bg-white">
-      {/* Hero */}
-      <View className="items-center px-6 pt-24 pb-20">
-        <Image
-          source={require('../../../assets/images/icon.png')}
-          className="rounded-7 mb-8 h-28 w-28 shadow-lg"
+    <div style={{ height: '100dvh', overflowY: 'auto' }}>
+      {/* ── Hero ── */}
+      <section
+        className="landing-hero-bg"
+        style={{
+          minHeight: '100dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0 24px',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <motion.img
+          src={iconSrc}
+          alt="Svitlo"
+          className="landing-float landing-icon-glow"
+          style={{
+            width: 128,
+            height: 128,
+            borderRadius: 28,
+            marginBottom: 40
+          }}
+          initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          transition={{
+            duration: 0.7,
+            type: 'spring',
+            stiffness: 160,
+            damping: 14
+          }}
         />
-        <Text className="mb-3 text-center text-5xl font-bold tracking-tight text-gray-900">
-          Svitlo
-        </Text>
-        <Text className="mb-10 max-w-130 text-center text-xl leading-8 text-gray-500">
-          {t('landing.tagline')}
-        </Text>
-        <AppStoreButton />
-      </View>
 
-      {/* Features */}
-      <View className="border-t border-gray-100 bg-gray-50 px-6 py-20">
-        <View className="mx-auto w-full max-w-270">
-          <Text className="mb-3 text-center text-3xl font-bold tracking-tight text-gray-900">
-            {t('landing.featuresTitle')}
-          </Text>
-          <Text className="mb-12 text-center text-lg text-gray-500">
-            {t('landing.featuresSubtitle')}
-          </Text>
-
-          <View className="flex-row flex-wrap justify-center gap-5">
-            {FEATURES.map(f => (
-              <View
-                key={f.titleKey}
-                className="min-w-75 flex-1 basis-[30%] rounded-2xl border border-gray-200 bg-white p-6"
-              >
-                <Text className="mb-3 text-3xl">{f.icon}</Text>
-                <Text className="mb-2 text-lg font-semibold text-gray-900">
-                  {t(f.titleKey)}
-                </Text>
-                <Text className="text-base leading-6 text-gray-500">
-                  {t(f.descKey)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-
-      {/* How It Works */}
-      <View className="border-t border-gray-100 px-6 py-20">
-        <View className="mx-auto w-full max-w-270">
-          <Text className="mb-12 text-center text-3xl font-bold tracking-tight text-gray-900">
-            {t('landing.howItWorksTitle')}
-          </Text>
-
-          <View className="flex-row flex-wrap justify-center gap-10">
-            {STEPS.map(s => (
-              <View
-                key={s.number}
-                className="min-w-60 flex-1 basis-[28%] items-center gap-4"
-              >
-                <View className="h-14 w-14 items-center justify-center rounded-full bg-[#208AEF]">
-                  <Text className="text-xl font-bold text-white">
-                    {s.number}
-                  </Text>
-                </View>
-                <Text className="text-xl font-semibold text-gray-900">
-                  {t(s.titleKey)}
-                </Text>
-                <Text className="text-center text-base leading-6 text-gray-500">
-                  {t(s.descKey)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-
-      {/* AI Section */}
-      <View className="items-center bg-[#208AEF] px-6 py-20">
-        <View className="mx-auto max-w-160 items-center">
-          <Text className="mb-3 text-3xl font-bold text-white">
-            {t('landing.aiTitle')}
-          </Text>
-          <Text className="mb-6 text-center text-lg leading-8 text-white/90">
-            {t('landing.aiDesc')}
-          </Text>
-        </View>
-      </View>
-
-      {/* Footer CTA */}
-      <View className="items-center bg-gray-900 px-6 py-20">
-        <Text className="mb-3 text-3xl font-bold text-white">
-          {t('landing.ctaTitle')}
-        </Text>
-        <Text className="mb-8 max-w-120 text-center text-lg text-gray-400">
-          {t('landing.ctaDesc')}
-        </Text>
-        <AppStoreButton />
-        <Pressable
-          onPress={() => Linking.openURL('/privacy-policy')}
-          className="mt-8"
+        <motion.h1
+          className="landing-gradient-text"
+          style={{
+            margin: 0,
+            fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
+            fontWeight: 800,
+            textAlign: 'center',
+            letterSpacing: '-0.03em',
+            marginBottom: 24,
+            lineHeight: 1.1
+          }}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.15 }}
         >
-          <Text className="text-sm text-gray-500 underline">
-            {t('auth.privacyPolicy')}
-          </Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+          {t('landing.heroTitle')}
+        </motion.h1>
+
+        <motion.p
+          style={{
+            margin: 0,
+            maxWidth: 520,
+            textAlign: 'center',
+            fontSize: 'clamp(1rem, 2vw, 1.25rem)',
+            lineHeight: 1.7,
+            color: 'rgba(255,255,255,0.55)',
+            marginBottom: 48
+          }}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.3 }}
+        >
+          {t('landing.tagline')}
+        </motion.p>
+
+        <motion.div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 20
+          }}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.45 }}
+        >
+          <AppStoreButton
+            label={t('landing.appStore')}
+            sublabel={t('landing.downloadOn')}
+          />
+          <a
+            href="#features"
+            onClick={e => {
+              e.preventDefault()
+              document
+                .getElementById('features')
+                ?.scrollIntoView({ behavior: 'smooth' })
+            }}
+            className="landing-learn-more"
+          >
+            {t('landing.learnMore')} ↓
+          </a>
+        </motion.div>
+      </section>
+
+      {/* ── Stats Strip ── */}
+      <section
+        style={{
+          borderBottom: '1px solid #f0f0f0',
+          backgroundColor: '#fff',
+          padding: '56px 24px'
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 900,
+            margin: '0 auto',
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: '32px 64px'
+          }}
+        >
+          {STATS.map((s, i) => (
+            <motion.div
+              key={s.labelKey}
+              style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+              {...fadeInUp(i * 0.08)}
+            >
+              <span style={{ fontSize: 28 }}>{s.icon}</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>
+                  {t(s.labelKey)}
+                </div>
+                <div style={{ fontSize: 13, color: '#888' }}>
+                  {t(s.descKey)}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Features ── */}
+      <section
+        id="features"
+        className="landing-section"
+        style={{ backgroundColor: '#f9fafb' }}
+      >
+        <div className="landing-container landing-container--xl">
+          <motion.h2
+            className="landing-section-title"
+            style={{ marginBottom: 12 }}
+            {...fadeInUp()}
+          >
+            {t('landing.featuresTitle')}
+          </motion.h2>
+          <motion.p
+            className="landing-section-subtitle"
+            style={{ marginBottom: 64 }}
+            {...fadeInUp(0.08)}
+          >
+            {t('landing.featuresSubtitle')}
+          </motion.p>
+
+          <div
+            className="landing-grid"
+            style={{
+              gridTemplateColumns:
+                'repeat(auto-fill, minmax(min(300px, 100%), 1fr))'
+            }}
+          >
+            {FEATURES.map((f, i) => (
+              <motion.div
+                key={f.titleKey}
+                className="landing-feature-card"
+                {...fadeInUp(i * 0.06)}
+              >
+                <span className="landing-icon">{f.icon}</span>
+                <h3 className="landing-card-title">{t(f.titleKey)}</h3>
+                <p className="landing-card-body">{t(f.descKey)}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How It Works ── */}
+      <section className="landing-section" style={{ backgroundColor: '#fff' }}>
+        <div className="landing-container landing-container--lg">
+          <motion.h2
+            className="landing-section-title"
+            style={{ marginBottom: 64 }}
+            {...fadeInUp()}
+          >
+            {t('landing.howItWorksTitle')}
+          </motion.h2>
+
+          <div
+            className="landing-grid"
+            style={{
+              gridTemplateColumns:
+                'repeat(auto-fill, minmax(min(240px, 100%), 1fr))',
+              gap: 48
+            }}
+          >
+            {STEPS.map((s, i) => (
+              <motion.div
+                key={s.number}
+                className="landing-centered"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center'
+                }}
+                {...fadeInUp(i * 0.12)}
+              >
+                <div className="landing-step-number">
+                  <span
+                    style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}
+                  >
+                    {s.number}
+                  </span>
+                </div>
+                <h3 className="landing-card-title" style={{ fontSize: 18 }}>
+                  {t(s.titleKey)}
+                </h3>
+                <p className="landing-card-body">{t(s.descKey)}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Use Cases ── */}
+      <section className="landing-section landing-dark-section">
+        <div className="landing-container landing-container--xl">
+          <motion.h2
+            className="landing-section-title landing-section-title--light"
+            style={{ marginBottom: 12 }}
+            {...fadeInUp()}
+          >
+            {t('landing.useCasesTitle')}
+          </motion.h2>
+          <motion.p
+            className="landing-section-subtitle landing-section-subtitle--light"
+            style={{ marginBottom: 64 }}
+            {...fadeInUp(0.08)}
+          >
+            {t('landing.useCasesSubtitle')}
+          </motion.p>
+
+          <div
+            className="landing-grid"
+            style={{
+              gridTemplateColumns:
+                'repeat(auto-fill, minmax(min(280px, 100%), 1fr))'
+            }}
+          >
+            {USE_CASES.map((uc, i) => (
+              <motion.div
+                key={uc.titleKey}
+                className="landing-use-case-card"
+                {...fadeInUp(i * 0.08)}
+              >
+                <span className="landing-icon">{uc.icon}</span>
+                <h3 className="landing-card-title landing-card-title--light">
+                  {t(uc.titleKey)}
+                </h3>
+                <p className="landing-card-body landing-card-body--light">
+                  {t(uc.descKey)}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── AI Section ── */}
+      <section
+        className="landing-section"
+        style={{
+          background:
+            'linear-gradient(135deg, var(--brand-blue), var(--brand-indigo))'
+        }}
+      >
+        <motion.div
+          className="landing-container landing-container--md landing-centered"
+          {...fadeInUp()}
+        >
+          <motion.span
+            style={{ fontSize: 48, display: 'inline-block', marginBottom: 24 }}
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            ✨
+          </motion.span>
+          <h2
+            className="landing-section-title landing-section-title--light"
+            style={{ marginBottom: 16 }}
+          >
+            {t('landing.aiTitle')}
+          </h2>
+          <p
+            style={{
+              fontSize: 18,
+              lineHeight: 1.8,
+              color: 'rgba(255,255,255,0.9)',
+              margin: 0
+            }}
+          >
+            {t('landing.aiDesc')}
+          </p>
+        </motion.div>
+      </section>
+
+      {/* ── Made in Ukraine ── */}
+      <section className="landing-section landing-dark-section">
+        <motion.div
+          className="landing-container landing-container--sm landing-centered"
+          {...fadeInUp()}
+        >
+          <motion.span
+            style={{ fontSize: 48, display: 'inline-block', marginBottom: 24 }}
+            initial={{ scale: 0 }}
+            whileInView={{ scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ type: 'spring', stiffness: 200, damping: 12 }}
+          >
+            🇺🇦
+          </motion.span>
+          <h2
+            className="landing-section-title landing-section-title--light"
+            style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', marginBottom: 16 }}
+          >
+            {t('landing.madeInUkraine')}
+          </h2>
+          <p
+            className="landing-card-body landing-card-body--light"
+            style={{ fontSize: 16, lineHeight: 1.8 }}
+          >
+            {t('landing.madeInUkraineDesc')}
+          </p>
+        </motion.div>
+      </section>
+
+      {/* ── CTA Footer ── */}
+      <section
+        className="landing-section"
+        style={{
+          backgroundColor: 'var(--dark-bg-deep)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.06)'
+        }}
+      >
+        <motion.div
+          className="landing-container landing-container--sm landing-centered"
+          {...fadeInUp()}
+        >
+          <h2
+            className="landing-section-title landing-section-title--light"
+            style={{ marginBottom: 16 }}
+          >
+            {t('landing.ctaTitle')}
+          </h2>
+          <p
+            className="landing-section-subtitle landing-section-subtitle--light"
+            style={{ marginBottom: 12 }}
+          >
+            {t('landing.ctaDesc')}
+          </p>
+          <p
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: 'var(--brand-blue)',
+              marginBottom: 40
+            }}
+          >
+            {t('landing.free')}
+          </p>
+
+          <AppStoreButton
+            label={t('landing.appStore')}
+            sublabel={t('landing.downloadOn')}
+          />
+
+          <div
+            style={{
+              marginTop: 40,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 16
+            }}
+          >
+            <a href="/privacy-policy" className="landing-privacy-link">
+              {t('auth.privacyPolicy')}
+            </a>
+            <p
+              style={{
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.2)',
+                margin: 0
+              }}
+            >
+              {t('landing.copyright', { year: CURRENT_YEAR })}
+            </p>
+          </div>
+        </motion.div>
+      </section>
+    </div>
   )
 }
