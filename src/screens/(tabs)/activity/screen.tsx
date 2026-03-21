@@ -216,14 +216,17 @@ export default function ActivityScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerRight: () => (
-            <GeneratorScopeMenu
-              admin={admin}
-              availableGenerators={availableGenerators}
-              effectiveScope={effectiveScope}
-              onSelect={setGeneratorScope}
-            />
-          )
+          headerRight:
+            availableGenerators.length > 1
+              ? () => (
+                  <GeneratorScopeMenu
+                    admin={admin}
+                    availableGenerators={availableGenerators}
+                    effectiveScope={effectiveScope}
+                    onSelect={setGeneratorScope}
+                  />
+                )
+              : undefined
         }}
       />
       <Animated.FlatList

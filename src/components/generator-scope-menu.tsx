@@ -23,11 +23,19 @@ export function GeneratorScopeMenu({
 }: GeneratorScopeMenuProps) {
   if (availableGenerators.length <= 1) return null
 
+  const isFiltered = effectiveScope !== (admin ? 'org' : 'my')
+
+  const scopeIcon = !isFiltered
+    ? 'line.3.horizontal.decrease'
+    : effectiveScope === 'my'
+      ? 'person'
+      : 'bolt.fill'
+
   return (
     <Host matchContents>
       <SwiftMenu
         label="Filter"
-        systemImage="line.3.horizontal.decrease"
+        systemImage={scopeIcon}
         modifiers={[labelStyle('iconOnly')]}
       >
         {admin ? (

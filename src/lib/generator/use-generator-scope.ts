@@ -8,6 +8,13 @@ import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 export function useGeneratorScope() {
   const [generatorScope, setGeneratorScope] = useState<string | null>(null)
   const { selectedOrgId } = useSelectedOrg()
+  const [prevOrgId, setPrevOrgId] = useState(selectedOrgId)
+
+  // Reset filter when switching orgs
+  if (prevOrgId !== selectedOrgId) {
+    setPrevOrgId(selectedOrgId)
+    setGeneratorScope(null)
+  }
   const { userOrgs, isAdmin, userId } = useUserOrgs()
   const admin = isAdmin(selectedOrgId)
 

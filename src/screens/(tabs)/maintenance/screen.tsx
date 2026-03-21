@@ -48,14 +48,17 @@ export default function MaintenanceScreen() {
       </View>
     )
 
-  const headerRight = () => (
-    <GeneratorScopeMenu
-      admin={admin}
-      availableGenerators={availableGenerators}
-      effectiveScope={effectiveScope}
-      onSelect={setGeneratorScope}
-    />
-  )
+  const headerRight =
+    availableGenerators.length > 1
+      ? () => (
+          <GeneratorScopeMenu
+            admin={admin}
+            availableGenerators={availableGenerators}
+            effectiveScope={effectiveScope}
+            onSelect={setGeneratorScope}
+          />
+        )
+      : undefined
 
   if (isEmpty)
     return (
