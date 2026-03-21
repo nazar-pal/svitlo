@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Platform, Pressable, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { SymbolView } from 'expo-symbols'
+import { useThemeColor } from 'heroui-native'
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -42,6 +43,7 @@ export function SwipeableRow({
   onDelete,
   openRowRef
 }: SwipeableRowProps) {
+  const dangerForeground = useThemeColor('danger-foreground')
   const translateX = useSharedValue(0)
   const rowWidth = useSharedValue(0)
   const rowHeight = useSharedValue(0)
@@ -206,7 +208,11 @@ export function SwipeableRow({
           className="bg-danger items-center justify-center"
           style={buttonStyle}
         >
-          <SymbolView name="trash.fill" size={22} tintColor="#FFFFFF" />
+          <SymbolView
+            name="trash.fill"
+            size={22}
+            tintColor={dangerForeground}
+          />
         </AnimatedPressable>
       </Animated.View>
       <GestureDetector gesture={Gesture.Simultaneous(pan, tapToClose)}>

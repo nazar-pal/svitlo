@@ -1,12 +1,12 @@
 import {
-  Checkbox,
+  ControlField,
   Description,
   Input,
   Label,
   Tabs,
   TextField
 } from 'heroui-native'
-import { Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
 import { selection } from '@/lib/haptics'
@@ -46,21 +46,22 @@ export function SuggestionCard({
 
   return (
     <View className={`py-3 ${!item.selected ? 'opacity-40' : ''}`}>
-      <Pressable
-        onPress={() => {
+      <ControlField
+        isSelected={item.selected}
+        onSelectedChange={() => {
           selection()
           onToggle()
         }}
         className="flex-row items-center gap-3"
       >
-        <Checkbox isSelected={item.selected} />
+        <ControlField.Indicator variant="checkbox" />
         <Text
           className="text-foreground text-3.75 flex-1 font-medium"
           numberOfLines={item.selected ? undefined : 1}
         >
           {item.taskName}
         </Text>
-      </Pressable>
+      </ControlField>
 
       {item.selected ? (
         <View className="mt-3 ml-9 gap-3">
@@ -133,18 +134,19 @@ export function SuggestionCard({
             </TextField>
           ) : null}
 
-          <Pressable
-            onPress={() => {
+          <ControlField
+            isSelected={item.isOneTime}
+            onSelectedChange={() => {
               selection()
               onUpdate({ isOneTime: !item.isOneTime })
             }}
             className="flex-row items-center gap-3"
           >
-            <Checkbox isSelected={item.isOneTime} />
+            <ControlField.Indicator variant="checkbox" />
             <Text className="text-foreground text-sm">
               {t('maintenanceTemplate.oneTimeTask')}
             </Text>
-          </Pressable>
+          </ControlField>
         </View>
       ) : null}
     </View>

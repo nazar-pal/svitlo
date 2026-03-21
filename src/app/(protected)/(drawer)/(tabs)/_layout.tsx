@@ -1,7 +1,7 @@
 import { isLiquidGlassAvailable } from 'expo-glass-effect'
 import { NativeTabs } from 'expo-router/unstable-native-tabs'
 import { useThemeColor } from 'heroui-native'
-import { DynamicColorIOS } from 'react-native'
+import { DynamicColorIOS, processColor } from 'react-native'
 
 import { InvitationWatcher } from '@/components/invitation-watcher'
 import { useTranslation } from '@/lib/i18n'
@@ -13,6 +13,12 @@ export const unstable_settings = {
 export default function AppTabs() {
   const [accentColor] = useThemeColor(['accent'])
   const { t } = useTranslation()
+
+  const processed = processColor(accentColor)
+  const indicatorColor =
+    typeof processed === 'number'
+      ? `rgba(${(processed >> 16) & 0xff}, ${(processed >> 8) & 0xff}, ${processed & 0xff}, 0.15)`
+      : accentColor
 
   const dynamicLabelAndIconColor = isLiquidGlassAvailable()
     ? DynamicColorIOS({ light: '#000', dark: '#FFF' })
@@ -29,7 +35,7 @@ export default function AppTabs() {
         iconColor={dynamicLabelAndIconColor}
         tintColor={accentColor}
         labelVisibilityMode="labeled"
-        indicatorColor={accentColor + '25'}
+        indicatorColor={indicatorColor}
         disableTransparentOnScrollEdge={true} // Used to prevent transparent background on iOS 18 and older
       >
         <NativeTabs.Trigger name="(home)">
