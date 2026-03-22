@@ -7,12 +7,6 @@ import { hoursBetween } from '@/lib/utils/time'
 
 export type GeneratorStatus = 'running' | 'resting' | 'available'
 
-export interface StatusCounts {
-  running: number
-  resting: number
-  available: number
-}
-
 export interface GroupedGenerators {
   running: Generator[]
   resting: Generator[]
@@ -31,7 +25,7 @@ export const GENERATOR_STATUS_KEYS = {
   available: 'generatorStatus.available'
 } as const satisfies Record<GeneratorStatus, ParseKeys>
 
-interface GeneratorStatusInfo {
+export interface GeneratorStatusInfo {
   status: GeneratorStatus
   openSession: GeneratorSession | null
   restEndsAt: Date | null

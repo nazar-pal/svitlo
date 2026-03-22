@@ -1,7 +1,9 @@
 import {
+  getAllGeneratorAssignments,
   getAllGeneratorSessions,
   getAllMaintenanceRecords,
   getAllMaintenanceTemplates,
+  getAllUsers,
   getGeneratorsByOrg
 } from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
@@ -21,10 +23,13 @@ export function useGeneratorListData() {
   const { data: allSessions } = useDrizzleQuery(getAllGeneratorSessions())
   const { data: allTemplates } = useDrizzleQuery(getAllMaintenanceTemplates())
   const { data: allRecords } = useDrizzleQuery(getAllMaintenanceRecords())
+  const { data: allAssignments } = useDrizzleQuery(getAllGeneratorAssignments())
+  const { data: users } = useDrizzleQuery(getAllUsers())
 
   const sessionsByGenerator = groupBy(allSessions, s => s.generatorId)
   const templatesByGenerator = groupBy(allTemplates, t => t.generatorId)
   const recordsByGenerator = groupBy(allRecords, r => r.generatorId)
+  const assignmentsByGenerator = groupBy(allAssignments, a => a.generatorId)
 
   const nextMaintenanceByGenerator = new Map<
     string,
@@ -44,6 +49,8 @@ export function useGeneratorListData() {
   return {
     generators,
     sessionsByGenerator,
-    nextMaintenanceByGenerator
+    nextMaintenanceByGenerator,
+    assignmentsByGenerator,
+    users
   }
 }

@@ -1,10 +1,5 @@
 import { SymbolView } from 'expo-symbols'
-import {
-  Button,
-  PressableFeedback,
-  Surface,
-  useThemeColor
-} from 'heroui-native'
+import { Button, Surface, useThemeColor } from 'heroui-native'
 import { Stack, useRouter } from 'expo-router'
 import { ScrollView, Text, View } from 'react-native'
 
@@ -99,9 +94,6 @@ export default function MaintenanceScreen() {
                       key={item.templateId}
                       item={item}
                       generator={generatorsById.get(item.generatorId)}
-                      onPress={() =>
-                        router.push(`/generator/${item.generatorId}`)
-                      }
                       onRecord={() =>
                         router.push(
                           `/maintenance/record?templateId=${item.templateId}&generatorId=${item.generatorId}`
@@ -122,12 +114,10 @@ export default function MaintenanceScreen() {
 function MaintenanceListItem({
   item,
   generator,
-  onPress,
   onRecord
 }: {
   item: MaintenanceItemInfo
   generator: Generator | undefined
-  onPress: () => void
   onRecord: () => void
 }) {
   const { t } = useTranslation()
@@ -163,42 +153,38 @@ function MaintenanceListItem({
         : 'text-muted'
 
   return (
-    <PressableFeedback onPress={onPress}>
-      <Surface variant="secondary">
-        <View className="flex-row items-center gap-3">
-          <View
-            className={`${iconBgClass} size-10 items-center justify-center rounded-xl`}
-          >
-            <SymbolView name="wrench.fill" size={20} tintColor={iconColor} />
-          </View>
-
-          <View className="flex-1 gap-1">
-            <Text
-              className="text-foreground text-4.25 font-semibold"
-              numberOfLines={1}
-            >
-              {item.taskName}
-            </Text>
-            <Text className="text-muted text-3.25" numberOfLines={1}>
-              {generator?.title ?? t('maintenanceTab.unknownGenerator')}
-              {' · '}
-              <Text className={statusColorClass}>{statusText}</Text>
-            </Text>
-          </View>
-
-          {urgency !== 'ok' ? (
-            <Button
-              variant={urgency === 'overdue' ? 'primary' : 'outline'}
-              size="sm"
-              onPress={onRecord}
-            >
-              {t('maintenanceTab.record')}
-            </Button>
-          ) : (
-            <SymbolView name="chevron.right" size={14} tintColor={mutedColor} />
-          )}
+    <Surface variant="secondary">
+      <View className="flex-row items-center gap-3">
+        <View
+          className={`${iconBgClass} size-10 items-center justify-center rounded-xl`}
+        >
+          <SymbolView name="wrench.fill" size={20} tintColor={iconColor} />
         </View>
-      </Surface>
-    </PressableFeedback>
+
+        <View className="flex-1 gap-1">
+          <Text
+            className="text-foreground text-4.25 font-semibold"
+            numberOfLines={1}
+          >
+            {item.taskName}
+          </Text>
+          <Text className="text-muted text-3.25" numberOfLines={1}>
+            {generator?.title ?? t('maintenanceTab.unknownGenerator')}
+            {' · '}
+            <Text className={statusColorClass}>{statusText}</Text>
+          </Text>
+        </View>
+
+        {urgency !== 'ok' && (
+          <Button
+            variant={urgency === 'overdue' ? 'primary' : 'outline'}
+            size="sm"
+            onPress={onRecord}
+          >
+            {t('maintenanceTab.record')}
+          </Button>
+        )}
+      </View>
+    </Surface>
   )
 }

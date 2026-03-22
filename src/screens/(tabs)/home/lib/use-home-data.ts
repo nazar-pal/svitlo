@@ -2,8 +2,7 @@ import { getAllGeneratorSessions } from '@/data/client/queries'
 import { useGeneratorListData } from '@/lib/generator/use-generator-list-data'
 import {
   computeGeneratorStatus,
-  type GroupedGenerators,
-  type StatusCounts
+  type GroupedGenerators
 } from '@/lib/generator/status'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
@@ -16,8 +15,13 @@ export function useHomeData() {
   const { userOrgs, isAdmin } = useUserOrgs()
   const { selectedOrgId } = useSelectedOrg()
 
-  const { generators, sessionsByGenerator, nextMaintenanceByGenerator } =
-    useGeneratorListData()
+  const {
+    generators,
+    sessionsByGenerator,
+    nextMaintenanceByGenerator,
+    assignmentsByGenerator,
+    users
+  } = useGeneratorListData()
 
   const { data: allSessions } = useDrizzleQuery(getAllGeneratorSessions())
 
@@ -41,12 +45,6 @@ export function useHomeData() {
     grouped[status].push(g)
   }
 
-  const statusCounts: StatusCounts = {
-    running: grouped.running.length + (myActiveGenerator ? 1 : 0),
-    resting: grouped.resting.length,
-    available: grouped.available.length
-  }
-
   return {
     userId,
     userOrgs,
@@ -54,9 +52,10 @@ export function useHomeData() {
     generators,
     sessionsByGenerator,
     nextMaintenanceByGenerator,
+    assignmentsByGenerator,
+    users,
     myActiveSession,
     myActiveGenerator,
-    grouped,
-    statusCounts
+    grouped
   }
 }

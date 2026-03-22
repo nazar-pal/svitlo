@@ -38,7 +38,7 @@ export default function AppTabs() {
         indicatorColor={indicatorColor}
         disableTransparentOnScrollEdge={true} // Used to prevent transparent background on iOS 18 and older
       >
-        <NativeTabs.Trigger name="(home)">
+        <NativeTabs.Trigger name="(home)" disableAutomaticContentInsets>
           <NativeTabs.Trigger.Label selectedStyle={{ color: accentColor }}>
             {t('tabs.home')}
           </NativeTabs.Trigger.Label>

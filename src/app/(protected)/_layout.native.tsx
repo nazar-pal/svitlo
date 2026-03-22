@@ -21,6 +21,23 @@ const formSheetOptions = {
   headerLeft: () => <ModalCloseButton />
 } satisfies StackScreenProps['options']
 
+const compactSheetOptions = {
+  ...formSheetOptions,
+  sheetAllowedDetents: [0.5, 1.0],
+  sheetExpandsWhenScrolledToEdge: true
+} satisfies StackScreenProps['options']
+
+const halfSheetOptions = {
+  presentation: 'formSheet',
+  sheetGrabberVisible: true,
+  sheetAllowedDetents: [0.5, 1.0],
+  sheetExpandsWhenScrolledToEdge: true,
+  headerShown: true,
+  ...(glassAvailable
+    ? { headerTransparent: true }
+    : { headerBlurEffect: 'systemMaterial' })
+} satisfies StackScreenProps['options']
+
 export default function ProtectedLayout() {
   const { identity } = useLocalIdentity()
   const { t } = useTranslation()
@@ -35,28 +52,12 @@ export default function ProtectedLayout() {
           <Stack.Screen name="(drawer)" />
           <Stack.Screen name="re-auth" options={{ presentation: 'modal' }} />
           <Stack.Screen
-            name="generator/[id]"
-            options={{
-              headerShown: true,
-              headerLargeTitle: true,
-              headerLargeTitleShadowVisible: false,
-              headerShadowVisible: false,
-              headerBackButtonDisplayMode: 'minimal'
-            }}
+            name="generator/activity"
+            options={{ ...halfSheetOptions, title: t('tabs.activity') }}
           />
           <Stack.Screen
-            name="generator/activity"
-            options={{
-              presentation: 'formSheet',
-              sheetGrabberVisible: true,
-              sheetAllowedDetents: [0.5, 1.0],
-              sheetExpandsWhenScrolledToEdge: true,
-              headerShown: true,
-              ...(glassAvailable
-                ? { headerTransparent: true }
-                : { headerBlurEffect: 'systemMaterial' }),
-              title: t('tabs.activity')
-            }}
+            name="generator/maintenance"
+            options={{ ...halfSheetOptions, title: t('tabs.maintenance') }}
           />
           <Stack.Screen
             name="generator/create"
@@ -93,7 +94,7 @@ export default function ProtectedLayout() {
           <Stack.Screen
             name="maintenance/record"
             options={{
-              ...formSheetOptions,
+              ...compactSheetOptions,
               title: t('screens.recordMaintenance')
             }}
           />
@@ -114,21 +115,21 @@ export default function ProtectedLayout() {
           <Stack.Screen
             name="organization/create"
             options={{
-              ...formSheetOptions,
+              ...compactSheetOptions,
               title: t('screens.newOrganization')
             }}
           />
           <Stack.Screen
             name="organization/[id]/invite"
             options={{
-              ...formSheetOptions,
+              ...compactSheetOptions,
               title: t('screens.inviteMember')
             }}
           />
           <Stack.Screen
             name="organization/[id]/rename"
             options={{
-              ...formSheetOptions,
+              ...compactSheetOptions,
               title: t('screens.renameOrganization')
             }}
           />

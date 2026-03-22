@@ -1,78 +1,83 @@
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { parseISO } from 'date-fns'
 import { SymbolView } from 'expo-symbols'
+import { ScrollView, Text, View } from 'react-native'
 import {
   ListGroup,
   PressableFeedback,
   Separator,
-  Spinner,
   Surface,
   useThemeColor
 } from 'heroui-native'
-import { Text, View } from 'react-native'
 
-import { SectionHeader } from '@/components/section-header'
-import type {
-  MaintenanceRecord,
-  MaintenanceTemplate
-} from '@/data/client/db-schema'
+import {
+  getGenerator,
+  getAllOrganizations,
+  getMaintenanceRecords,
+  getMaintenanceTemplates
+} from '@/data/client/queries'
 import { formatDate, useTranslation } from '@/lib/i18n'
+import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
+import { useLocalUser } from '@/lib/powersync'
 
-interface MaintenanceSectionProps {
-  templates: MaintenanceTemplate[]
-  records: MaintenanceRecord[]
-  generatorId: string
-  isAdmin: boolean
-  isSuggesting: boolean
-  onSuggest: () => void
-  onAddTemplate: () => void
-  onRecordMaintenance: (templateId: string) => void
-}
-
-export function MaintenanceSection({
-  templates,
-  records,
-  generatorId,
-  isAdmin,
-  isSuggesting,
-  onSuggest,
-  onAddTemplate,
-  onRecordMaintenance
-}: MaintenanceSectionProps) {
+export default function MaintenanceScreen() {
   const { t } = useTranslation()
+  const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
+  const router = useRouter()
+  const localUser = useLocalUser()
   const foregroundColor = useThemeColor('foreground')
   const mutedColor = useThemeColor('muted')
+
+  const userId = localUser?.id ?? ''
+
+  const { data: gens } = useDrizzleQuery(
+    generatorId ? getGenerator(generatorId) : undefined
+  )
+  const generator = gens[0]
+
+  const { data: templates } = useDrizzleQuery(
+    generatorId ? getMaintenanceTemplates(generatorId) : undefined
+  )
+
+  const { data: records } = useDrizzleQuery(
+    generatorId ? getMaintenanceRecords(generatorId) : undefined
+  )
+
+  const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
+
+  if (!generator) return null
+
+  const org = allOrgs.find(o => o.id === generator.organizationId)
+  const isAdmin = org?.adminUserId === userId
 
   function getLastRecordForTemplate(templateId: string) {
     return records.find(r => r.templateId === templateId)
   }
 
   return (
-    <View className="gap-2">
-      <View className="flex-row items-center justify-between">
-        <SectionHeader title={t('tabs.maintenance')} />
-        {isAdmin ? (
-          <View className="flex-row items-center gap-3">
-            {isSuggesting ? (
-              <Spinner size="sm" />
-            ) : (
-              <PressableFeedback onPress={onSuggest}>
-                <SymbolView
-                  name="sparkles"
-                  size={20}
-                  tintColor={foregroundColor}
-                />
-              </PressableFeedback>
-            )}
-            <PressableFeedback onPress={onAddTemplate}>
-              <SymbolView
-                name="plus.circle.fill"
-                size={22}
-                tintColor={foregroundColor}
-              />
-            </PressableFeedback>
-          </View>
-        ) : null}
-      </View>
+    <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerClassName="px-5 pb-10 pt-2"
+    >
+      <Stack.Screen options={{ title: t('tabs.maintenance') }} />
+
+      {isAdmin ? (
+        <View className="mb-3 flex-row justify-end">
+          <PressableFeedback
+            onPress={() =>
+              router.push(
+                `/maintenance/create-template?generatorId=${generatorId}`
+              )
+            }
+          >
+            <SymbolView
+              name="plus.circle.fill"
+              size={22}
+              tintColor={foregroundColor}
+            />
+          </PressableFeedback>
+        </View>
+      ) : null}
 
       {templates.length === 0 ? (
         <Surface variant="secondary" className="items-center py-6">
@@ -88,7 +93,11 @@ export function MaintenanceSection({
               <View key={template.id}>
                 {index > 0 ? <Separator className="mx-4" /> : null}
                 <ListGroup.Item
-                  onPress={() => onRecordMaintenance(template.id)}
+                  onPress={() =>
+                    router.push(
+                      `/maintenance/record?templateId=${template.id}&generatorId=${generatorId}`
+                    )
+                  }
                 >
                   <ListGroup.ItemPrefix>
                     <SymbolView
@@ -152,6 +161,6 @@ export function MaintenanceSection({
           })}
         </ListGroup>
       )}
-    </View>
+    </ScrollView>
   )
 }
