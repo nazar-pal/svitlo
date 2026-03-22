@@ -47,7 +47,7 @@ export function UpdateChecker() {
   }, [isUpdatePending, downloadedUpdate, currentlyRunning, toast])
 
   useEffect(() => {
-    if (!Updates.isEnabled) return
+    if (__DEV__ || !Updates.isEnabled) return
     Updates.checkForUpdateAsync().catch(console.warn)
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') Updates.checkForUpdateAsync().catch(console.warn)
