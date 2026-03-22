@@ -3,5 +3,5 @@ import { useTranslation } from '@/lib/i18n'
 
 export default function HomeLayout() {
   const { t } = useTranslation()
-  return <TabStackLayout title={t('tabs.home')} />
+  return <TabStackLayout title={t('tabs.home')} gestureEnabled={false} />
 }

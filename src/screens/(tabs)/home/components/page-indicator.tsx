@@ -6,6 +6,8 @@ import Animated, {
   type SharedValue
 } from 'react-native-reanimated'
 
+import { circularDistance } from '@/lib/utils/circular-distance'
+
 import {
   GENERATOR_STATUS_META,
   type GeneratorStatus
@@ -20,11 +22,13 @@ interface PageIndicatorProps {
 
 function Dot({
   index,
+  count,
   scrollX,
   pageWidth,
   status
 }: {
   index: number
+  count: number
   scrollX: SharedValue<number>
   pageWidth: number
   status: GeneratorStatus
@@ -32,18 +36,15 @@ function Dot({
   const statusColor = useThemeColor(GENERATOR_STATUS_META[status].color)
 
   const animatedStyle = useAnimatedStyle(() => {
-    const input = [
-      (index - 1) * pageWidth,
-      index * pageWidth,
-      (index + 1) * pageWidth
-    ]
+    const dist = circularDistance(scrollX.value, index, count, pageWidth)
+    const input = [-pageWidth, 0, pageWidth]
     return {
-      width: interpolate(scrollX.value, input, [8, 10, 8], 'clamp'),
-      height: interpolate(scrollX.value, input, [8, 10, 8], 'clamp'),
-      opacity: interpolate(scrollX.value, input, [0.3, 1, 0.3], 'clamp'),
+      width: interpolate(dist, input, [8, 10, 8], 'clamp'),
+      height: interpolate(dist, input, [8, 10, 8], 'clamp'),
+      opacity: interpolate(dist, input, [0.3, 1, 0.3], 'clamp'),
       transform: [
         {
-          scale: interpolate(scrollX.value, input, [0.8, 1, 0.8], 'clamp')
+          scale: interpolate(dist, input, [0.8, 1, 0.8], 'clamp')
         }
       ]
     }
@@ -76,6 +77,7 @@ export function PageIndicator({
         <Dot
           key={index}
           index={index}
+          count={count}
           scrollX={scrollX}
           pageWidth={pageWidth}
           status={status}

@@ -1,6 +1,4 @@
-import { getAllGeneratorSessions } from '@/data/client/queries'
 import { useGeneratorListData } from '@/lib/generator/use-generator-list-data'
-import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
@@ -13,13 +11,12 @@ export function useHomeData() {
 
   const {
     generators,
+    allSessions,
     sessionsByGenerator,
     nextMaintenanceByGenerator,
     assignmentsByGenerator,
     users
   } = useGeneratorListData()
-
-  const { data: allSessions } = useDrizzleQuery(getAllGeneratorSessions())
 
   const admin = isAdmin(selectedOrgId)
 

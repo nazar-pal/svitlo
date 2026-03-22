@@ -3,7 +3,13 @@ import { isLiquidGlassAvailable } from 'expo-glass-effect'
 import { Stack } from 'expo-router'
 import { useThemeColor } from 'heroui-native'
 
-export function TabStackLayout({ title }: { title: string }) {
+export function TabStackLayout({
+  title,
+  gestureEnabled = true
+}: {
+  title: string
+  gestureEnabled?: boolean
+}) {
   const tabBarBackgroundColor = useThemeColor('background')
 
   return (
@@ -20,6 +26,7 @@ export function TabStackLayout({ title }: { title: string }) {
         name={'index'}
         options={{
           title,
+          gestureEnabled,
           headerShown: true,
           headerStyle: {
             backgroundColor: isLiquidGlassAvailable()

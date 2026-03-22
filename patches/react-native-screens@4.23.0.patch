@@ -1,0 +1,25 @@
+diff --git a/ios/RNSScreenStack.mm b/ios/RNSScreenStack.mm
+index e37e40ab0aa83d46709a75b0fc0f7234da63cdd3..adb01271ed64bc57811f317e4cb94ee105e8c06f 100644
+--- a/ios/RNSScreenStack.mm
++++ b/ios/RNSScreenStack.mm
+@@ -1275,7 +1275,7 @@ - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
+       // ScrollView should take precedence when scrolling horizontally (it should be required to fail).
+       // However, if it does not allow for horizontal scrolling, there should be no such restriction,
+       // and swiping horizontally should dismiss the screen.
+-      return [self scrollViewHasHorizontalPart:static_cast<UIScrollView *>(otherGestureRecognizer.view)];
++      return [self scrollViewHasHorizontalPart:static_cast<UIScrollView *>(otherGestureRecognizer.view)] && _controller.viewControllers.count > 1;
+     }
+   }
+ 
+@@ -1299,7 +1299,10 @@ - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
+ #endif // check for iOS >= 26
+ 
+   // edge swipe to dismiss should take precedence over scrolling (both horizontally and vertically)
+-  return isEdgeSwipeGestureRecognizer && [self isScrollViewPanGestureRecognizer:otherGestureRecognizer];
++  // Only enforce when there's actually a screen to pop to (viewControllers.count > 1).
++  // On root screens, this failure requirement blocks horizontal scroll/pager gestures unnecessarily.
++  // See: https://github.com/callstack/react-native-pager-view/issues/1050
++  return isEdgeSwipeGestureRecognizer && [self isScrollViewPanGestureRecognizer:otherGestureRecognizer] && _controller.viewControllers.count > 1;
+ }
+ 
+ #endif // !TARGET_OS_TV

@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Alert, useWindowDimensions, View } from 'react-native'
-import { SafeAreaView } from 'react-native-screens/experimental'
 import Animated, {
-  interpolate,
+  scrollTo,
+  useAnimatedRef,
   useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-  type SharedValue
+  useSharedValue
 } from 'react-native-reanimated'
+import { SafeAreaView } from 'react-native-screens/experimental'
+import { scheduleOnRN } from 'react-native-worklets'
 
+import { storage } from '@/lib/storage'
 import { EmptyState } from '@/components/empty-state'
 import { deleteGenerator } from '@/data/client/mutations/generators'
 import {
@@ -25,57 +26,21 @@ import {
   Menu as SwiftMenu
 } from '@expo/ui/swift-ui'
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
-import { Stack, useRouter } from 'expo-router'
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 
+import { AnimatedHeaderTitle } from './components/animated-header-title'
+import { CarouselPage } from './components/carousel-page'
 import { HeroCard, type HeroCardItem } from './components/hero-card'
 import { PageIndicator } from './components/page-indicator'
 import { useHomeData } from './lib/use-home-data'
-
-function CarouselPage({
-  item,
-  index,
-  scrollX,
-  width,
-  userId
-}: {
-  item: HeroCardItem
-  index: number
-  scrollX: SharedValue<number>
-  width: number
-  userId: string
-}) {
-  const animatedStyle = useAnimatedStyle(() => {
-    const input = [(index - 1) * width, index * width, (index + 1) * width]
-    return {
-      transform: [
-        {
-          scale: interpolate(scrollX.value, input, [0.92, 1, 0.92], 'clamp')
-        },
-        {
-          translateY: interpolate(scrollX.value, input, [8, 0, 8], 'clamp')
-        }
-      ],
-      opacity: interpolate(scrollX.value, input, [0.6, 1, 0.6], 'clamp')
-    }
-  })
-
-  return (
-    <Animated.View
-      style={[{ width }, animatedStyle]}
-      className="flex-1 px-5 py-4"
-    >
-      <HeroCard item={item} userId={userId} />
-    </Animated.View>
-  )
-}
 
 export default function HomeScreen() {
   const router = useRouter()
   const { t } = useTranslation()
   const { width: screenWidth } = useWindowDimensions()
-  const scrollX = useSharedValue(0)
-  const [currentIndex, setCurrentIndex] = useState(0)
-
+  const { generator: generatorParam } = useLocalSearchParams<{
+    generator?: string
+  }>()
   const {
     userId,
     userOrgs,
@@ -88,8 +53,52 @@ export default function HomeScreen() {
     myActiveSession
   } = useHomeData()
 
-  const scrollHandler = useAnimatedScrollHandler(event => {
-    scrollX.value = event.contentOffset.x
+  const count = generators.length
+  const looped = count > 1
+
+  const targetId = generatorParam ?? storage.getString('last-home-generator')
+  const initialPage = targetId
+    ? Math.max(
+        0,
+        generators.findIndex(g => g.id === targetId)
+      )
+    : 0
+
+  const flatListRef = useAnimatedRef<Animated.FlatList<HeroCardItem>>()
+  const scrollX = useSharedValue(initialPage * screenWidth)
+  const [currentIndex, setCurrentIndex] = useState(initialPage)
+  const currentIndexRef = useRef(currentIndex)
+  currentIndexRef.current = currentIndex
+
+  const [prevCount, setPrevCount] = useState(count)
+  if (count !== prevCount) {
+    setPrevCount(count)
+    setCurrentIndex(initialPage)
+    currentIndexRef.current = initialPage
+  }
+
+  const updateIndex = (realIndex: number) => {
+    if (realIndex !== currentIndexRef.current) {
+      currentIndexRef.current = realIndex
+      setCurrentIndex(realIndex)
+      impactLight()
+      storage.set('last-home-generator', generators[realIndex]!.id)
+    }
+  }
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: e => {
+      scrollX.value = looped
+        ? e.contentOffset.x % (count * screenWidth)
+        : e.contentOffset.x
+    },
+    onMomentumEnd: e => {
+      const flatIndex = Math.round(e.contentOffset.x / screenWidth)
+      const realIndex = looped ? flatIndex % count : flatIndex
+      scheduleOnRN(updateIndex, realIndex)
+      if (looped && (flatIndex < count || flatIndex >= count * 2))
+        scrollTo(flatListRef, (realIndex + count) * screenWidth, 0, false)
+    }
   })
 
   if (userOrgs.length === 0)
@@ -121,6 +130,11 @@ export default function HomeScreen() {
     }
   })
 
+  const loopedItems = looped
+    ? [...carouselItems, ...carouselItems, ...carouselItems]
+    : carouselItems
+  const loopOffset = looped ? count : 0
+
   const safeIndex = Math.max(
     0,
     Math.min(currentIndex, carouselItems.length - 1)
@@ -134,6 +148,16 @@ export default function HomeScreen() {
           title: carouselItems[safeIndex]?.generator.title ?? t('tabs.home'),
           headerShown: true,
           headerLargeTitle: false,
+          ...(count > 1 && {
+            headerTitle: () => (
+              <AnimatedHeaderTitle
+                titles={carouselItems.map(item => item.generator.title)}
+                count={count}
+                scrollX={scrollX}
+                pageWidth={screenWidth}
+              />
+            )
+          }),
           headerRight: () =>
             admin ? (
               <Host matchContents>
@@ -233,36 +257,33 @@ export default function HomeScreen() {
       ) : (
         <SafeAreaView edges={{ bottom: true }} className="bg-background flex-1">
           <Animated.FlatList
-            data={carouselItems}
-            keyExtractor={item => item.generator.id}
+            key={count}
+            ref={flatListRef}
+            data={loopedItems}
+            keyExtractor={(_, index) => String(index)}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            windowSize={3}
-            onScroll={scrollHandler}
-            scrollEventThrottle={16}
+            bounces={!looped}
+            initialScrollIndex={loopOffset + initialPage}
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustContentInsets={false}
             getItemLayout={(_, index) => ({
               length: screenWidth,
               offset: screenWidth * index,
               index
             })}
-            onMomentumScrollEnd={e => {
-              const newIndex = Math.round(
-                e.nativeEvent.contentOffset.x / screenWidth
-              )
-              if (newIndex !== currentIndex) {
-                setCurrentIndex(newIndex)
-                impactLight()
-              }
-            }}
-            renderItem={({ item, index }) => (
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            renderItem={({ item, index: flatIndex }) => (
               <CarouselPage
-                item={item}
-                index={index}
+                index={looped ? flatIndex % count : flatIndex}
+                count={count}
                 scrollX={scrollX}
-                width={screenWidth}
-                userId={userId}
-              />
+                pageWidth={screenWidth}
+              >
+                <HeroCard item={item} userId={userId} />
+              </CarouselPage>
             )}
           />
 

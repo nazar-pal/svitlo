@@ -105,5 +105,8 @@
   "trustedDependencies": [
     "@shopify/react-native-skia"
   ],
-  "private": true
+  "private": true,
+  "patchedDependencies": {
+    "react-native-screens@4.23.0": "patches/react-native-screens@4.23.0.patch"
+  }
 }

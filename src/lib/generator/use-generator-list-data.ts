@@ -6,6 +6,7 @@ import {
   getAllUsers,
   getGeneratorsByOrg
 } from '@/data/client/queries'
+import { differential } from '@/lib/hooks/differential'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
   computeNextMaintenance,
@@ -18,13 +19,26 @@ export function useGeneratorListData() {
   const { selectedOrgId } = useSelectedOrg()
 
   const { data: generators } = useDrizzleQuery(
-    selectedOrgId ? getGeneratorsByOrg(selectedOrgId) : undefined
+    selectedOrgId ? getGeneratorsByOrg(selectedOrgId) : undefined,
+    differential()
   )
-  const { data: allSessions } = useDrizzleQuery(getAllGeneratorSessions())
-  const { data: allTemplates } = useDrizzleQuery(getAllMaintenanceTemplates())
-  const { data: allRecords } = useDrizzleQuery(getAllMaintenanceRecords())
-  const { data: allAssignments } = useDrizzleQuery(getAllGeneratorAssignments())
-  const { data: users } = useDrizzleQuery(getAllUsers())
+  const { data: allSessions } = useDrizzleQuery(
+    getAllGeneratorSessions(),
+    differential()
+  )
+  const { data: allTemplates } = useDrizzleQuery(
+    getAllMaintenanceTemplates(),
+    differential()
+  )
+  const { data: allRecords } = useDrizzleQuery(
+    getAllMaintenanceRecords(),
+    differential()
+  )
+  const { data: allAssignments } = useDrizzleQuery(
+    getAllGeneratorAssignments(),
+    differential()
+  )
+  const { data: users } = useDrizzleQuery(getAllUsers(), differential())
 
   const sessionsByGenerator = groupBy(allSessions, s => s.generatorId)
   const templatesByGenerator = groupBy(allTemplates, t => t.generatorId)
@@ -48,6 +62,7 @@ export function useGeneratorListData() {
 
   return {
     generators,
+    allSessions,
     sessionsByGenerator,
     nextMaintenanceByGenerator,
     assignmentsByGenerator,
