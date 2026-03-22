@@ -82,7 +82,7 @@ function buildActivityItems(
 
 export default function ActivityScreen() {
   const { t } = useTranslation()
-  const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
+  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const [filter, setFilter] = useState<Filter>('all')
   const openRowRef = useRef<SwipeableRowRef | null>(null)
@@ -122,7 +122,7 @@ export default function ActivityScreen() {
             <HeaderSubmitButton
               systemImage="plus"
               onPress={() =>
-                router.push(`/generator/log-session?generatorId=${generatorId}`)
+                router.push(`/generator/${generatorId}/log-session`)
               }
             />
           )

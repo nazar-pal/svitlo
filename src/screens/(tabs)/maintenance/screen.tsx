@@ -96,7 +96,7 @@ export default function MaintenanceScreen() {
                       generator={generatorsById.get(item.generatorId)}
                       onRecord={() =>
                         router.push(
-                          `/maintenance/record?templateId=${item.templateId}&generatorId=${item.generatorId}`
+                          `/generator/${item.generatorId}/record-maintenance?templateId=${item.templateId}`
                         )
                       }
                     />

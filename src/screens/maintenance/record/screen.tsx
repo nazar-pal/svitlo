@@ -15,9 +15,9 @@ import { useLocalUser } from '@/lib/powersync'
 
 export default function RecordMaintenanceScreen() {
   const { t } = useTranslation()
-  const { templateId, generatorId } = useLocalSearchParams<{
+  const { id: generatorId, templateId } = useLocalSearchParams<{
+    id: string
     templateId: string
-    generatorId: string
   }>()
   const router = useRouter()
   const localUser = useLocalUser()

@@ -15,7 +15,7 @@ import { useLocalUser } from '@/lib/powersync'
 
 export default function LogSessionScreen() {
   const { t } = useTranslation()
-  const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
+  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
 

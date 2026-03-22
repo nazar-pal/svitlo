@@ -29,7 +29,7 @@ type TriggerType = (typeof TRIGGER_TYPES)[number]
 
 export default function CreateMaintenanceTemplateScreen() {
   const { t } = useTranslation()
-  const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
+  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
 

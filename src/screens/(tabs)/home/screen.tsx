@@ -167,7 +167,7 @@ export default function HomeScreen() {
                       systemImage="gearshape"
                       onPress={() =>
                         router.push(
-                          `/generator/settings?generatorId=${carouselItems[safeIndex]!.generator.id}`
+                          `/generator/${carouselItems[safeIndex]!.generator.id}/settings`
                         )
                       }
                     />
@@ -176,7 +176,7 @@ export default function HomeScreen() {
                       systemImage="wrench.and.screwdriver"
                       onPress={() =>
                         router.push(
-                          `/generator/maintenance?generatorId=${carouselItems[safeIndex]!.generator.id}`
+                          `/generator/${carouselItems[safeIndex]!.generator.id}/maintenance`
                         )
                       }
                     />

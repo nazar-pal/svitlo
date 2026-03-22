@@ -52,14 +52,6 @@ export default function ProtectedLayout() {
           <Stack.Screen name="(drawer)" />
           <Stack.Screen name="re-auth" options={{ presentation: 'modal' }} />
           <Stack.Screen
-            name="generator/activity"
-            options={{ ...halfSheetOptions, title: t('tabs.activity') }}
-          />
-          <Stack.Screen
-            name="generator/maintenance"
-            options={{ ...halfSheetOptions, title: t('tabs.maintenance') }}
-          />
-          <Stack.Screen
             name="generator/create"
             options={{
               ...formSheetOptions,
@@ -67,32 +59,40 @@ export default function ProtectedLayout() {
             }}
           />
           <Stack.Screen
-            name="generator/log-session"
-            options={{
-              ...formSheetOptions,
-              title: t('screens.logPastRun')
-            }}
-          />
-          <Stack.Screen
-            name="generator/settings"
+            name="generator/[id]/settings"
             options={{
               ...formSheetOptions,
               title: t('generator.settings')
             }}
           />
           <Stack.Screen
-            name="maintenance/create-template"
+            name="generator/[id]/activity"
+            options={{ ...halfSheetOptions, title: t('tabs.activity') }}
+          />
+          <Stack.Screen
+            name="generator/[id]/maintenance"
+            options={{ ...halfSheetOptions, title: t('tabs.maintenance') }}
+          />
+          <Stack.Screen
+            name="generator/[id]/log-session"
+            options={{
+              ...formSheetOptions,
+              title: t('screens.logPastRun')
+            }}
+          />
+          <Stack.Screen
+            name="generator/[id]/create-template"
             options={{ ...formSheetOptions, title: t('screens.newTask') }}
           />
           <Stack.Screen
-            name="maintenance/add-suggestions"
+            name="generator/[id]/add-suggestions"
             options={{
               ...formSheetOptions,
               title: t('aiSuggestions.title')
             }}
           />
           <Stack.Screen
-            name="maintenance/record"
+            name="generator/[id]/record-maintenance"
             options={{
               ...compactSheetOptions,
               title: t('screens.recordMaintenance')

@@ -41,7 +41,7 @@ import { useTranslation } from '@/lib/i18n'
 import { AssignedEmployeesSection } from '@/components/assigned-employees-section'
 
 export default function GeneratorSettingsScreen() {
-  const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
+  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
   const { data: gens } = useDrizzleQuery(
     generatorId ? getGenerator(generatorId) : undefined
   )

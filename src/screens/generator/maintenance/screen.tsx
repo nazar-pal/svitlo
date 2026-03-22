@@ -22,7 +22,7 @@ import { useLocalUser } from '@/lib/powersync'
 
 export default function MaintenanceScreen() {
   const { t } = useTranslation()
-  const { generatorId } = useLocalSearchParams<{ generatorId: string }>()
+  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
   const foregroundColor = useThemeColor('foreground')
@@ -65,9 +65,7 @@ export default function MaintenanceScreen() {
         <View className="mb-3 flex-row justify-end">
           <PressableFeedback
             onPress={() =>
-              router.push(
-                `/maintenance/create-template?generatorId=${generatorId}`
-              )
+              router.push(`/generator/${generatorId}/create-template`)
             }
           >
             <SymbolView
@@ -95,7 +93,7 @@ export default function MaintenanceScreen() {
                 <ListGroup.Item
                   onPress={() =>
                     router.push(
-                      `/maintenance/record?templateId=${template.id}&generatorId=${generatorId}`
+                      `/generator/${generatorId}/record-maintenance?templateId=${template.id}`
                     )
                   }
                 >
