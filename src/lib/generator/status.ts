@@ -7,12 +7,6 @@ import { hoursBetween } from '@/lib/utils/time'
 
 export type GeneratorStatus = 'running' | 'resting' | 'available'
 
-export interface GroupedGenerators {
-  running: Generator[]
-  resting: Generator[]
-  available: Generator[]
-}
-
 export const GENERATOR_STATUS_META = {
   running: { color: 'success' },
   resting: { color: 'warning' },

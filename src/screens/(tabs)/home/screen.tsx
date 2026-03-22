@@ -85,9 +85,7 @@ export default function HomeScreen() {
     nextMaintenanceByGenerator,
     assignmentsByGenerator,
     users,
-    myActiveSession,
-    myActiveGenerator,
-    grouped
+    myActiveSession
   } = useHomeData()
 
   const scrollHandler = useAnimatedScrollHandler(event => {
@@ -108,32 +106,20 @@ export default function HomeScreen() {
       </View>
     )
 
-  // Build flat carousel items: active session first, then running, resting, available
-  function buildItem(
-    g: (typeof generators)[number],
-    isMyActive: boolean
-  ): HeroCardItem {
+  const carouselItems: HeroCardItem[] = generators.map(g => {
     const sessions = sessionsByGenerator.get(g.id) ?? []
     const assignments = assignmentsByGenerator.get(g.id) ?? []
     return {
       generator: g,
       statusInfo: computeGeneratorStatus(g, sessions),
       nextMaintenance: nextMaintenanceByGenerator.get(g.id) ?? null,
-      isMyActiveSession: isMyActive,
+      isMyActiveSession: myActiveSession?.generatorId === g.id,
       lifetimeHours: computeLifetimeHours(sessions),
       assignedUserNames: admin
         ? assignments.map(a => getUserName(users, a.userId))
         : []
     }
-  }
-
-  const carouselItems: HeroCardItem[] = []
-
-  if (myActiveGenerator && myActiveSession)
-    carouselItems.push(buildItem(myActiveGenerator, true))
-
-  for (const group of [grouped.running, grouped.resting, grouped.available])
-    for (const g of group) carouselItems.push(buildItem(g, false))
+  })
 
   const safeIndex = Math.max(
     0,
@@ -252,6 +238,7 @@ export default function HomeScreen() {
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
+            windowSize={3}
             onScroll={scrollHandler}
             scrollEventThrottle={16}
             getItemLayout={(_, index) => ({
