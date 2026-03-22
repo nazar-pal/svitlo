@@ -61,6 +61,9 @@ export const updateMaintenanceTemplateSchema = z
     isOneTime: z.boolean()
   })
   .partial()
+  .refine(data => Object.keys(data).length > 0, {
+    error: () => t('validation.atLeastOneField')
+  })
   .superRefine(refineTriggerFields)
 
 export type UpdateMaintenanceTemplateInput = z.input<

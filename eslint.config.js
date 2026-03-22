@@ -8,6 +8,25 @@ module.exports = defineConfig([
     ignores: ['dist/*']
   },
   {
+    files: ['**/__tests__/**/*'],
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        jest: 'readonly'
+      }
+    },
+    rules: {
+      'import/first': 'off',
+      '@typescript-eslint/no-require-imports': 'off'
+    }
+  },
+  {
     files: ['src/screens/**/*'],
     rules: {
       'no-restricted-imports': [

@@ -34,6 +34,10 @@ export function getGeneratorSessions(generatorId: string) {
     .orderBy(desc(generatorSessions.startedAt))
 }
 
+export function getAllGeneratorAssignments() {
+  return db.select().from(generatorUserAssignments)
+}
+
 export function getGeneratorAssignments(generatorId: string) {
   return db
     .select()

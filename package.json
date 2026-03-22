@@ -16,7 +16,10 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md}\"",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "flt": "npm run format && npm run lint && npm run typecheck",
+    "fltt": "npm run format && npm run lint && npm run typecheck && npm run test",
     "ota:prod": "eas update --channel production --environment production --platform ios"
   },
   "dependencies": {
@@ -90,10 +93,12 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-async-generator-functions": "^7.29.0",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.2.14",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.4",
     "eslint-config-expo": "^55.0.0",
+    "jest-expo": "^55.0.11",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "typescript": "~5.9.3"
   },

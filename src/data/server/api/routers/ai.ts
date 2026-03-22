@@ -83,10 +83,10 @@ const rawSuggestionSchema = z.object({
   isGeneric: z.boolean()
 })
 
-const DEFAULT_CALENDAR_DAYS = 90
-const ASSUMED_DAILY_HOURS = 8
+export const DEFAULT_CALENDAR_DAYS = 90
+export const ASSUMED_DAILY_HOURS = 8
 
-function repairTasks(
+export function repairTasks(
   tasks: z.infer<typeof rawSuggestionSchema>['tasks']
 ): z.infer<typeof maintenanceSuggestionSchema>['tasks'] {
   return tasks.map(task => {
@@ -135,7 +135,9 @@ function repairTasks(
   })
 }
 
-function genericFallback(model: string): z.infer<typeof rawSuggestionSchema> {
+export function genericFallback(
+  model: string
+): z.infer<typeof rawSuggestionSchema> {
   return {
     maxConsecutiveRunHours: 8,
     requiredRestHours: 4,

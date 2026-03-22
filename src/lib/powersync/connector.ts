@@ -12,7 +12,7 @@ import { addRejection } from './sync-rejections'
 
 let cachedCredentials: PowerSyncCredentials | null = null
 
-function isAuthError(error: unknown): boolean {
+export function isAuthError(error: unknown): boolean {
   if (error instanceof ORPCError && error.code === 'UNAUTHORIZED') return true
   if (error instanceof Error) {
     const msg = error.message.toLowerCase()
@@ -144,7 +144,7 @@ export function clearCredentialCache() {
 
 // ── Error categorization ────────────────────────────────────────────────────
 
-interface ErrorCategory {
+export interface ErrorCategory {
   category: string
   isRecoverable: boolean
 }
@@ -153,7 +153,7 @@ interface ErrorCategory {
  * Extract a PostgreSQL SQLSTATE code from the error if present.
  * Postgres errors typically include a 5-character code like '23505'.
  */
-function extractSqlState(error: unknown): string | null {
+export function extractSqlState(error: unknown): string | null {
   if (error && typeof error === 'object') {
     const rec = error as Record<string, unknown>
     if (typeof rec.code === 'string' && /^\d{5}$/.test(rec.code))
@@ -175,7 +175,7 @@ function extractSqlState(error: unknown): string | null {
   return match?.[1] ?? null
 }
 
-function categorizeError(error: unknown): ErrorCategory {
+export function categorizeError(error: unknown): ErrorCategory {
   if (isAuthError(error))
     return { category: 'auth_expired', isRecoverable: true }
 

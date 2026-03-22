@@ -46,3 +46,6 @@ app-example
 /android
 # heroui-agents-md
 .heroui-docs/
+
+# test coverage
+coverage/

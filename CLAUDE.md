@@ -44,8 +44,19 @@ Redundancy between layers is intentional: client validates for UX, server enforc
 
 - `bun run lint` — run after changes, fix all errors
 - `bun run typecheck` — run after changes, fix all errors
+- `bun run test` — run all tests
 - `gh` CLI is installed and available
 - Use `knip` to remove unused code when making large changes
+
+## Testing
+
+- `bun run test` — run all tests
+- `bun run test:watch` — run in watch mode during development
+- Tests are co-located in `__tests__/` directories next to source files
+- Test files use `*-test.ts` naming convention
+- Assert on error structure (field presence, ok/false), not on translated message strings
+- Mutation tests mock `@/lib/powersync/database` and auth helpers from `./helpers` — see `mock-db.ts` for shared chain helpers
+- Use `jest.resetAllMocks()` in `beforeEach` for mutation tests
 
 <!-- HEROUI-NATIVE-AGENTS-MD-START -->
 
