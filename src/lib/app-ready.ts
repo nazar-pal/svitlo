@@ -8,9 +8,19 @@ const uiReady = new Promise<void>(r => {
   resolveUi = r
 })
 
-export const appReadyPromise = Promise.all([databaseReady, uiReady]).then(
-  () => {}
-)
+const SAFETY_TIMEOUT_MS = 10_000
+
+export const appReadyPromise: Promise<void> = Promise.race([
+  Promise.all([databaseReady, uiReady]),
+  new Promise<void>(resolve =>
+    setTimeout(() => {
+      console.warn('[app-ready] Safety timeout fired — forcing app ready')
+      resolveDb()
+      resolveUi()
+      resolve()
+    }, SAFETY_TIMEOUT_MS)
+  )
+]).then(() => {})
 
 export function setDatabaseReady() {
   resolveDb()
