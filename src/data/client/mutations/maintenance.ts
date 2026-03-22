@@ -13,7 +13,7 @@ import {
   type InsertMaintenanceTemplateInput,
   type UpdateMaintenanceTemplateInput
 } from '@/data/client/validation'
-import { db, powersync } from '@/lib/powersync/database'
+import { db } from '@/lib/powersync/database'
 
 import {
   canAccessGenerator,
@@ -45,48 +45,6 @@ export async function createMaintenanceTemplate(
     triggerCalendarDays: parsed.data.triggerCalendarDays ?? null,
     isOneTime: parsed.data.isOneTime ? 1 : 0,
     createdAt: nowISO()
-  })
-
-  return ok
-}
-
-export async function createManyMaintenanceTemplates(
-  userId: string,
-  inputs: InsertMaintenanceTemplateInput[]
-): Promise<MutationResult> {
-  if (inputs.length === 0) return fail(t('errors.noTemplatesToCreate'))
-
-  const generatorId = inputs[0].generatorId
-  if (inputs.some(i => i.generatorId !== generatorId))
-    return fail(t('errors.templatesMustBeSameGenerator'))
-
-  for (const input of inputs) {
-    const parsed = insertMaintenanceTemplateSchema.safeParse(input)
-    if (!parsed.success)
-      return fail(`${input.taskName}: ${parsed.error.issues[0].message}`)
-  }
-
-  if (!(await isGeneratorOrgAdmin(userId, generatorId)))
-    return fail(t('errors.onlyAdminCanCreateTemplates'))
-
-  await powersync.writeTransaction(async tx => {
-    for (const input of inputs) {
-      const parsed = insertMaintenanceTemplateSchema.parse(input)
-      await tx.execute(
-        'INSERT INTO maintenance_templates (id, generator_id, task_name, description, trigger_type, trigger_hours_interval, trigger_calendar_days, is_one_time, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          newId(),
-          parsed.generatorId,
-          parsed.taskName,
-          parsed.description ?? null,
-          parsed.triggerType,
-          parsed.triggerHoursInterval ?? null,
-          parsed.triggerCalendarDays ?? null,
-          parsed.isOneTime ? 1 : 0,
-          nowISO()
-        ]
-      )
-    }
   })
 
   return ok

@@ -85,13 +85,6 @@ export default function ProtectedLayout() {
             options={{ ...formSheetOptions, title: t('screens.newTask') }}
           />
           <Stack.Screen
-            name="generator/[id]/add-suggestions"
-            options={{
-              ...formSheetOptions,
-              title: t('aiSuggestions.title')
-            }}
-          />
-          <Stack.Screen
             name="generator/[id]/record-maintenance"
             options={{
               ...compactSheetOptions,

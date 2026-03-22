@@ -23,7 +23,6 @@ const { db } = require('@/lib/powersync/database') as ReturnType<
 
 import {
   createMaintenanceTemplate,
-  createManyMaintenanceTemplates,
   updateMaintenanceTemplate,
   deleteMaintenanceTemplate,
   recordMaintenance,
@@ -72,45 +71,6 @@ describe('createMaintenanceTemplate', () => {
       triggerType: 'hours',
       triggerHoursInterval: 100
     })
-    expect(result.ok).toBe(false)
-  })
-})
-
-describe('createManyMaintenanceTemplates', () => {
-  const validTemplate = {
-    generatorId: 'gen-1',
-    taskName: 'Oil change',
-    triggerType: 'hours' as const,
-    triggerHoursInterval: 100
-  }
-
-  it('fails when inputs array is empty', async () => {
-    const result = await createManyMaintenanceTemplates('user-1', [])
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when templates have different generatorIds', async () => {
-    const result = await createManyMaintenanceTemplates('user-1', [
-      validTemplate,
-      { ...validTemplate, generatorId: 'gen-2' }
-    ])
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when individual template validation fails', async () => {
-    const result = await createManyMaintenanceTemplates('user-1', [
-      validTemplate,
-      { ...validTemplate, taskName: '' }
-    ])
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when not admin', async () => {
-    mockIsGeneratorOrgAdmin.mockResolvedValue(false)
-
-    const result = await createManyMaintenanceTemplates('user-1', [
-      validTemplate
-    ])
     expect(result.ok).toBe(false)
   })
 })

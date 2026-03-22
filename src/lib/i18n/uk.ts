@@ -234,9 +234,7 @@ export const uk = {
   },
 
   aiSuggestions: {
-    title: 'Пропозиції ШІ',
     sources: 'Джерела',
-    noSuggestions: 'Пропозицій немає',
     offline: 'Офлайн',
     offlineDesc: 'Для пропозицій ШІ потрібне підключення до інтернету.',
     failedToGet: 'Не вдалося отримати пропозиції',
@@ -464,10 +462,6 @@ export const uk = {
       'Інтервал годин обов\u0027язковий для обраного типу тригера',
     calendarDaysRequired:
       'Календарні дні обов\u0027язкові для обраного типу тригера',
-    noTemplatesToCreate: 'Немає шаблонів для створення',
-    templatesMustBeSameGenerator:
-      'Усі шаблони мають належати одному генератору',
-
     userNotOrgMember: 'Користувач не є учасником цієї організації',
     userAlreadyAssigned: 'Користувача вже призначено до цього генератора',
     userNotAssigned: 'Користувача не призначено до цього генератора'

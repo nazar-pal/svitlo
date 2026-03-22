@@ -213,9 +213,7 @@ export const en = {
   },
 
   aiSuggestions: {
-    title: 'AI Suggestions',
     sources: 'Sources',
-    noSuggestions: 'No suggestions available',
     offline: 'Offline',
     offlineDesc: 'Internet connection is required for AI suggestions.',
     failedToGet: 'Failed to get suggestions',
@@ -421,10 +419,6 @@ export const en = {
     templateNotForGenerator: 'Template does not belong to this generator',
     hoursIntervalRequired: 'Hours interval required for this trigger type',
     calendarDaysRequired: 'Calendar days required for this trigger type',
-    noTemplatesToCreate: 'No templates to create',
-    templatesMustBeSameGenerator:
-      'All templates must belong to the same generator',
-
     userNotOrgMember: 'User is not a member of this organization',
     userAlreadyAssigned: 'User is already assigned to this generator',
     userNotAssigned: 'User is not assigned to this generator'
