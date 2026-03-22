@@ -145,7 +145,7 @@ export const en = {
     unassignConfirm: 'Remove this user from this generator?',
 
     lifetimeHours: '{{hours}} lifetime hours',
-    readyToRun: 'Ready to run',
+    readyToRun: 'Tap to start',
     startGenerator: 'Start Generator',
     stopGenerator: 'Stop Generator',
     elapsed: '{{hours}} elapsed',

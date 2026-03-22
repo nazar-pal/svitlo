@@ -1,6 +1,7 @@
+import type { ComponentProps, ReactNode } from 'react'
 import { SymbolView } from 'expo-symbols'
-import { Button, Separator, Surface, useThemeColor } from 'heroui-native'
-import { Alert, Text, View } from 'react-native'
+import { Separator, Surface, useThemeColor } from 'heroui-native'
+import { Alert, Pressable, Text, View } from 'react-native'
 
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator } from '@/data/client/db-schema'
@@ -8,6 +9,7 @@ import { startSession, stopSession } from '@/data/client/mutations'
 import { confirmRestingStart } from '@/lib/generator/confirm-resting-start'
 import {
   GENERATOR_STATUS_KEYS,
+  type GeneratorStatus,
   type GeneratorStatusInfo
 } from '@/lib/generator/status'
 import {
@@ -24,6 +26,10 @@ import {
 } from '@/lib/maintenance/due'
 import { formatHours } from '@/lib/utils/time'
 
+import { CoolingShimmer } from './cooling-shimmer'
+import { GeneratorSmoke } from './generator-smoke'
+import { IdlePulse } from './idle-pulse'
+
 export interface HeroCardItem {
   generator: Generator
   statusInfo: GeneratorStatusInfo
@@ -38,6 +44,19 @@ interface HeroCardProps {
   userId: string
 }
 
+function statusColorClass(status: GeneratorStatus): string {
+  switch (status) {
+    case 'running':
+      return 'text-success/60'
+    case 'resting':
+      return 'text-warning/60'
+    case 'available':
+      return 'text-accent/60'
+    default:
+      throw new Error(`Unknown status: ${status satisfies never}`)
+  }
+}
+
 function maintenanceLabelColor(urgency: MaintenanceUrgency): string {
   if (urgency === 'overdue') return 'text-danger'
   if (urgency === 'due_soon') return 'text-warning'
@@ -49,10 +68,72 @@ function formatAssignedNames(names: string[], max = 2): string {
   return `${names.slice(0, max).join(', ')} +${names.length - max}`
 }
 
+function StatusHeader({
+  status,
+  isMyActiveSession
+}: {
+  status: GeneratorStatus
+  isMyActiveSession: boolean
+}) {
+  const { t } = useTranslation()
+  const successColor = useThemeColor('success')
+
+  return (
+    <View className="flex-row items-center">
+      {isMyActiveSession ? (
+        <View className="flex-row items-center gap-1.5">
+          <View className="bg-success/15 size-5 items-center justify-center rounded-md">
+            <SymbolView name="bolt.fill" size={10} tintColor={successColor} />
+          </View>
+          <Text className="text-success text-xs font-semibold tracking-wide uppercase">
+            {t('home.myActiveSession')}
+          </Text>
+        </View>
+      ) : null}
+      <Text
+        className={`${statusColorClass(status)} ml-auto text-xs font-semibold tracking-widest uppercase`}
+      >
+        {t(GENERATOR_STATUS_KEYS[status])}
+      </Text>
+    </View>
+  )
+}
+
+type SymbolName = ComponentProps<typeof SymbolView>['name']
+
+function InfoRow({
+  icon,
+  iconBgClass,
+  iconColor,
+  children
+}: {
+  icon: SymbolName
+  iconBgClass?: string
+  iconColor: string
+  children: ReactNode
+}) {
+  return (
+    <View className="flex-row items-center gap-2.5 py-3">
+      <View
+        className={`${iconBgClass ?? 'bg-default'} size-8 items-center justify-center rounded-lg`}
+      >
+        <SymbolView name={icon} size={15} tintColor={iconColor} />
+      </View>
+      <Text className="text-muted flex-1 text-sm" numberOfLines={1}>
+        {children}
+      </Text>
+    </View>
+  )
+}
+
 export function HeroCard({ item, userId }: HeroCardProps) {
   const { t } = useTranslation()
-  const [mutedColor, successColor, accentColor, dangerColor, warningColor] =
-    useThemeColor(['muted', 'success', 'accent', 'danger', 'warning'])
+  const [mutedColor, accentColor, dangerColor, warningColor] = useThemeColor([
+    'muted',
+    'accent',
+    'danger',
+    'warning'
+  ])
 
   const {
     generator,
@@ -120,143 +201,141 @@ export function HeroCard({ item, userId }: HeroCardProps) {
         : mutedColor
 
   return (
-    <View className="flex-1 gap-5">
-      {/* Header: Status badge + model + active session */}
-      <View className="gap-2">
-        {isMyActiveSession ? (
-          <View className="flex-row items-center gap-1.5">
-            <View className="bg-success/15 size-5 items-center justify-center rounded-md">
-              <SymbolView name="bolt.fill" size={10} tintColor={successColor} />
-            </View>
-            <Text className="text-success text-xs font-semibold tracking-wide uppercase">
-              {t('home.myActiveSession')}
+    <Surface variant="tertiary" className="flex-1 overflow-hidden p-0">
+      {/* Full-card Skia background */}
+      {status === 'running' ? (
+        <GeneratorSmoke progress={progress} warningFraction={warningFraction} />
+      ) : status === 'resting' ? (
+        <CoolingShimmer restProgress={restCountdown.progress} />
+      ) : (
+        <IdlePulse />
+      )}
+
+      {/* Content layer */}
+      <View className="flex-1 gap-4 p-5">
+        <StatusHeader status={status} isMyActiveSession={isMyActiveSession} />
+
+        {/* Generator identity */}
+        <View className="gap-1">
+          <Text className="text-foreground text-lg font-bold" numberOfLines={1}>
+            {generator.model}
+          </Text>
+          {generator.description ? (
+            <Text className="text-muted text-sm" numberOfLines={2}>
+              {generator.description}
             </Text>
-          </View>
-        ) : null}
-        <Text className="text-muted text-sm" numberOfLines={1}>
-          {generator.model}
-          {generator.description ? ` · ${generator.description}` : ''}
-        </Text>
-      </View>
+          ) : null}
+        </View>
 
-      {/* Status visualization */}
-      <View className="flex-1 justify-center">
-        {status === 'running' ? (
-          <Surface variant="tertiary" className="gap-5 overflow-hidden">
-            <View className="bg-success/8 -m-4 mb-0 items-center p-4 pb-3">
-              <Text className="text-success/60 text-xs font-semibold tracking-widest uppercase">
-                {t(GENERATOR_STATUS_KEYS[status])}
-              </Text>
-            </View>
-
-            <View className="items-center py-2">
-              <Text
-                className={`text-13 text-center leading-none font-bold tracking-tight ${timeColor}`}
-                style={{ fontVariant: ['tabular-nums'] }}
-              >
-                {elapsedTimeStr}
-              </Text>
-            </View>
-
-            <View className="gap-1.5">
-              <View className="bg-default h-2.5 overflow-hidden rounded-full">
-                <SkiaProgressBar
-                  progress={progress}
-                  warningFraction={warningFraction}
-                  height={10}
-                />
-              </View>
-              <View className="flex-row justify-between">
-                <Text className="text-muted text-3">
-                  {t('generator.elapsed', {
-                    hours: formatHours(totalRunHours)
-                  })}
-                </Text>
-                <Text className="text-muted text-3">
-                  {t('generator.max', { hours: formatHours(maxHours) })}
+        {/* Elastic center: tappable status visualization */}
+        <Pressable
+          onPress={
+            status === 'running'
+              ? handleStop
+              : status === 'resting'
+                ? () => confirmRestingStart(handleStart)
+                : handleStart
+          }
+          accessibilityRole="button"
+          accessibilityLabel={
+            status === 'running'
+              ? t('generator.stopGenerator')
+              : t('generator.startGenerator')
+          }
+          className="flex-1 items-center justify-center gap-5 active:opacity-80"
+        >
+          {status === 'running' ? (
+            <>
+              <View className="items-center gap-1">
+                <Text
+                  className={`text-13 text-center leading-none font-bold tracking-tight ${timeColor}`}
+                  style={{ fontVariant: ['tabular-nums'] }}
+                >
+                  {elapsedTimeStr}
                 </Text>
               </View>
-            </View>
-          </Surface>
-        ) : status === 'resting' ? (
-          <Surface variant="tertiary" className="gap-5 overflow-hidden">
-            <View className="bg-warning/8 -m-4 mb-0 items-center p-4 pb-3">
-              <Text className="text-warning/60 text-xs font-semibold tracking-widest uppercase">
-                {t(GENERATOR_STATUS_KEYS[status])}
-              </Text>
-            </View>
 
-            <View className="items-center py-2">
-              <Text
-                className="text-warning text-13 text-center leading-none font-bold tracking-tight"
-                style={{ fontVariant: ['tabular-nums'] }}
-              >
-                {restCountdown.remainingFormatted}
-              </Text>
-            </View>
-
-            <View className="gap-1.5">
-              <View className="bg-default h-2.5 overflow-hidden rounded-full">
-                <SkiaProgressBar
-                  progress={restCountdown.progress}
-                  warningFraction={1}
-                  height={10}
-                  mode="resting"
-                />
+              <View className="w-full gap-1.5">
+                <View className="bg-default h-2.5 overflow-hidden rounded-full">
+                  <SkiaProgressBar
+                    progress={progress}
+                    warningFraction={warningFraction}
+                    height={10}
+                  />
+                </View>
+                <View className="flex-row justify-between">
+                  <Text className="text-muted text-3">
+                    {t('generator.elapsed', {
+                      hours: formatHours(totalRunHours)
+                    })}
+                  </Text>
+                  <Text className="text-muted text-3">
+                    {t('generator.max', { hours: formatHours(maxHours) })}
+                  </Text>
+                </View>
               </View>
-              <View className="flex-row justify-between">
-                <Text className="text-muted text-3">
-                  {t('generator.remaining', {
-                    time: restCountdown.remainingFormatted
-                  })}
-                </Text>
-                <Text className="text-muted text-3">
-                  {t('generator.required', {
-                    hours: formatHours(generator.requiredRestHours)
-                  })}
+            </>
+          ) : status === 'resting' ? (
+            <>
+              <View className="items-center gap-1">
+                <Text
+                  className="text-warning text-13 text-center leading-none font-bold tracking-tight"
+                  style={{ fontVariant: ['tabular-nums'] }}
+                >
+                  {restCountdown.remainingFormatted}
                 </Text>
               </View>
-            </View>
-          </Surface>
-        ) : (
-          <Surface variant="tertiary" className="items-center gap-4 py-8">
-            <View className="bg-accent/10 size-24 items-center justify-center rounded-full">
+
+              <View className="w-full gap-1.5">
+                <View className="bg-default h-2.5 overflow-hidden rounded-full">
+                  <SkiaProgressBar
+                    progress={restCountdown.progress}
+                    warningFraction={1}
+                    height={10}
+                    mode="resting"
+                  />
+                </View>
+                <View className="flex-row justify-between">
+                  <Text className="text-muted text-3">
+                    {t('generator.remaining', {
+                      time: restCountdown.remainingFormatted
+                    })}
+                  </Text>
+                  <Text className="text-muted text-3">
+                    {t('generator.required', {
+                      hours: formatHours(generator.requiredRestHours)
+                    })}
+                  </Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
               <SymbolView name="bolt.fill" size={44} tintColor={accentColor} />
-            </View>
-            <Text className="text-foreground text-lg font-semibold">
-              {t('generator.readyToRun')}
-            </Text>
-          </Surface>
-        )}
-      </View>
+              <Text className="text-foreground text-lg font-semibold">
+                {t('generator.readyToRun')}
+              </Text>
+            </>
+          )}
+        </Pressable>
 
-      {/* Info panel */}
-      <Surface variant="tertiary" className="gap-0 p-0">
-        <View className="flex-row items-center gap-2.5 px-4 py-3">
-          <View className="bg-default size-8 items-center justify-center rounded-lg">
-            <SymbolView name="clock.fill" size={15} tintColor={mutedColor} />
-          </View>
-          <Text className="text-muted flex-1 text-sm" numberOfLines={1}>
+        {/* Info rows */}
+        <View>
+          <Separator />
+          <InfoRow icon="clock.fill" iconColor={mutedColor}>
             {t('generator.lifetimeHours', {
               hours: formatHours(lifetimeHours)
             })}
-          </Text>
-        </View>
+          </InfoRow>
 
-        {nextMaintenance ? (
-          <>
-            <Separator />
-            <View className="flex-row items-center gap-2.5 px-4 py-3">
-              <View
-                className={`${maintenanceIconBg} size-8 items-center justify-center rounded-lg`}
+          {nextMaintenance ? (
+            <>
+              <Separator />
+              <InfoRow
+                icon="wrench.fill"
+                iconBgClass={maintenanceIconBg}
+                iconColor={maintenanceIconColor}
               >
-                <SymbolView
-                  name="wrench.fill"
-                  size={15}
-                  tintColor={maintenanceIconColor}
-                />
-              </View>
-              <Text className="text-muted flex-1 text-sm" numberOfLines={1}>
                 {nextMaintenance.taskName}
                 {' · '}
                 <Text
@@ -264,48 +343,20 @@ export function HeroCard({ item, userId }: HeroCardProps) {
                 >
                   {maintenanceLabelText(nextMaintenance)}
                 </Text>
-              </Text>
-            </View>
-          </>
-        ) : null}
+              </InfoRow>
+            </>
+          ) : null}
 
-        {assignedUserNames.length > 0 ? (
-          <>
-            <Separator />
-            <View className="flex-row items-center gap-2.5 px-4 py-3">
-              <View className="bg-default size-8 items-center justify-center rounded-lg">
-                <SymbolView
-                  name="person.2.fill"
-                  size={15}
-                  tintColor={mutedColor}
-                />
-              </View>
-              <Text className="text-muted flex-1 text-sm" numberOfLines={1}>
+          {assignedUserNames.length > 0 ? (
+            <>
+              <Separator />
+              <InfoRow icon="person.2.fill" iconColor={mutedColor}>
                 {formatAssignedNames(assignedUserNames)}
-              </Text>
-            </View>
-          </>
-        ) : null}
-      </Surface>
-
-      {/* Action button */}
-      {status === 'available' ? (
-        <Button variant="primary" size="lg" onPress={handleStart}>
-          {t('generator.startGenerator')}
-        </Button>
-      ) : status === 'running' ? (
-        <Button variant="danger" size="lg" onPress={handleStop}>
-          {t('generator.stopGenerator')}
-        </Button>
-      ) : status === 'resting' ? (
-        <Button
-          variant="ghost"
-          size="lg"
-          onPress={() => confirmRestingStart(handleStart)}
-        >
-          {t('generator.startGenerator')}
-        </Button>
-      ) : null}
-    </View>
+              </InfoRow>
+            </>
+          ) : null}
+        </View>
+      </View>
+    </Surface>
   )
 }

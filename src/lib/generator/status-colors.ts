@@ -1,7 +1,7 @@
 import { useThemeColor } from 'heroui-native'
 import { processColor } from 'react-native'
 
-function colorToRgb(color: string): readonly [number, number, number] {
+export function colorToRgb(color: string): readonly [number, number, number] {
   const processed = processColor(color)
   if (typeof processed !== 'number') return [0.5, 0.5, 0.5]
   const r = ((processed >> 16) & 0xff) / 255

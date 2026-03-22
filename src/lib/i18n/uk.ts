@@ -165,7 +165,7 @@ export const uk = {
     unassignConfirm: 'Прибрати цього користувача з генератора?',
 
     lifetimeHours: '{{hours}} загальних годин',
-    readyToRun: 'Готовий до запуску',
+    readyToRun: 'Натисніть, щоб запустити',
     startGenerator: 'Запустити генератор',
     stopGenerator: 'Зупинити генератор',
     elapsed: '{{hours}} минуло',
