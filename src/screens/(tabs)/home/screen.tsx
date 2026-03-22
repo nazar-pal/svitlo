@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, useWindowDimensions, View } from 'react-native'
 import Animated, {
   scrollTo,
@@ -9,6 +9,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-screens/experimental'
 import { scheduleOnRN } from 'react-native-worklets'
 
+import { setUIReady } from '@/lib/app-ready'
 import { storage } from '@/lib/storage'
 import { EmptyState } from '@/components/empty-state'
 import { deleteGenerator } from '@/data/client/mutations/generators'
@@ -44,6 +45,8 @@ export default function HomeScreen() {
   const {
     userId,
     userOrgs,
+    selectedOrgId,
+    isOrgsLoading,
     admin,
     generators,
     sessionsByGenerator,
@@ -52,6 +55,49 @@ export default function HomeScreen() {
     users,
     myActiveSession
   } = useHomeData()
+
+  // Signal app readiness once data has settled so the splash overlay can fade out.
+  // The splash stays visible until setUIReady() fires via one of three paths:
+  //  1. generators loaded → data is ready to display
+  //  2. org selected, generators genuinely empty (uses a short timer because
+  //     PowerSync doesn't transition through isLoading when the query SQL
+  //     changes — the stale deferred result persists for a few renders)
+  //  3. orgs query done, user has no organizations
+  const [dataReady, setDataReady] = useState(false)
+  useEffect(() => {
+    if (dataReady || !userId) return
+
+    if (generators.length > 0) {
+      setDataReady(true)
+      setUIReady()
+      return
+    }
+
+    if (!isOrgsLoading && userOrgs.length === 0) {
+      setDataReady(true)
+      setUIReady()
+      return
+    }
+
+    if (!selectedOrgId) return
+
+    // When selectedOrgId first appears the generators query switches from
+    // a no-op to a real SQLite query, but the hook still returns the old
+    // empty result for a few renders. The timer lets that query settle;
+    // if generators arrive first, this effect re-runs and clears the timer.
+    const timer = setTimeout(() => {
+      setDataReady(true)
+      setUIReady()
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [
+    userId,
+    generators.length,
+    selectedOrgId,
+    isOrgsLoading,
+    userOrgs.length,
+    dataReady
+  ])
 
   const count = generators.length
   const looped = count > 1
@@ -100,6 +146,9 @@ export default function HomeScreen() {
         scrollTo(flatListRef, (realIndex + count) * screenWidth, 0, false)
     }
   })
+
+  // Don't render content until data is settled — splash overlay covers this
+  if (!dataReady) return null
 
   if (userOrgs.length === 0)
     return (

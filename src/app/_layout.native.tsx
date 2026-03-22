@@ -1,4 +1,5 @@
 import '@azure/core-asynciterator-polyfill'
+import * as SplashScreen from 'expo-splash-screen'
 import { setBackgroundColorAsync } from 'expo-system-ui'
 import '../global.css'
 
@@ -18,6 +19,8 @@ import React, { useEffect } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { useUniwind } from 'uniwind'
+
+SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
   const { theme } = useUniwind()

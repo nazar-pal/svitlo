@@ -12,6 +12,7 @@ import React, {
 } from 'react'
 import { ActivityIndicator, Text, View } from 'react-native'
 
+import { setDatabaseReady, setUIReady } from '@/lib/app-ready'
 import { useLocalIdentity } from '@/lib/auth/local-identity-context'
 import { useSessionStatus } from '@/lib/auth/session-status-context'
 import { signOut } from '@/lib/auth/sign-out'
@@ -43,8 +44,14 @@ export function PowerSyncProvider({
   useEffect(() => {
     powersync
       .init()
-      .then(() => setIsReady(true))
-      .catch(console.error)
+      .then(() => {
+        setIsReady(true)
+        setDatabaseReady()
+      })
+      .catch(error => {
+        console.error(error)
+        setDatabaseReady()
+      })
 
     // TODO: Report these errors to Sentry when it's set up instead of console.error
     const dispose = powersync.registerListener({
@@ -112,6 +119,14 @@ export function PowerSyncProvider({
 
 function SyncGate({ children }: { children: React.ReactNode }) {
   const status = useStatus()
+  const { isReady } = usePowerSync()
+
+  // On first launch (never synced): once DB is ready, signal UI ready so the splash
+  // hides and the user sees sync progress. On subsequent launches isReady and hasSynced
+  // become true simultaneously (init reads persisted metadata), so this doesn't fire.
+  useEffect(() => {
+    if (isReady && !status.hasSynced) setUIReady()
+  }, [isReady, status.hasSynced])
 
   // hasSynced persists in SQLite — after first sync, subsequent launches skip this gate.
   // Priorities still help: PowerSync syncs user/org data (p1) before generators (p2) and

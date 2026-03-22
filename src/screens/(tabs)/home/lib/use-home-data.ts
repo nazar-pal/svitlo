@@ -6,7 +6,7 @@ import { useLocalUser } from '@/lib/powersync'
 export function useHomeData() {
   const localUser = useLocalUser()
   const userId = localUser?.id ?? ''
-  const { userOrgs, isAdmin } = useUserOrgs()
+  const { userOrgs, isAdmin, isOrgsLoading } = useUserOrgs()
   const { selectedOrgId } = useSelectedOrg()
 
   const {
@@ -26,6 +26,8 @@ export function useHomeData() {
   return {
     userId,
     userOrgs,
+    selectedOrgId,
+    isOrgsLoading,
     admin,
     generators,
     sessionsByGenerator,

@@ -3,6 +3,8 @@ import { Stack } from 'expo-router'
 import React, { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
 
+import { setDatabaseReady, setUIReady } from '@/lib/app-ready'
+
 import { AuthBootstrapScreen } from './auth-bootstrap-screen'
 import { authClient } from './auth-client'
 import { useLocalIdentity } from './local-identity-context'
@@ -99,6 +101,16 @@ function AuthGateInner() {
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
     }
   }, [])
+
+  // Signal app readiness for the unauthenticated path where PowerSyncProvider
+  // never mounts. For authenticated users, PowerSync context signals
+  // setDatabaseReady() and the home screen signals setUIReady().
+  useEffect(() => {
+    if ((!showBootstrap || isBootstrapped) && !isAuthenticated) {
+      setDatabaseReady()
+      setUIReady()
+    }
+  }, [showBootstrap, isBootstrapped, isAuthenticated])
 
   if (showBootstrap && !isBootstrapped) {
     return <AuthBootstrapScreen />

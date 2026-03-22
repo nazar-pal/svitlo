@@ -12,7 +12,9 @@ export function useUserOrgs() {
 
   const memberIdSet = new Set(memberOrgIds.map(m => m.organizationId))
 
-  const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
+  const { data: allOrgs, isLoading: isOrgsLoading } = useDrizzleQuery(
+    getAllOrganizations()
+  )
 
   const userOrgs = allOrgs.filter(
     org => org.adminUserId === userId || memberIdSet.has(org.id)
@@ -21,5 +23,5 @@ export function useUserOrgs() {
   const isAdmin = (orgId: string | null) =>
     userOrgs.find(o => o.id === orgId)?.adminUserId === userId
 
-  return { userOrgs, allOrgs, isAdmin, userId }
+  return { userOrgs, allOrgs, isAdmin, userId, isOrgsLoading }
 }
