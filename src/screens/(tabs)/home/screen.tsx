@@ -30,7 +30,6 @@ import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 
 import { AnimatedHeaderTitle } from './components/animated-header-title'
-import { CarouselPage } from './components/carousel-page'
 import { HeroCard, type HeroCardItem } from './components/hero-card'
 import { PageIndicator } from './components/page-indicator'
 import { useHomeData } from './lib/use-home-data'
@@ -324,15 +323,10 @@ export default function HomeScreen() {
             })}
             onScroll={scrollHandler}
             scrollEventThrottle={16}
-            renderItem={({ item, index: flatIndex }) => (
-              <CarouselPage
-                index={looped ? flatIndex % count : flatIndex}
-                count={count}
-                scrollX={scrollX}
-                pageWidth={screenWidth}
-              >
+            renderItem={({ item }) => (
+              <View style={{ width: screenWidth, flex: 1 }}>
                 <HeroCard item={item} userId={userId} />
-              </CarouselPage>
+              </View>
             )}
           />
 

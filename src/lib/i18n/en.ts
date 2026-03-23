@@ -146,6 +146,7 @@ export const en = {
 
     lifetimeHours: '{{hours}} lifetime hours',
     readyToRun: 'Tap to start',
+    tapToStop: 'Tap to stop',
     startGenerator: 'Start Generator',
     stopGenerator: 'Stop Generator',
     elapsed: '{{hours}} elapsed',

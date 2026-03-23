@@ -166,6 +166,7 @@ export const uk = {
 
     lifetimeHours: '{{hours}} загальних годин',
     readyToRun: 'Натисніть, щоб запустити',
+    tapToStop: 'Натисніть, щоб зупинити',
     startGenerator: 'Запустити генератор',
     stopGenerator: 'Зупинити генератор',
     elapsed: '{{hours}} минуло',

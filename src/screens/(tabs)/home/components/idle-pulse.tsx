@@ -19,27 +19,32 @@ const source = Skia.RuntimeEffect.Make(`
 
   half4 main(vec2 fragCoord) {
     vec2 uv = fragCoord / size;
-    vec2 center = vec2(0.5, 0.4);
+    vec2 center = vec2(0.5, 0.5);
 
-    float dist = distance(uv, center);
+    vec2 diff = uv - center;
+    float dist = length(diff);
 
-    // Radial falloff — wider for full-card coverage
-    float glow = exp(-dist * dist * 3.0);
+    // Radial falloff — soft circular glow
+    float glow = exp(-dist * dist * 4.0);
 
-    // Breathing intensity — slow, calm pulse
-    float breath = 0.5 + 0.5 * sin(time * 1.0);
+    // Breathing intensity — calm pulse with persistent floor
+    float breath = 0.6 + 0.4 * sin(time * 1.6);
 
-    float alpha = glow * breath * 0.10;
+    float alpha = glow * breath * 0.30;
 
-    // Circular fade to zero before edges
-    float edgeFade = smoothstep(0.7, 0.3, dist);
+    // Smooth fade to zero at edges
+    float edgeFade = smoothstep(0.55, 0.15, dist);
     alpha *= edgeFade;
 
     return half4(color * alpha, alpha);
   }
 `)!
 
-export function IdlePulse() {
+interface IdlePulseProps {
+  color?: string
+}
+
+export function IdlePulse({ color }: IdlePulseProps) {
   const [layout, setLayout] = useState({ width: 0, height: 0 })
   const accentColor = useThemeColor('accent')
   const time = useSharedValue(0)
@@ -56,12 +61,12 @@ export function IdlePulse() {
     )
   }, [time])
 
-  const accentRgb = colorToRgb(accentColor)
+  const tintRgb = colorToRgb(color ?? accentColor)
 
   const uniforms = useDerivedValue(() => ({
     time: time.get(),
     size: vec(layout.width, layout.height),
-    color: accentRgb
+    color: tintRgb
   }))
 
   return (

@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { SymbolView } from 'expo-symbols'
-import { Separator, Surface, useThemeColor } from 'heroui-native'
+import { useThemeColor } from 'heroui-native'
 import { Alert, Pressable, Text, View } from 'react-native'
 
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
@@ -26,8 +26,6 @@ import {
 } from '@/lib/maintenance/due'
 import { formatHours } from '@/lib/utils/time'
 
-import { CoolingShimmer } from './cooling-shimmer'
-import { GeneratorSmoke } from './generator-smoke'
 import { IdlePulse } from './idle-pulse'
 
 export interface HeroCardItem {
@@ -113,7 +111,7 @@ function InfoRow({
   children: ReactNode
 }) {
   return (
-    <View className="flex-row items-center gap-2.5 py-3">
+    <View className="bg-background flex-row items-center gap-2.5 px-3.5 py-3">
       <View
         className={`${iconBgClass ?? 'bg-default'} size-8 items-center justify-center rounded-lg`}
       >
@@ -128,12 +126,8 @@ function InfoRow({
 
 export function HeroCard({ item, userId }: HeroCardProps) {
   const { t } = useTranslation()
-  const [mutedColor, accentColor, dangerColor, warningColor] = useThemeColor([
-    'muted',
-    'accent',
-    'danger',
-    'warning'
-  ])
+  const [mutedColor, accentColor, dangerColor, warningColor, successColor] =
+    useThemeColor(['muted', 'accent', 'danger', 'warning', 'success'])
 
   const {
     generator,
@@ -201,23 +195,14 @@ export function HeroCard({ item, userId }: HeroCardProps) {
         : mutedColor
 
   return (
-    <Surface variant="tertiary" className="flex-1 overflow-hidden p-0">
-      {/* Full-card Skia background */}
-      {status === 'running' ? (
-        <GeneratorSmoke progress={progress} warningFraction={warningFraction} />
-      ) : status === 'resting' ? (
-        <CoolingShimmer restProgress={restCountdown.progress} />
-      ) : (
-        <IdlePulse />
-      )}
-
+    <View className="flex-1 overflow-hidden">
       {/* Content layer */}
       <View className="flex-1 gap-4 p-5">
         <StatusHeader status={status} isMyActiveSession={isMyActiveSession} />
 
         {/* Generator identity */}
         <View className="gap-1">
-          <Text className="text-foreground text-lg font-bold" numberOfLines={1}>
+          <Text className="text-foreground text-xl font-bold" numberOfLines={1}>
             {generator.model}
           </Text>
           {generator.description ? (
@@ -246,14 +231,27 @@ export function HeroCard({ item, userId }: HeroCardProps) {
         >
           {status === 'running' ? (
             <>
-              <View className="items-center gap-1">
-                <Text
-                  className={`text-13 text-center leading-none font-bold tracking-tight ${timeColor}`}
-                  style={{ fontVariant: ['tabular-nums'] }}
-                >
-                  {elapsedTimeStr}
-                </Text>
+              <Text
+                className={`text-13 text-center leading-none font-bold tracking-tight ${timeColor}`}
+                style={{ fontVariant: ['tabular-nums'] }}
+              >
+                {elapsedTimeStr}
+              </Text>
+
+              <View className="size-24 items-center justify-center">
+                <IdlePulse color={successColor} />
+                <View className="border-success/20 bg-success/8 size-18 items-center justify-center rounded-full border">
+                  <SymbolView
+                    name="stop.fill"
+                    size={28}
+                    tintColor={successColor}
+                  />
+                </View>
               </View>
+
+              <Text className="text-success text-base font-medium">
+                {t('generator.tapToStop')}
+              </Text>
 
               <View className="w-full gap-1.5">
                 <View className="bg-default h-2.5 overflow-hidden rounded-full">
@@ -264,12 +262,12 @@ export function HeroCard({ item, userId }: HeroCardProps) {
                   />
                 </View>
                 <View className="flex-row justify-between">
-                  <Text className="text-muted text-3">
+                  <Text className="text-muted text-xs">
                     {t('generator.elapsed', {
                       hours: formatHours(totalRunHours)
                     })}
                   </Text>
-                  <Text className="text-muted text-3">
+                  <Text className="text-muted text-xs">
                     {t('generator.max', { hours: formatHours(maxHours) })}
                   </Text>
                 </View>
@@ -277,14 +275,27 @@ export function HeroCard({ item, userId }: HeroCardProps) {
             </>
           ) : status === 'resting' ? (
             <>
-              <View className="items-center gap-1">
-                <Text
-                  className="text-warning text-13 text-center leading-none font-bold tracking-tight"
-                  style={{ fontVariant: ['tabular-nums'] }}
-                >
-                  {restCountdown.remainingFormatted}
-                </Text>
+              <Text
+                className="text-warning text-13 text-center leading-none font-bold tracking-tight"
+                style={{ fontVariant: ['tabular-nums'] }}
+              >
+                {restCountdown.remainingFormatted}
+              </Text>
+
+              <View className="size-24 items-center justify-center">
+                <IdlePulse color={warningColor} />
+                <View className="border-warning/20 bg-warning/8 size-18 items-center justify-center rounded-full border">
+                  <SymbolView
+                    name="bolt.fill"
+                    size={28}
+                    tintColor={warningColor}
+                  />
+                </View>
               </View>
+
+              <Text className="text-warning text-base font-medium">
+                {t('generatorStatus.resting')}
+              </Text>
 
               <View className="w-full gap-1.5">
                 <View className="bg-default h-2.5 overflow-hidden rounded-full">
@@ -296,12 +307,12 @@ export function HeroCard({ item, userId }: HeroCardProps) {
                   />
                 </View>
                 <View className="flex-row justify-between">
-                  <Text className="text-muted text-3">
+                  <Text className="text-muted text-xs">
                     {t('generator.remaining', {
                       time: restCountdown.remainingFormatted
                     })}
                   </Text>
-                  <Text className="text-muted text-3">
+                  <Text className="text-muted text-xs">
                     {t('generator.required', {
                       hours: formatHours(generator.requiredRestHours)
                     })}
@@ -311,8 +322,17 @@ export function HeroCard({ item, userId }: HeroCardProps) {
             </>
           ) : (
             <>
-              <SymbolView name="bolt.fill" size={44} tintColor={accentColor} />
-              <Text className="text-foreground text-lg font-semibold">
+              <View className="size-40 items-center justify-center">
+                <IdlePulse />
+                <View className="border-accent/20 bg-accent/8 size-30 items-center justify-center rounded-full border">
+                  <SymbolView
+                    name="bolt.fill"
+                    size={52}
+                    tintColor={accentColor}
+                  />
+                </View>
+              </View>
+              <Text className="text-accent text-base font-medium">
                 {t('generator.readyToRun')}
               </Text>
             </>
@@ -320,8 +340,7 @@ export function HeroCard({ item, userId }: HeroCardProps) {
         </Pressable>
 
         {/* Info rows */}
-        <View>
-          <Separator />
+        <View className="bg-default/40 gap-px overflow-hidden rounded-2xl">
           <InfoRow icon="clock.fill" iconColor={mutedColor}>
             {t('generator.lifetimeHours', {
               hours: formatHours(lifetimeHours)
@@ -329,34 +348,26 @@ export function HeroCard({ item, userId }: HeroCardProps) {
           </InfoRow>
 
           {nextMaintenance ? (
-            <>
-              <Separator />
-              <InfoRow
-                icon="wrench.fill"
-                iconBgClass={maintenanceIconBg}
-                iconColor={maintenanceIconColor}
-              >
-                {nextMaintenance.taskName}
-                {' · '}
-                <Text
-                  className={maintenanceLabelColor(nextMaintenance.urgency)}
-                >
-                  {maintenanceLabelText(nextMaintenance)}
-                </Text>
-              </InfoRow>
-            </>
+            <InfoRow
+              icon="wrench.fill"
+              iconBgClass={maintenanceIconBg}
+              iconColor={maintenanceIconColor}
+            >
+              {nextMaintenance.taskName}
+              {' · '}
+              <Text className={maintenanceLabelColor(nextMaintenance.urgency)}>
+                {maintenanceLabelText(nextMaintenance)}
+              </Text>
+            </InfoRow>
           ) : null}
 
           {assignedUserNames.length > 0 ? (
-            <>
-              <Separator />
-              <InfoRow icon="person.2.fill" iconColor={mutedColor}>
-                {formatAssignedNames(assignedUserNames)}
-              </InfoRow>
-            </>
+            <InfoRow icon="person.2.fill" iconColor={mutedColor}>
+              {formatAssignedNames(assignedUserNames)}
+            </InfoRow>
           ) : null}
         </View>
       </View>
-    </Surface>
+    </View>
   )
 }

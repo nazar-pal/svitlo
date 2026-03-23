@@ -222,13 +222,7 @@ function PlatformBadges({ children }: { children: ReactNode }) {
   return <div className="landing-platform-badges">{children}</div>
 }
 
-function PlatformBadge({
-  icon,
-  label
-}: {
-  icon: ReactNode
-  label: string
-}) {
+function PlatformBadge({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <span className="landing-platform-badge">
       {icon}
