@@ -219,7 +219,8 @@ export const en = {
     offlineDesc: 'Internet connection is required for AI suggestions.',
     failedToGet: 'Failed to get suggestions',
     genericWarning:
-      "This is a generic maintenance template. Verify the values against your generator's documentation."
+      "This is a generic maintenance template. Verify the values against your generator's documentation.",
+    timeout: 'The request timed out. Please try again.'
   },
 
   organization: {

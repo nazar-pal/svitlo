@@ -130,9 +130,9 @@ describe('genericFallback', () => {
     expect(result.tasks).toHaveLength(4)
   })
 
-  it('includes model name in modelInfo', () => {
+  it('returns empty modelInfo', () => {
     const result = genericFallback('Honda EU2200i')
-    expect(result.modelInfo).toContain('Honda EU2200i')
+    expect(result.modelInfo).toBe('')
   })
 
   it('returns valid maxConsecutiveRunHours and requiredRestHours', () => {

@@ -176,7 +176,7 @@ export function genericFallback(
       }
     ],
     sources: [],
-    modelInfo: `Could not find specific data for "${model}". Using generic defaults.`,
+    modelInfo: '',
     isGeneric: true
   }
 }

@@ -1,4 +1,5 @@
 import { Canvas, Fill, Shader, Skia, vec } from '@shopify/react-native-skia'
+import { Button } from 'heroui-native'
 import { useEffect } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import {
@@ -8,6 +9,8 @@ import {
   withRepeat,
   withTiming
 } from 'react-native-reanimated'
+
+import { useTranslation } from '@/lib/i18n'
 
 const CANVAS_SIZE = 160
 
@@ -118,9 +121,11 @@ const loaderSource = Skia.RuntimeEffect.Make(`
 
 interface AiLoaderProps {
   label: string
+  onCancel?: () => void
 }
 
-export function AiLoader({ label }: AiLoaderProps) {
+export function AiLoader({ label, onCancel }: AiLoaderProps) {
+  const { t } = useTranslation()
   const time = useSharedValue(0)
 
   useEffect(() => {
@@ -148,6 +153,11 @@ export function AiLoader({ label }: AiLoaderProps) {
         </Fill>
       </Canvas>
       <Text className="text-muted text-sm">{label}</Text>
+      {onCancel ? (
+        <Button variant="ghost" size="sm" onPress={onCancel}>
+          {t('common.cancel')}
+        </Button>
+      ) : null}
     </View>
   )
 }

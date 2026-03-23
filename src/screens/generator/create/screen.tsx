@@ -13,7 +13,7 @@ import {
   PressableFeedback,
   TextField
 } from 'heroui-native'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Alert as RNAlert, Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
@@ -62,6 +62,7 @@ export default function CreateGeneratorScreen() {
   const [aiIsGeneric, setAiIsGeneric] = useState(false)
 
   const [error, setError] = useState('')
+  const cancelledRef = useRef(false)
 
   function handleNext() {
     setFieldErrors({})
@@ -76,6 +77,7 @@ export default function CreateGeneratorScreen() {
   }
 
   async function handleAIMode() {
+    cancelledRef.current = false
     setMode('ai')
 
     const networkState = await Network.getNetworkStateAsync()
@@ -87,19 +89,32 @@ export default function CreateGeneratorScreen() {
 
     setIsLoadingAI(true)
     setAiIsGeneric(false)
-    const result = await rpcClient.ai
-      .suggestMaintenancePlan({
+    let timer: ReturnType<typeof setTimeout>
+
+    const result = await Promise.race([
+      rpcClient.ai.suggestMaintenancePlan({
         generatorModel: values.model,
         description: values.description || undefined,
         locale
+      }),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(t('aiSuggestions.timeout'))),
+          45_000
+        )
       })
+    ])
+      .finally(() => clearTimeout(timer))
       .catch((err: unknown) => {
+        if (cancelledRef.current) return null
         RNAlert.alert(
           t('common.error'),
           err instanceof Error ? err.message : t('aiSuggestions.failedToGet')
         )
         return null
       })
+
+    if (cancelledRef.current) return
     setIsLoadingAI(false)
 
     if (!result) {
@@ -116,6 +131,12 @@ export default function CreateGeneratorScreen() {
     setAiModelInfo(result.modelInfo)
     setAiIsGeneric(result.isGeneric)
     setMaintenanceItems(result.tasks.map(task => ({ ...task, selected: true })))
+  }
+
+  function handleCancelAI() {
+    cancelledRef.current = true
+    setIsLoadingAI(false)
+    setMode(null)
   }
 
   function handleManualMode() {
@@ -313,6 +334,7 @@ export default function CreateGeneratorScreen() {
           {isLoadingAI ? (
             <AiLoader
               label={t('generator.researching', { model: values.model })}
+              onCancel={handleCancelAI}
             />
           ) : null}
 
@@ -392,11 +414,9 @@ export default function CreateGeneratorScreen() {
                 </View>
               ) : null}
 
-              {mode === 'manual' ? (
-                <Button variant="secondary" onPress={addEmptyMaintenanceItem}>
-                  {t('generator.addMaintenanceTask')}
-                </Button>
-              ) : null}
+              <Button variant="secondary" onPress={addEmptyMaintenanceItem}>
+                {t('generator.addMaintenanceTask')}
+              </Button>
 
               <AiSourcesList sources={aiSources} />
 

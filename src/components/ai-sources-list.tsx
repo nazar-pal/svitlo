@@ -10,14 +10,18 @@ interface AiSourcesListProps {
 export function AiSourcesList({ sources, className }: AiSourcesListProps) {
   const { t } = useTranslation()
 
-  if (sources.length === 0) return null
+  const validSources = sources.filter(
+    s => s.startsWith('https://') || s.startsWith('http://')
+  )
+
+  if (validSources.length === 0) return null
 
   return (
     <View className={`gap-1 ${className ?? ''}`}>
       <Text className="text-muted text-xs font-medium uppercase">
         {t('aiSuggestions.sources')}
       </Text>
-      {sources.map((source, i) => (
+      {validSources.map((source, i) => (
         <Pressable
           key={i}
           onPress={() => Linking.openURL(source)}

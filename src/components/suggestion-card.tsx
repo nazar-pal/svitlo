@@ -109,9 +109,14 @@ export function SuggestionCard({
               <Label>{t('maintenanceTemplate.hoursInterval')}</Label>
               <Input
                 value={item.triggerHoursInterval?.toString() ?? ''}
-                onChangeText={v =>
-                  onUpdate({ triggerHoursInterval: parseFloat(v) || null })
-                }
+                onChangeText={v => {
+                  const parsed = parseFloat(v)
+                  onUpdate({
+                    triggerHoursInterval: Number.isFinite(parsed)
+                      ? parsed
+                      : null
+                  })
+                }}
                 keyboardType="decimal-pad"
               />
               <Description>
@@ -125,9 +130,12 @@ export function SuggestionCard({
               <Label>{t('maintenanceTemplate.calendarDays')}</Label>
               <Input
                 value={item.triggerCalendarDays?.toString() ?? ''}
-                onChangeText={v =>
-                  onUpdate({ triggerCalendarDays: parseInt(v, 10) || null })
-                }
+                onChangeText={v => {
+                  const parsed = parseInt(v, 10)
+                  onUpdate({
+                    triggerCalendarDays: Number.isFinite(parsed) ? parsed : null
+                  })
+                }}
                 keyboardType="number-pad"
               />
               <Description>{t('maintenanceTemplate.daysBetween')}</Description>
