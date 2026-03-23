@@ -10,6 +10,7 @@ import {
 } from 'heroui-native'
 import { useState } from 'react'
 import { Alert, StyleSheet, View } from 'react-native'
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 
 import { deleteOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
@@ -76,47 +77,50 @@ export function DeleteOrgDialog({
             style={StyleSheet.absoluteFill}
           />
         </Dialog.Overlay>
-        <Dialog.Content>
-          <Dialog.Close variant="ghost" className="self-end" />
-          <View className="gap-5">
-            <View className="gap-1.5">
-              <Dialog.Title>{t('organization.deleteOrg')}</Dialog.Title>
-              <Dialog.Description>
-                {t('organization.deleteOrgDesc')}
-              </Dialog.Description>
-            </View>
+        <KeyboardAvoidingView behavior="padding">
+          <Dialog.Content>
+            <Dialog.Close variant="ghost" className="self-end" />
+            <View className="gap-5">
+              <View className="gap-1.5">
+                <Dialog.Title>{t('organization.deleteOrg')}</Dialog.Title>
+                <Dialog.Description>
+                  {t('organization.deleteOrgDesc')}
+                </Dialog.Description>
+              </View>
 
-            <TextField isInvalid={confirmText.length > 0 && !canDelete}>
-              <Label>
-                {t('organization.typeToConfirm', { name: orgName })}
-              </Label>
-              <Input
-                value={confirmText}
-                onChangeText={setConfirmText}
-                placeholder={orgName}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {confirmText.length > 0 && !canDelete ? (
-                <FieldError>{t('organization.nameDoesNotMatch')}</FieldError>
-              ) : null}
-            </TextField>
+              <TextField isInvalid={confirmText.length > 0 && !canDelete}>
+                <Label>
+                  {t('organization.typeToConfirm', { name: orgName })}
+                </Label>
+                <Input
+                  value={confirmText}
+                  onChangeText={setConfirmText}
+                  placeholder={orgName}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  variant="secondary"
+                />
+                {confirmText.length > 0 && !canDelete ? (
+                  <FieldError>{t('organization.nameDoesNotMatch')}</FieldError>
+                ) : null}
+              </TextField>
 
-            <View className="flex-row justify-end gap-3">
-              <Button variant="ghost" size="sm" onPress={close}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                isDisabled={!canDelete}
-                onPress={handleDelete}
-              >
-                {t('common.delete')}
-              </Button>
+              <View className="flex-row justify-end gap-3">
+                <Button variant="ghost" size="sm" onPress={close}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  isDisabled={!canDelete}
+                  onPress={handleDelete}
+                >
+                  {t('common.delete')}
+                </Button>
+              </View>
             </View>
-          </View>
-        </Dialog.Content>
+          </Dialog.Content>
+        </KeyboardAvoidingView>
       </Dialog.Portal>
     </Dialog>
   )
