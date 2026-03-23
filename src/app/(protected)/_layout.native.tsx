@@ -71,13 +71,27 @@ export default function ProtectedLayout() {
           />
           <Stack.Screen
             name="generator/[id]/maintenance"
-            options={{ ...halfSheetOptions, title: t('tabs.maintenance') }}
+            options={{ ...formSheetOptions, title: t('tabs.maintenance') }}
           />
           <Stack.Screen
             name="generator/[id]/log-session"
             options={{
-              ...formSheetOptions,
+              ...compactSheetOptions,
               title: t('screens.logPastRun')
+            }}
+          />
+          <Stack.Screen
+            name="generator/[id]/template-details"
+            options={{
+              ...formSheetOptions,
+              title: t('screens.taskDetails')
+            }}
+          />
+          <Stack.Screen
+            name="generator/[id]/edit-template"
+            options={{
+              ...formSheetOptions,
+              title: t('screens.editTask')
             }}
           />
           <Stack.Screen
@@ -94,14 +108,14 @@ export default function ProtectedLayout() {
           <Stack.Screen
             name="activity/edit-session"
             options={{
-              ...formSheetOptions,
+              ...compactSheetOptions,
               title: t('screens.editRun')
             }}
           />
           <Stack.Screen
             name="activity/edit-maintenance"
             options={{
-              ...formSheetOptions,
+              ...compactSheetOptions,
               title: t('screens.editMaintenance')
             }}
           />

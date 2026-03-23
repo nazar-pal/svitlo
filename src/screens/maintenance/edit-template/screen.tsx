@@ -15,21 +15,39 @@ import { useTranslation } from '@/lib/i18n'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
-import { createMaintenanceTemplate } from '@/data/client/mutations'
+import { updateMaintenanceTemplate } from '@/data/client/mutations'
+import type { MaintenanceTemplate } from '@/data/client/db-schema/maintenance'
+import { getMaintenanceTemplate } from '@/data/client/queries'
 import {
   flattenZodErrors,
-  insertMaintenanceTemplateSchema
+  updateMaintenanceTemplateSchema
 } from '@/data/client/validation'
 import { notifySuccess, selection } from '@/lib/haptics'
+import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useFormFields } from '@/lib/hooks/use-form-fields'
 import { useLocalUser } from '@/lib/powersync'
 
 const TRIGGER_TYPES = ['hours', 'calendar', 'whichever_first'] as const
 type TriggerType = (typeof TRIGGER_TYPES)[number]
 
-export default function CreateMaintenanceTemplateScreen() {
+export default function EditMaintenanceTemplateScreen() {
+  const { templateId } = useLocalSearchParams<{
+    id: string
+    templateId: string
+  }>()
+
+  const { data: templateData } = useDrizzleQuery(
+    templateId ? getMaintenanceTemplate(templateId) : undefined
+  )
+  const template = templateData[0]
+
+  if (!template) return null
+
+  return <EditForm template={template} />
+}
+
+function EditForm({ template }: { template: MaintenanceTemplate }) {
   const { t } = useTranslation()
-  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const localUser = useLocalUser()
 
@@ -40,11 +58,15 @@ export default function CreateMaintenanceTemplateScreen() {
   }
 
   const { values, field, set, fieldErrors, setFieldErrors } = useFormFields({
-    taskName: '',
-    description: '',
-    triggerType: 'hours',
-    triggerHoursInterval: '',
-    triggerCalendarDays: ''
+    taskName: template.taskName,
+    description: template.description ?? '',
+    triggerType: template.triggerType,
+    triggerHoursInterval: template.triggerHoursInterval
+      ? String(template.triggerHoursInterval)
+      : '',
+    triggerCalendarDays: template.triggerCalendarDays
+      ? String(template.triggerCalendarDays)
+      : ''
   })
   const [error, setError] = useState('')
   const triggerType = values.triggerType as TriggerType
@@ -52,8 +74,8 @@ export default function CreateMaintenanceTemplateScreen() {
   const showCalendar =
     triggerType === 'calendar' || triggerType === 'whichever_first'
 
-  async function handleCreate() {
-    if (!localUser || !generatorId) return
+  async function handleSave() {
+    if (!localUser) return
     setError('')
     setFieldErrors({})
 
@@ -63,25 +85,28 @@ export default function CreateMaintenanceTemplateScreen() {
     }
 
     const input = {
-      generatorId,
       taskName: values.taskName,
-      description: values.description || undefined,
+      description: values.description || null,
       triggerType,
       triggerHoursInterval: showHours
-        ? toNum(values.triggerHoursInterval, parseFloat)
-        : undefined,
+        ? (toNum(values.triggerHoursInterval, parseFloat) ?? null)
+        : null,
       triggerCalendarDays: showCalendar
-        ? toNum(values.triggerCalendarDays, s => parseInt(s, 10))
-        : undefined
+        ? (toNum(values.triggerCalendarDays, s => parseInt(s, 10)) ?? null)
+        : null
     }
 
-    const parsed = insertMaintenanceTemplateSchema.safeParse(input)
+    const parsed = updateMaintenanceTemplateSchema.safeParse(input)
     if (!parsed.success) {
       setFieldErrors(flattenZodErrors(parsed.error))
       return
     }
 
-    const result = await createMaintenanceTemplate(localUser.id, input)
+    const result = await updateMaintenanceTemplate(
+      localUser.id,
+      template.id,
+      parsed.data
+    )
     if (!result.ok) {
       setError(result.error)
       return
@@ -95,7 +120,7 @@ export default function CreateMaintenanceTemplateScreen() {
     <>
       <Stack.Screen
         options={{
-          headerRight: () => <HeaderSubmitButton onPress={handleCreate} />
+          headerRight: () => <HeaderSubmitButton onPress={handleSave} />
         }}
       />
       <KeyboardAwareScrollView
@@ -107,17 +132,12 @@ export default function CreateMaintenanceTemplateScreen() {
         extraKeyboardSpace={42}
       >
         <View className="mx-auto w-full max-w-150 gap-7">
-          <Text className="text-muted text-3.75 leading-5.5">
-            {t('maintenanceTemplate.defineDesc')}
-          </Text>
-
           <View className="gap-5">
             <TextField isInvalid={!!fieldErrors.taskName}>
               <Label>{t('maintenanceTemplate.taskName')}</Label>
               <Input
                 placeholder={t('maintenanceTemplate.taskNamePlaceholder')}
                 {...field('taskName')}
-                autoFocus
               />
               <FieldError>{fieldErrors.taskName}</FieldError>
             </TextField>
@@ -132,7 +152,6 @@ export default function CreateMaintenanceTemplateScreen() {
               <Description>{t('common.optional')}</Description>
             </TextField>
 
-            {/* Trigger Type Selector */}
             <View className="gap-2">
               <Text className="text-foreground text-sm font-medium">
                 {t('maintenanceTemplate.triggerType')}

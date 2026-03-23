@@ -225,7 +225,16 @@ export const uk = {
     everyHours: 'Кожні {{hours}} год',
     everyDays: 'Кожні {{days}} дн.',
     everyBoth: '{{hours}} год або {{days}} дн.',
-    last: 'Останнє: {{date}}'
+    last: 'Останнє: {{date}}',
+    schedule: 'Розклад',
+    nextDue: 'Наступне обслуговування',
+    instructions: 'Інструкції',
+    recordNow: 'Записати обслуговування',
+    lastPerformed: 'Останнє виконання',
+    completed: 'Виконано',
+    deleteTask: 'Видалити завдання',
+    deleteTaskConfirm:
+      'Ви впевнені, що хочете видалити це завдання? Усі пов\u2019язані записи також будуть видалені.'
   },
 
   maintenanceRecord: {
@@ -387,7 +396,9 @@ export const uk = {
     editMaintenance: 'Редагувати обслуговування',
     newOrganization: 'Нова організація',
     inviteMember: 'Запросити учасника',
-    renameOrganization: 'Перейменувати організацію'
+    renameOrganization: 'Перейменувати організацію',
+    taskDetails: 'Деталі завдання',
+    editTask: 'Редагувати завдання'
   },
 
   invitations: {

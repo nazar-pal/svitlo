@@ -204,7 +204,16 @@ export const en = {
     everyHours: 'Every {{hours}}h',
     everyDays: 'Every {{days}} days',
     everyBoth: '{{hours}}h or {{days}} days',
-    last: 'Last: {{date}}'
+    last: 'Last: {{date}}',
+    schedule: 'Schedule',
+    nextDue: 'Next Due',
+    instructions: 'Instructions',
+    recordNow: 'Record Maintenance',
+    lastPerformed: 'Last Performed',
+    completed: 'Completed',
+    deleteTask: 'Delete Task',
+    deleteTaskConfirm:
+      'Are you sure you want to delete this task? All associated records will also be deleted.'
   },
 
   maintenanceRecord: {
@@ -359,7 +368,9 @@ export const en = {
     editMaintenance: 'Edit Maintenance',
     newOrganization: 'New Organization',
     inviteMember: 'Invite Member',
-    renameOrganization: 'Rename Organization'
+    renameOrganization: 'Rename Organization',
+    taskDetails: 'Task Details',
+    editTask: 'Edit Task'
   },
 
   invitations: {
