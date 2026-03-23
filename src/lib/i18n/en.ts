@@ -17,7 +17,8 @@ export const en = {
     submit: 'Submit',
     menu: 'Menu',
     language: 'Language',
-    create: 'Create'
+    create: 'Create',
+    continue: 'Continue'
   },
 
   tabs: {
@@ -293,6 +294,8 @@ export const en = {
       'Sign in again to resume syncing your data. Your local data is safe and will not be lost.',
     signedInWithEmail: 'Signed in with email?',
     notNow: 'Not now',
+    completeName: "What's your name?",
+    completeNameDesc: 'Enter your name to continue.',
     differentAccount: 'Different account detected',
     differentAccountDesc:
       'You signed in with a different account than the one stored on this device. To switch accounts, please sign out first. Your current sign-in has been cancelled.'

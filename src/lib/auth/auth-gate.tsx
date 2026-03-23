@@ -22,6 +22,7 @@ function AuthGateInner() {
   const revalidationInFlightRef = useRef(false)
 
   const isAuthenticated = identity !== null
+  const hasCompleteName = !session || Boolean(session.user?.name?.trim())
 
   // Show the bootstrap spinner only on cold start when we have no stored identity
   // and Better Auth is still resolving its cached session.
@@ -121,7 +122,10 @@ function AuthGateInner() {
       <Stack.Protected guard={!isAuthenticated}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
-      <Stack.Protected guard={isAuthenticated}>
+      <Stack.Protected guard={isAuthenticated && !hasCompleteName}>
+        <Stack.Screen name="(complete-profile)" />
+      </Stack.Protected>
+      <Stack.Protected guard={isAuthenticated && hasCompleteName}>
         <Stack.Screen name="(protected)" />
       </Stack.Protected>
     </Stack>

@@ -11,6 +11,13 @@ export const signInSchema = z.object({
   password: z.string().min(1, { error: () => t('validation.enterPassword') })
 })
 
+export const completeNameSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, { error: () => t('validation.enterName') })
+})
+
 export const signUpSchema = z
   .object({
     name: z
