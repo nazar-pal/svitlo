@@ -18,6 +18,7 @@ import {
 import { useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 
+import { CreateOrgDialog } from '@/components/create-org-dialog'
 import { DeleteOrgDialog } from '@/components/delete-org-dialog'
 import { LanguageMenu } from '@/components/language-menu'
 import { LeaveOrgDialog } from '@/components/leave-org-dialog'
@@ -61,6 +62,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
   )
   const [deleteOrgId, setDeleteOrgId] = useState<string | null>(null)
   const [leaveOrgId, setLeaveOrgId] = useState<string | null>(null)
+  const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false)
   const { t } = useTranslation()
 
   const userEmail = localUser?.email ?? ''
@@ -186,7 +188,12 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
               </View>
             ))}
             <Separator className="mx-4" />
-            <ListGroup.Item onPress={() => router.push('/organization/create')}>
+            <ListGroup.Item
+              onPress={() => {
+                navigation.dispatch(DrawerActions.closeDrawer())
+                setIsCreateOrgOpen(true)
+              }}
+            >
               <ListGroup.ItemPrefix>
                 <SymbolView name="plus" size={20} tintColor={foregroundColor} />
               </ListGroup.ItemPrefix>
@@ -237,6 +244,11 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
           </View>
         ) : null}
       </ScrollView>
+
+      <CreateOrgDialog
+        isOpen={isCreateOrgOpen}
+        onClose={() => setIsCreateOrgOpen(false)}
+      />
 
       <InvitationDialog
         invitationIds={selectedInvitationIds}

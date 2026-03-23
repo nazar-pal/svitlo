@@ -30,7 +30,8 @@ export const uk = {
     close: 'Закрити',
     submit: 'Підтвердити',
     menu: 'Меню',
-    language: 'Мова'
+    language: 'Мова',
+    create: 'Створити'
   },
 
   tabs: {

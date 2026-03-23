@@ -16,7 +16,8 @@ export const en = {
     close: 'Close',
     submit: 'Submit',
     menu: 'Menu',
-    language: 'Language'
+    language: 'Language',
+    create: 'Create'
   },
 
   tabs: {

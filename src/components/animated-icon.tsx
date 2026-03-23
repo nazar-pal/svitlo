@@ -66,33 +66,48 @@ const glowSource = Skia.RuntimeEffect.Make(`
 export function AnimatedSplashOverlay() {
   const [visible, setVisible] = useState(true)
   const opacity = useSharedValue(1)
-  const scale = useSharedValue(INITIAL_SCALE_FACTOR)
+  const iconOpacity = useSharedValue(1)
+  const iconScale = useSharedValue(1)
 
   useEffect(() => {
     appReadyPromise.then(() => {
       SplashScreen.hideAsync()
-      scale.value = withTiming(1, {
-        duration: DURATION,
-        easing: Easing.elastic(0.7)
+      iconScale.value = withTiming(0.6, {
+        duration: DURATION * 0.6,
+        easing: Easing.in(Easing.ease)
       })
+      iconOpacity.value = withTiming(0, { duration: DURATION * 0.5 })
       opacity.value = withDelay(
-        DURATION * 0.2,
-        withTiming(0, { duration: DURATION * 0.5 }, finished => {
+        DURATION * 0.15,
+        withTiming(0, { duration: DURATION * 0.6 }, finished => {
           'worklet'
           if (finished) scheduleOnRN(setVisible, false)
         })
       )
     })
-  }, [opacity, scale])
+  }, [opacity, iconOpacity, iconScale])
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }]
+    opacity: opacity.value
+  }))
+
+  const iconAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: iconOpacity.value,
+    transform: [{ scale: iconScale.value }]
   }))
 
   if (!visible) return null
 
-  return <Animated.View style={[styles.backgroundSolidColor, animatedStyle]} />
+  return (
+    <Animated.View style={[styles.backgroundSolidColor, animatedStyle]}>
+      <Animated.View style={[styles.splashIcon, iconAnimatedStyle]}>
+        <Image
+          source={require('@/assets/images/splash-icon.png')}
+          style={styles.splashIconImage}
+        />
+      </Animated.View>
+    </Animated.View>
+  )
 }
 
 const keyframe = new Keyframe({
@@ -203,8 +218,18 @@ const styles = StyleSheet.create({
     position: 'absolute'
   },
   backgroundSolidColor: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#208AEF',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 1000
+  },
+  splashIcon: {
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  splashIconImage: {
+    width: 100,
+    height: 100
   }
 })

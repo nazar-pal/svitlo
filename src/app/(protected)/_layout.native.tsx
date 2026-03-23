@@ -120,13 +120,6 @@ export default function ProtectedLayout() {
             }}
           />
           <Stack.Screen
-            name="organization/create"
-            options={{
-              ...compactSheetOptions,
-              title: t('screens.newOrganization')
-            }}
-          />
-          <Stack.Screen
             name="organization/[id]/invite"
             options={{
               ...compactSheetOptions,
