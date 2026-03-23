@@ -556,7 +556,10 @@ export const en = {
     waitlistErrorGeneric: 'Something went wrong. Please try again.',
     notifyMeSubmitting: 'Sending...',
     iosStatus: 'iOS — In App Review',
-    androidStatus: 'Android — Coming Soon'
+    androidStatus: 'Android — Coming Soon',
+    screenshotHome: 'Svitlo app home screen showing generator details',
+    screenshotRunning: 'Svitlo app showing an active generator session',
+    screenshotMembers: 'Svitlo app showing team member management'
   },
 
   time: {

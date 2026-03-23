@@ -333,3 +333,93 @@ body {
   background-color: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.8);
 }
+
+/* ── Landing — phone showcase ── */
+
+.landing-phone-section {
+  background-color: #fff;
+  padding-top: 64px;
+  padding-bottom: 80px;
+  overflow: hidden;
+}
+
+.landing-phone-row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 24px;
+}
+
+.landing-phone {
+  flex-shrink: 0;
+}
+
+.landing-phone--side {
+  width: 220px;
+  opacity: 0.85;
+  transform: scale(0.92);
+}
+
+.landing-phone--center {
+  width: 260px;
+  position: relative;
+  bottom: 20px;
+}
+
+.landing-phone-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 32px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  .landing-phone-img {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.3),
+      0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-phone-row {
+    gap: 16px;
+  }
+  .landing-phone--side {
+    width: 170px;
+  }
+  .landing-phone--center {
+    width: 200px;
+    bottom: 16px;
+  }
+  .landing-phone-img {
+    border-radius: 24px;
+  }
+}
+
+@media (max-width: 540px) {
+  .landing-phone-section {
+    padding-top: 40px;
+    padding-bottom: 56px;
+  }
+  .landing-phone-row {
+    gap: 12px;
+  }
+  .landing-phone--side {
+    width: 110px;
+    opacity: 0.7;
+    transform: scale(0.85);
+  }
+  .landing-phone--center {
+    width: 160px;
+    bottom: 12px;
+  }
+  .landing-phone-img {
+    border-radius: 20px;
+  }
+}

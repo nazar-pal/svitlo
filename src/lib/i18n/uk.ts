@@ -600,7 +600,10 @@ export const uk = {
     waitlistErrorGeneric: 'Щось пішло не так. Спробуйте ще раз.',
     notifyMeSubmitting: 'Надсилаємо...',
     iosStatus: 'iOS — На розгляді в App Store',
-    androidStatus: 'Android — Незабаром'
+    androidStatus: 'Android — Незабаром',
+    screenshotHome: 'Головний екран додатку Svitlo з деталями генератора',
+    screenshotRunning: 'Додаток Svitlo з активною сесією генератора',
+    screenshotMembers: 'Додаток Svitlo з управлінням учасниками команди'
   },
 
   time: {

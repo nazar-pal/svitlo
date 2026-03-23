@@ -9,6 +9,12 @@ import { useTranslation } from '@/lib/i18n'
 const CURRENT_YEAR = String(new Date().getFullYear())
 
 const iconSrc: string = require('../../../assets/images/icon.png')
+const appHomeLightSrc: string = require('../../../assets/images/app-home-light.png')
+const appHomeDarkSrc: string = require('../../../assets/images/app-home-dark.png')
+const appHomeRunningLightSrc: string = require('../../../assets/images/app-home-running-light.png')
+const appHomeRunningDarkSrc: string = require('../../../assets/images/app-home-running-dark.png')
+const appMembersLightSrc: string = require('../../../assets/images/app-members-light.png')
+const appMembersDarkSrc: string = require('../../../assets/images/app-members-dark.png')
 
 const FEATURES = [
   {
@@ -247,6 +253,60 @@ function AndroidIcon() {
   )
 }
 
+const PHONES = [
+  {
+    lightSrc: appMembersLightSrc,
+    darkSrc: appMembersDarkSrc,
+    altKey: 'landing.screenshotMembers',
+    className: 'landing-phone landing-phone--side'
+  },
+  {
+    lightSrc: appHomeLightSrc,
+    darkSrc: appHomeDarkSrc,
+    altKey: 'landing.screenshotHome',
+    className: 'landing-phone landing-phone--center'
+  },
+  {
+    lightSrc: appHomeRunningLightSrc,
+    darkSrc: appHomeRunningDarkSrc,
+    altKey: 'landing.screenshotRunning',
+    className: 'landing-phone landing-phone--side'
+  }
+] as const
+
+function PhoneShowcase() {
+  const { t } = useTranslation()
+
+  return (
+    <section className="landing-section landing-phone-section">
+      <div className="landing-container landing-container--xl">
+        <div className="landing-phone-row">
+          {PHONES.map((phone, i) => (
+            <motion.div
+              key={phone.altKey}
+              className={phone.className}
+              {...fadeInUp(i * 0.12)}
+            >
+              <picture>
+                <source
+                  srcSet={phone.darkSrc}
+                  media="(prefers-color-scheme: dark)"
+                />
+                <img
+                  src={phone.lightSrc}
+                  alt={t(phone.altKey)}
+                  className="landing-phone-img"
+                  loading="lazy"
+                />
+              </picture>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function LandingScreen() {
   const { t } = useTranslation()
 
@@ -397,6 +457,9 @@ export default function LandingScreen() {
           ))}
         </div>
       </section>
+
+      {/* ── App Preview ── */}
+      <PhoneShowcase />
 
       {/* ── Features ── */}
       <section
