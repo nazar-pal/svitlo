@@ -5,21 +5,22 @@
 > **[PowerSync AI Hackathon](https://www.powersync.com/blog/powersync-ai-hackathon-8k-in-prizes) submission** — competing for Best Neon Project, Best Mastra AI Project, and Best Local-First Submission.
 
 <p align="center">
-  <img src="assets/images/app-home-dark.png" width="200" alt="Home screen — dark mode" />
+  <img src="assets/images/app-home-dark.png" width="200" alt="Home screen" />
   &nbsp;&nbsp;
-  <img src="assets/images/app-home-running-dark.png" width="200" alt="Generator running — dark mode" />
+  <img src="assets/images/app-home-running-dark.png" width="200" alt="Generator running" />
   &nbsp;&nbsp;
-  <img src="assets/images/app-members-dark.png" width="200" alt="Team members — dark mode" />
-</p>
-<p align="center">
-  <img src="assets/images/app-home-light.png" width="200" alt="Home screen — light mode" />
-  &nbsp;&nbsp;
-  <img src="assets/images/app-home-running-light.png" width="200" alt="Generator running — light mode" />
-  &nbsp;&nbsp;
-  <img src="assets/images/app-members-light.png" width="200" alt="Team members — light mode" />
+  <img src="assets/images/app-members-dark.png" width="200" alt="Team members" />
 </p>
 
-**Website:** [svitlo.expo.app](https://svitlo.expo.app) · **Demo Video:** [YouTube](https://youtu.be/3goWDzY37dE)
+<p align="center">
+  <a href="https://youtu.be/3goWDzY37dE">
+    <img src="https://img.youtube.com/vi/3goWDzY37dE/maxresdefault.jpg" width="600" alt="Watch the demo on YouTube" />
+  </a>
+  <br />
+  <a href="https://youtu.be/3goWDzY37dE">Watch the demo on YouTube</a>
+</p>
+
+**Website:** [svitlo.expo.app](https://svitlo.expo.app)
 
 ---
 
