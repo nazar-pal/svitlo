@@ -1,10 +1,11 @@
 import './landing.css'
 
-import { motion } from 'motion/react'
+import { type FormEvent, type ReactNode, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { z } from 'zod'
 
 import { useTranslation } from '@/lib/i18n'
 
-const APP_STORE_URL = 'https://apps.apple.com/app/id6743439804'
 const CURRENT_YEAR = String(new Date().getFullYear())
 
 const iconSrc: string = require('../../../assets/images/icon.png')
@@ -101,38 +102,154 @@ const fadeInUp = (delay = 0) => ({
   transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const }
 })
 
+const emailSchema = z.email()
+
+type FormState = 'idle' | 'submitting' | 'success' | 'error'
+let waitlistSubmitted = false
+
+function WaitlistForm({ variant }: { variant: 'hero' | 'cta' }) {
+  const { t, locale } = useTranslation()
+  const [state, setState] = useState<FormState>(() =>
+    waitlistSubmitted ? 'success' : 'idle'
+  )
+  const [error, setError] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    const email = inputRef.current?.value.trim() ?? ''
+
+    if (!emailSchema.safeParse(email).success) {
+      setError(t('landing.waitlistErrorInvalid'))
+      setState('error')
+      return
+    }
+
+    setState('submitting')
+    setError('')
+
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, locale })
+      })
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          setError(t('landing.waitlistErrorTooMany'))
+          setState('error')
+          return
+        }
+        throw new Error('request failed')
+      }
+
+      waitlistSubmitted = true
+      setState('success')
+    } catch {
+      setError(t('landing.waitlistErrorGeneric'))
+      setState('error')
+    }
+  }
+
+  return (
+    <div className="landing-waitlist">
+      <AnimatePresence mode="wait">
+        {state === 'success' ? (
+          <motion.p
+            key="success"
+            className="landing-waitlist-success"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+          >
+            {t('landing.waitlistSuccess')}
+          </motion.p>
+        ) : (
+          <motion.form
+            key="form"
+            className="landing-waitlist-form"
+            onSubmit={handleSubmit}
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <input
+              ref={inputRef}
+              type="email"
+              autoComplete="email"
+              aria-label={t('landing.emailPlaceholder')}
+              aria-describedby={error ? `waitlist-error-${variant}` : undefined}
+              placeholder={t('landing.emailPlaceholder')}
+              className="landing-waitlist-input"
+              disabled={state === 'submitting'}
+              onInput={() => {
+                if (state === 'error') {
+                  setState('idle')
+                  setError('')
+                }
+              }}
+            />
+            <button
+              type="submit"
+              className="landing-waitlist-btn"
+              disabled={state === 'submitting'}
+            >
+              {state === 'submitting'
+                ? t('landing.notifyMeSubmitting')
+                : t('landing.notifyMe')}
+            </button>
+          </motion.form>
+        )}
+      </AnimatePresence>
+
+      {state === 'error' && error && (
+        <motion.p
+          id={`waitlist-error-${variant}`}
+          role="alert"
+          className="landing-waitlist-error"
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {error}
+        </motion.p>
+      )}
+    </div>
+  )
+}
+
+function PlatformBadges({ children }: { children: ReactNode }) {
+  return <div className="landing-platform-badges">{children}</div>
+}
+
+function PlatformBadge({
+  icon,
+  label
+}: {
+  icon: ReactNode
+  label: string
+}) {
+  return (
+    <span className="landing-platform-badge">
+      {icon}
+      {label}
+    </span>
+  )
+}
+
 function AppleIcon() {
   return (
-    <svg width="22" height="26" viewBox="0 0 384 512" fill="currentColor">
+    <svg width="14" height="17" viewBox="0 0 384 512" fill="currentColor">
       <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
     </svg>
   )
 }
 
-function AppStoreButton({
-  label,
-  sublabel
-}: {
-  label: string
-  sublabel: string
-}) {
+function AndroidIcon() {
   return (
-    <a
-      href={APP_STORE_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="landing-app-store-btn"
-    >
-      <AppleIcon />
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 500, opacity: 0.6 }}>
-          {sublabel}
-        </div>
-        <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.2 }}>
-          {label}
-        </div>
-      </div>
-    </a>
+    <svg width="16" height="17" viewBox="0 0 576 512" fill="currentColor">
+      <path d="M420.55 301.93a24 24 0 1 1 24-24 24 24 0 0 1-24 24m-265.1 0a24 24 0 1 1 24-24 24 24 0 0 1-24 24m273.7-144.48l47.94-83a10 10 0 1 0-17.27-10l-48.54 84.07a301 301 0 0 0-123.13-26.08A300.62 300.62 0 0 0 164.82 148.5l-48.54-84.07a10 10 0 0 0-17.27 10l47.94 83C64.53 202.22 8.24 285.55 0 384h576c-8.24-98.45-64.54-181.78-146.85-226.55" />
+    </svg>
   )
 }
 
@@ -201,7 +318,7 @@ export default function LandingScreen() {
             fontSize: 'clamp(1rem, 2vw, 1.25rem)',
             lineHeight: 1.7,
             color: 'rgba(255,255,255,0.55)',
-            marginBottom: 48
+            marginBottom: 40
           }}
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -215,16 +332,25 @@ export default function LandingScreen() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 20
+            gap: 24
           }}
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.45 }}
         >
-          <AppStoreButton
-            label={t('landing.appStore')}
-            sublabel={t('landing.downloadOn')}
-          />
+          <WaitlistForm variant="hero" />
+
+          <PlatformBadges>
+            <PlatformBadge
+              icon={<AppleIcon />}
+              label={t('landing.iosStatus')}
+            />
+            <PlatformBadge
+              icon={<AndroidIcon />}
+              label={t('landing.androidStatus')}
+            />
+          </PlatformBadges>
+
           <a
             href="#features"
             onClick={e => {
@@ -516,10 +642,7 @@ export default function LandingScreen() {
             {t('landing.free')}
           </p>
 
-          <AppStoreButton
-            label={t('landing.appStore')}
-            sublabel={t('landing.downloadOn')}
-          />
+          <WaitlistForm variant="cta" />
 
           <div
             style={{

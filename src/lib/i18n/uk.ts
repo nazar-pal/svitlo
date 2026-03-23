@@ -502,8 +502,6 @@ export const uk = {
   landing: {
     tagline:
       'Відстежуйте, обслуговуйте та керуйте вашими електрогенераторами \u2014 все в одному застосунку.',
-    downloadOn: 'Завантажити в',
-    appStore: 'App Store',
     featuresTitle: 'Все, що потрібно',
     featuresSubtitle:
       'Від відстеження сесій до обслуговування на базі ШІ \u2014 все в одному місці.',
@@ -570,7 +568,17 @@ export const uk = {
     copyright: '\u00A9 {{year}} Svitlo',
     ctaTitle: 'Готові почати?',
     ctaDesc:
-      'Завантажте Svitlo та візьміть обслуговування генераторів під контроль вже сьогодні.'
+      'Завантажте Svitlo та візьміть обслуговування генераторів під контроль вже сьогодні.',
+    emailPlaceholder: 'Введіть вашу електронну пошту',
+    notifyMe: 'Повідомити мене',
+    waitlistSuccess:
+      'Ви у списку! Ми надішлемо листа, коли Svitlo стане доступним.',
+    waitlistErrorInvalid: 'Будь ласка, введіть дійсну електронну адресу.',
+    waitlistErrorTooMany: 'Забагато спроб. Спробуйте пізніше.',
+    waitlistErrorGeneric: 'Щось пішло не так. Спробуйте ще раз.',
+    notifyMeSubmitting: 'Надсилаємо...',
+    iosStatus: 'iOS — На розгляді в App Store',
+    androidStatus: 'Android — Незабаром'
   },
 
   time: {

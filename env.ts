@@ -24,7 +24,9 @@ const serverSchema = {
   BETTER_AUTH_URL: z.string().trim().min(1).optional(),
   POWERSYNC_URL: z.url(),
   POWERSYNC_PRIVATE_KEY: z.string().trim().min(32),
-  GOOGLE_GENERATIVE_AI_API_KEY: z.string().trim().min(1)
+  GOOGLE_GENERATIVE_AI_API_KEY: z.string().trim().min(1),
+  RESEND_API_KEY: z.string().trim().min(1),
+  RESEND_WAITLIST_SEGMENT_ID: z.string().trim().min(1)
 }
 
 const clientSchema = {
@@ -45,6 +47,8 @@ export const env = createEnv({
     POWERSYNC_URL: process.env.POWERSYNC_URL,
     POWERSYNC_PRIVATE_KEY: process.env.POWERSYNC_PRIVATE_KEY,
     GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    RESEND_WAITLIST_SEGMENT_ID: process.env.RESEND_WAITLIST_SEGMENT_ID,
     EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
     EXPO_PUBLIC_APP_VARIANT: process.env.EXPO_PUBLIC_APP_VARIANT
   },

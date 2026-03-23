@@ -459,8 +459,6 @@ export const en = {
   landing: {
     tagline:
       'Track, maintain, and manage your power generators \u2014 all from one app.',
-    downloadOn: 'Download on the',
-    appStore: 'App Store',
     featuresTitle: 'Everything You Need',
     featuresSubtitle:
       'From session tracking to AI-powered maintenance \u2014 all in one place.',
@@ -526,7 +524,17 @@ export const en = {
     copyright: '\u00A9 {{year}} Svitlo',
     ctaTitle: 'Ready to Get Started?',
     ctaDesc:
-      'Download Svitlo and take control of your generator maintenance today.'
+      'Download Svitlo and take control of your generator maintenance today.',
+    emailPlaceholder: 'Enter your email',
+    notifyMe: 'Notify Me',
+    waitlistSuccess:
+      "You're on the list! We'll email you when Svitlo is available.",
+    waitlistErrorInvalid: 'Please enter a valid email address.',
+    waitlistErrorTooMany: 'Too many attempts. Please try again later.',
+    waitlistErrorGeneric: 'Something went wrong. Please try again.',
+    notifyMeSubmitting: 'Sending...',
+    iosStatus: 'iOS — In App Review',
+    androidStatus: 'Android — Coming Soon'
   },
 
   time: {
