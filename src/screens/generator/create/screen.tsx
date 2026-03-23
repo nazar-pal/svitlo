@@ -122,15 +122,34 @@ export default function CreateGeneratorScreen() {
       return
     }
 
-    if (result.maxConsecutiveRunHours != null)
-      set('maxConsecutiveRunHours', String(result.maxConsecutiveRunHours))
-    if (result.requiredRestHours != null)
-      set('requiredRestHours', String(result.requiredRestHours))
+    const suggestion = result
 
-    setAiSources(result.sources)
-    setAiModelInfo(result.modelInfo)
-    setAiIsGeneric(result.isGeneric)
-    setMaintenanceItems(result.tasks.map(task => ({ ...task, selected: true })))
+    function applyResult() {
+      if (suggestion.maxConsecutiveRunHours != null)
+        set('maxConsecutiveRunHours', String(suggestion.maxConsecutiveRunHours))
+      if (suggestion.requiredRestHours != null)
+        set('requiredRestHours', String(suggestion.requiredRestHours))
+
+      setAiSources(suggestion.sources)
+      setAiModelInfo(suggestion.modelInfo)
+      setAiIsGeneric(suggestion.isGeneric)
+      setMaintenanceItems(
+        suggestion.tasks.map(task => ({ ...task, selected: true }))
+      )
+    }
+
+    if (suggestion.isGeneric) {
+      RNAlert.alert(
+        t('aiSuggestions.genericTitle'),
+        t('aiSuggestions.genericPrompt'),
+        [
+          { text: t('aiSuggestions.noThanks'), style: 'cancel' },
+          { text: t('aiSuggestions.useTemplate'), onPress: applyResult }
+        ]
+      )
+    } else {
+      applyResult()
+    }
   }
 
   function handleCancelAI() {

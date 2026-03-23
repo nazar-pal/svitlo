@@ -25,11 +25,11 @@ TRIGGER TYPE FIELD RULES — follow these exactly:
 - "calendar": triggerCalendarDays MUST be a positive integer, triggerHoursInterval MUST be null
 - "whichever_first": BOTH triggerHoursInterval AND triggerCalendarDays MUST be positive numbers, never null
 
-UNKNOWN GENERATOR HANDLING:
-- If you cannot find specific manufacturer documentation or data for the given generator model, set isGeneric to true.
-- When isGeneric is true, provide a sensible generic maintenance template using conservative industry-standard defaults for portable/standby generators.
-- Do NOT fabricate specific manufacturer-recommended values. If you are unsure, use isGeneric: true.
-- When isGeneric is false, it means you found real manufacturer data for this specific model.`,
+WHEN TO SET isGeneric:
+- Set isGeneric to false when you find relevant maintenance data from web search — even from third-party sources, forums, or similar models from the same manufacturer line.
+- Set isGeneric to true ONLY when your search yields absolutely nothing relevant for the model.
+- Do NOT set isGeneric to true just because you lack an official PDF manual. Any web results with model-specific or manufacturer-line-specific data count as real data.
+- When isGeneric is true, provide a sensible generic maintenance template using conservative industry-standard defaults for portable/standby generators.`,
   model: google('gemini-2.5-flash'),
   tools: {
     googleSearch: google.tools.googleSearch({})

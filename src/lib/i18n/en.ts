@@ -230,6 +230,11 @@ export const en = {
     failedToGet: 'Failed to get suggestions',
     genericWarning:
       "This is a generic maintenance template. Verify the values against your generator's documentation.",
+    genericTitle: 'No specific data found',
+    genericPrompt:
+      "We couldn't find manufacturer maintenance data for this model. Would you like to use a generic template as a starting point?",
+    useTemplate: 'Use Template',
+    noThanks: 'No Thanks',
     timeout: 'The request timed out. Please try again.'
   },
 

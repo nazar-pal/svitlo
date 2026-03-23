@@ -223,12 +223,15 @@ export const aiRouter = {
           }
         })
         raw = rawSuggestionSchema.parse(result.object)
-      } catch {
+      } catch (error) {
+        console.error(
+          '[suggestMaintenancePlan] AI generation failed:',
+          error instanceof Error ? error.message : error
+        )
         raw = genericFallback(input.generatorModel)
       }
 
-      // Force isGeneric if no real sources were found
-      const isGeneric = raw.isGeneric || raw.sources.length === 0
+      const isGeneric = raw.isGeneric
 
       const repairedTasks = repairTasks(raw.tasks)
 
