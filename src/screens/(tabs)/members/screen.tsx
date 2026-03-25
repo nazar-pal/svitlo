@@ -2,7 +2,11 @@ import { EmptyState } from '@/components/empty-state'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { SectionHeader } from '@/components/section-header'
 import { useTranslation } from '@/lib/i18n'
-import { cancelInvitation, removeMember } from '@/data/client/mutations'
+import {
+  alertOnError,
+  cancelInvitation,
+  removeMember
+} from '@/data/client/mutations'
 import {
   getAllUsers,
   getOrganization,
@@ -71,7 +75,7 @@ export default function MembersScreen() {
         style: 'destructive',
         onPress: async () => {
           const result = await removeMember(userId, memberId)
-          if (!result.ok) return Alert.alert(t('common.error'), result.error)
+          if (alertOnError(result)) return
           notifyWarning()
         }
       }
@@ -80,7 +84,7 @@ export default function MembersScreen() {
 
   async function handleCancelInvitation(invitationId: string) {
     const result = await cancelInvitation(userId, invitationId)
-    if (!result.ok) return Alert.alert(t('common.error'), result.error)
+    if (alertOnError(result)) return
     notifyWarning()
   }
 

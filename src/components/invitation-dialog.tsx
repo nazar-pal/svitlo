@@ -1,10 +1,15 @@
-import { BlurView } from 'expo-blur'
 import { Button, Dialog } from 'heroui-native'
 import { useRef, useState } from 'react'
-import { Alert, StyleSheet, View } from 'react-native'
+import { View } from 'react-native'
 import Animated, { Keyframe } from 'react-native-reanimated'
 
-import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
+import { BlurDialogOverlay } from '@/components/blur-dialog-overlay'
+
+import {
+  acceptInvitation,
+  alertOnError,
+  declineInvitation
+} from '@/data/client/mutations'
 import { getAllOrganizations, getAllUsers } from '@/data/client/queries'
 import { notifySuccess, notifyWarning } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
@@ -85,7 +90,7 @@ export function InvitationDialog({
   async function handleAccept() {
     if (!currentId) return
     const result = await acceptInvitation(userId, userEmail, currentId)
-    if (!result.ok) return Alert.alert(t('common.error'), result.error)
+    if (alertOnError(result)) return
     advance()
     notifySuccess()
   }
@@ -93,7 +98,7 @@ export function InvitationDialog({
   async function handleDecline() {
     if (!currentId) return
     const result = await declineInvitation(userEmail, currentId)
-    if (!result.ok) return Alert.alert(t('common.error'), result.error)
+    if (alertOnError(result)) return
     advance()
     notifyWarning()
   }
@@ -106,13 +111,7 @@ export function InvitationDialog({
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay>
-          <BlurView
-            tint="systemMaterial"
-            intensity={20}
-            style={StyleSheet.absoluteFill}
-          />
-        </Dialog.Overlay>
+        <BlurDialogOverlay />
         <Dialog.Content>
           <Dialog.Close variant="ghost" className="self-end" />
           <View className="overflow-hidden">

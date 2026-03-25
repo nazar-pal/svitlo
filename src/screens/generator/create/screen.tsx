@@ -29,7 +29,7 @@ import {
   flattenZodErrors,
   insertGeneratorSchema
 } from '@/data/client/validation'
-import { rpcClient } from '@/data/rpc-client'
+import { rpcClient } from '@/data/client/rpc-client'
 import { notifySuccess } from '@/lib/haptics'
 import { useFormFields } from '@/lib/hooks/use-form-fields'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'

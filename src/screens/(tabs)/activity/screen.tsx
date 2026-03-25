@@ -27,11 +27,8 @@ import { EmptyState } from '@/components/empty-state'
 import { GeneratorScopeMenu } from '@/components/generator-scope-menu'
 import { SwipeableRow } from '@/components/swipeable-row'
 import { formatDate, useTranslation } from '@/lib/i18n'
-import {
-  confirmDeleteRecord,
-  confirmDeleteSession
-} from '@/lib/activity/confirm-delete'
-import { type Filter, FILTERS, filterLabel } from '@/lib/activity'
+import { confirmDeleteRecord, confirmDeleteSession } from '@/lib/alerts'
+import { type Filter, FILTERS, filterLabel } from '@/lib/activity-filters'
 import { selection } from '@/lib/haptics'
 import { type ActivityItem, useActivityData } from './lib/use-activity-data'
 

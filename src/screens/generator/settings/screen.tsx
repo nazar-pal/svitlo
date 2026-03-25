@@ -14,6 +14,7 @@ import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import {
+  alertOnError,
   assignUserToGenerator,
   deleteGenerator,
   unassignUserFromGenerator,
@@ -38,7 +39,7 @@ import { getUserName } from '@/lib/utils/get-user-name'
 import { useState } from 'react'
 
 import { useTranslation } from '@/lib/i18n'
-import { AssignedEmployeesSection } from '@/components/assigned-employees-section'
+import { AssignedMembersSection } from '@/components/assigned-members-section'
 
 export default function GeneratorSettingsScreen() {
   const { id: generatorId } = useLocalSearchParams<{ id: string }>()
@@ -138,7 +139,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
           style: 'destructive',
           onPress: async () => {
             const result = await deleteGenerator(userId, generatorId)
-            if (!result.ok) return Alert.alert(t('common.error'), result.error)
+            if (alertOnError(result)) return
             notifyWarning()
             router.dismissAll()
           }
@@ -153,7 +154,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
       generatorId,
       targetUserId
     )
-    if (!result.ok) return Alert.alert(t('common.error'), result.error)
+    if (alertOnError(result)) return
     notifySuccess()
   }
 
@@ -169,7 +170,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
             generatorId,
             targetUserId
           )
-          if (!result.ok) return Alert.alert(t('common.error'), result.error)
+          if (alertOnError(result)) return
           notifyWarning()
         }
       }
@@ -259,7 +260,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
             </TextField>
           </View>
 
-          <AssignedEmployeesSection
+          <AssignedMembersSection
             assignments={assignments}
             unassignedMembers={unassignedMembers}
             getUserName={resolveUserName}

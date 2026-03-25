@@ -1,4 +1,3 @@
-import { BlurView } from 'expo-blur'
 import {
   Button,
   Dialog,
@@ -8,9 +7,10 @@ import {
   TextField
 } from 'heroui-native'
 import { useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { View } from 'react-native'
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 
+import { BlurDialogOverlay } from '@/components/blur-dialog-overlay'
 import { useTranslation } from '@/lib/i18n'
 
 interface ConfirmDeleteDialogProps {
@@ -71,13 +71,7 @@ export function ConfirmDeleteDialog({
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay>
-          <BlurView
-            tint="systemMaterial"
-            intensity={20}
-            style={StyleSheet.absoluteFill}
-          />
-        </Dialog.Overlay>
+        <BlurDialogOverlay />
         <KeyboardAvoidingView behavior="padding">
           <Dialog.Content>
             <Dialog.Close variant="ghost" className="self-end" />

@@ -1,6 +1,7 @@
 import { Alert } from 'react-native'
 
 import {
+  alertOnError,
   deleteMaintenanceRecord,
   deleteMaintenanceTemplate,
   deleteSession
@@ -16,7 +17,7 @@ export function confirmDeleteSession(userId: string, sessionId: string) {
       style: 'destructive',
       onPress: async () => {
         const result = await deleteSession(userId, sessionId)
-        if (!result.ok) return Alert.alert(t('common.error'), result.error)
+        if (alertOnError(result)) return
         notifyWarning()
       }
     }
@@ -31,7 +32,7 @@ export function confirmDeleteRecord(userId: string, recordId: string) {
       style: 'destructive',
       onPress: async () => {
         const result = await deleteMaintenanceRecord(userId, recordId)
-        if (!result.ok) return Alert.alert(t('common.error'), result.error)
+        if (alertOnError(result)) return
         notifyWarning()
       }
     }
@@ -53,7 +54,7 @@ export function confirmDeleteTemplate(
         style: 'destructive',
         onPress: async () => {
           const result = await deleteMaintenanceTemplate(userId, templateId)
-          if (!result.ok) return Alert.alert(t('common.error'), result.error)
+          if (alertOnError(result)) return
           notifyWarning()
           onDeleted()
         }

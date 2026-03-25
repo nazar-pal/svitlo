@@ -1,6 +1,6 @@
 # Svitlo
 
-**Svitlo** (Ukrainian: "світло" — *light / electricity*) is an offline-first iOS app for tracking power generator runtime, scheduling maintenance with AI, and coordinating generators across teams — built for people who depend on generators when the grid goes down.
+**Svitlo** (Ukrainian: "світло" — _light / electricity_) is an offline-first iOS app for tracking power generator runtime, scheduling maintenance with AI, and coordinating generators across teams — built for people who depend on generators when the grid goes down.
 
 > **[PowerSync AI Hackathon](https://www.powersync.com/blog/powersync-ai-hackathon-8k-in-prizes) submission** — competing for Best Neon Project, Best Mastra AI Project, and Best Local-First Submission.
 
@@ -55,11 +55,11 @@ All reads and writes hit a **local SQLite database** (OP-SQLite) on the device. 
 
 Svitlo defines **10 named Sync Streams** with priority ordering so the initial sync delivers data in FK-safe order:
 
-| Priority | Streams | Purpose |
-|----------|---------|---------|
-| 1 (first) | `user_data`, `org_data` | Identity and organization context must arrive first — all other data has foreign keys to these |
-| 2 | `org_members_data`, `invitation_data`, `generator_data`, `assignment_data` | Organizational structure and generator registry |
-| 3 (last) | `session_data`, `template_data`, `record_data`, `peer_users` | Operational data — sessions, maintenance history, team member details |
+| Priority  | Streams                                                                    | Purpose                                                                                        |
+| --------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1 (first) | `user_data`, `org_data`                                                    | Identity and organization context must arrive first — all other data has foreign keys to these |
+| 2         | `org_members_data`, `invitation_data`, `generator_data`, `assignment_data` | Organizational structure and generator registry                                                |
+| 3 (last)  | `session_data`, `template_data`, `record_data`, `peer_users`               | Operational data — sessions, maintenance history, team member details                          |
 
 Each stream uses **parameterized SQL WITH clauses** to compute user context (admin orgs, member orgs, assigned generators) once, then efficiently filters all joins against that context. For example, org admins see all generators in their organizations, while regular members only see generators they're assigned to — all enforced at the sync layer.
 
@@ -153,20 +153,24 @@ export const db = drizzle({ client, schema })
 Neon hosts 9 tables across auth, organizations, generators, and maintenance domains. Beyond standard schema, Svitlo pushes business logic into PostgreSQL itself:
 
 **Check constraints** enforce data integrity at the row level:
+
 - Generator `maxConsecutiveRunHours > 0`, `requiredRestHours > 0`, `runWarningThresholdPct` between 1-100
 - Maintenance template `triggerHoursInterval > 0`, `triggerCalendarDays > 0`
 - Non-empty strings for names, emails, task names
 
 **Trigger functions** enforce rules too complex for CHECK constraints:
+
 - `validate_maintenance_template_trigger_fields()` — ensures the correct interval fields are populated based on `triggerType` (e.g., `whichever_first` requires both `triggerHoursInterval` AND `triggerCalendarDays`). Raises `P0001` on violation
 - `validate_org_admin_immutable()` — prevents `adminUserId` from being changed after organization creation, using `IS DISTINCT FROM` for null-safe comparison
 
 **Foreign key strategies** are deliberate:
+
 - **CASCADE** for ownership (deleting an org cascades to its generators, members, invitations)
 - **RESTRICT** on `organizations.adminUserId` (prevents deleting a user who owns an org)
 - **NO ACTION** on session/record user attribution (preserves audit trail even if the user leaves)
 
 **Unique partial index** enforces one active session per generator:
+
 ```sql
 CREATE UNIQUE INDEX ON generator_sessions (generator_id) WHERE stopped_at IS NULL;
 ```
@@ -231,20 +235,20 @@ No polling. No server calls. Pure local computation from synced session data.
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | [Expo](https://expo.dev) (SDK 55) + [Expo Router](https://docs.expo.dev/router/introduction/) |
-| Language | TypeScript |
-| UI | [HeroUI Native](https://herouinative.com) + [Tailwind CSS v4](https://tailwindcss.com) via [Uniwind](https://uniwind.dev) |
-| Local DB | [OP-SQLite](https://github.com/nicksrandall/op-sqlite) |
-| Sync | [PowerSync](https://www.powersync.com) Cloud (Sync Streams, edition 3) |
-| Server DB | [Neon](https://neon.tech) Serverless Postgres + [Drizzle ORM](https://orm.drizzle.team) |
-| Auth | [Better Auth](https://www.better-auth.com) (Apple Sign In) |
-| AI | [Mastra](https://mastra.ai) agent + [Google Gemini 2.5 Flash](https://ai.google.dev) with Google Search tool |
-| API | [ORPC](https://orpc.dev) (end-to-end type-safe RPC) |
-| Validation | [Zod](https://zod.dev) (client + AI output + server) |
-| Hosting | [EAS Hosting](https://docs.expo.dev/eas/) (API routes) |
-| i18n | English & Ukrainian |
+| Layer      | Technology                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Framework  | [Expo](https://expo.dev) (SDK 55) + [Expo Router](https://docs.expo.dev/router/introduction/)                             |
+| Language   | TypeScript                                                                                                                |
+| UI         | [HeroUI Native](https://herouinative.com) + [Tailwind CSS v4](https://tailwindcss.com) via [Uniwind](https://uniwind.dev) |
+| Local DB   | [OP-SQLite](https://github.com/nicksrandall/op-sqlite)                                                                    |
+| Sync       | [PowerSync](https://www.powersync.com) Cloud (Sync Streams, edition 3)                                                    |
+| Server DB  | [Neon](https://neon.tech) Serverless Postgres + [Drizzle ORM](https://orm.drizzle.team)                                   |
+| Auth       | [Better Auth](https://www.better-auth.com) (Apple Sign In)                                                                |
+| AI         | [Mastra](https://mastra.ai) agent + [Google Gemini 2.5 Flash](https://ai.google.dev) with Google Search tool              |
+| API        | [ORPC](https://orpc.dev) (end-to-end type-safe RPC)                                                                       |
+| Validation | [Zod](https://zod.dev) (client + AI output + server)                                                                      |
+| Hosting    | [EAS Hosting](https://docs.expo.dev/eas/) (API routes)                                                                    |
+| i18n       | English & Ukrainian                                                                                                       |
 
 ## Data Model
 
@@ -260,6 +264,7 @@ Organizations
 ```
 
 Key constraints enforced at the database level:
+
 - One active session per generator (unique partial index prevents double-starts)
 - Maintenance records preserved even if templates are deleted (audit trail)
 - Session user attribution preserved even if the user leaves the org (NO ACTION FK)
@@ -292,21 +297,21 @@ bun run dev
 
 #### Always Required
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | Neon pooled Postgres connection string |
-| `BETTER_AUTH_SECRET` | Auth token signing secret (`bun run auth:secret`) |
-| `POWERSYNC_URL` | PowerSync Cloud instance URL |
-| `POWERSYNC_PRIVATE_KEY` | HMAC-SHA256 secret for PowerSync JWTs |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Google AI API key for Mastra agent |
+| Variable                       | Description                                       |
+| ------------------------------ | ------------------------------------------------- |
+| `DATABASE_URL`                 | Neon pooled Postgres connection string            |
+| `BETTER_AUTH_SECRET`           | Auth token signing secret (`bun run auth:secret`) |
+| `POWERSYNC_URL`                | PowerSync Cloud instance URL                      |
+| `POWERSYNC_PRIVATE_KEY`        | HMAC-SHA256 secret for PowerSync JWTs             |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Google AI API key for Mastra agent                |
 
 #### Preview & Production
 
-| Variable | Description |
-|----------|-------------|
-| `BETTER_AUTH_URL` | Public URL for the auth server |
-| `EXPO_PUBLIC_API_URL` | Public API origin for native builds |
-| `EXPO_PUBLIC_APP_VARIANT` | `preview` or `production` |
+| Variable                  | Description                         |
+| ------------------------- | ----------------------------------- |
+| `BETTER_AUTH_URL`         | Public URL for the auth server      |
+| `EXPO_PUBLIC_API_URL`     | Public API origin for native builds |
+| `EXPO_PUBLIC_APP_VARIANT` | `preview` or `production`           |
 
 ## Project Structure
 
@@ -331,13 +336,13 @@ src/
 
 ## Scripts
 
-| Script | Description |
-|--------|-------------|
-| `bun run dev` | Start Expo dev server |
-| `bun run ios` | Run on iOS simulator |
-| `bun run lint` | ESLint |
+| Script              | Description              |
+| ------------------- | ------------------------ |
+| `bun run dev`       | Start Expo dev server    |
+| `bun run ios`       | Run on iOS simulator     |
+| `bun run lint`      | ESLint                   |
 | `bun run typecheck` | TypeScript type checking |
-| `bun run test` | Run all tests |
+| `bun run test`      | Run all tests            |
 
 ## License
 

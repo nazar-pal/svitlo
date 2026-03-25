@@ -324,9 +324,9 @@ export const en = {
     restart: 'Restart'
   },
 
-  employees: {
-    assignedEmployees: 'Assigned Employees',
-    noEmployeesAssigned: 'No employees assigned'
+  assignedMembers: {
+    title: 'Assigned Members',
+    noMembersAssigned: 'No members assigned'
   },
 
   scope: {

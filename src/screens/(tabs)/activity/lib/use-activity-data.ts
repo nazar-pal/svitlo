@@ -9,7 +9,7 @@ import {
   getAllMaintenanceTemplates,
   getAllUsers
 } from '@/data/client/queries'
-import type { Filter } from '@/lib/activity'
+import type { Filter } from '@/lib/activity-filters'
 import { t } from '@/lib/i18n'
 import { useGeneratorScope } from '@/lib/generator/use-generator-scope'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'

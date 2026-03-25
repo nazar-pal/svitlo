@@ -6,7 +6,7 @@ import {
   getAllUsers,
   getGeneratorsByOrg
 } from '@/data/client/queries'
-import { differential } from '@/lib/hooks/differential'
+import { differential } from '@/lib/powersync'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
   computeNextMaintenance,

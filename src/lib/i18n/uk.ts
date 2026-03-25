@@ -352,9 +352,9 @@ export const uk = {
     restart: 'Перезапустити'
   },
 
-  employees: {
-    assignedEmployees: 'Призначені працівники',
-    noEmployeesAssigned: 'Працівників не призначено'
+  assignedMembers: {
+    title: 'Призначені учасники',
+    noMembersAssigned: 'Учасників не призначено'
   },
 
   scope: {

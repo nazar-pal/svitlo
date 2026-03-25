@@ -17,11 +17,8 @@ import {
   getMaintenanceRecords,
   getMaintenanceTemplateSummaries
 } from '@/data/client/queries'
-import {
-  confirmDeleteRecord,
-  confirmDeleteSession
-} from '@/lib/activity/confirm-delete'
-import { type Filter, FILTERS, filterLabel } from '@/lib/activity'
+import { confirmDeleteRecord, confirmDeleteSession } from '@/lib/alerts'
+import { type Filter, FILTERS, filterLabel } from '@/lib/activity-filters'
 import { selection } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'

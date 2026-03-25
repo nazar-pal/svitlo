@@ -1,12 +1,16 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { SymbolView } from 'expo-symbols'
 import { useThemeColor } from 'heroui-native'
-import { Alert, Pressable, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator } from '@/data/client/db-schema'
-import { startSession, stopSession } from '@/data/client/mutations'
-import { confirmRestingStart } from '@/lib/generator/confirm-resting-start'
+import {
+  alertOnError,
+  startSession,
+  stopSession
+} from '@/data/client/mutations'
+import { confirmRestingStart } from '@/lib/alerts'
 import {
   GENERATOR_STATUS_KEYS,
   type GeneratorStatus,
@@ -169,14 +173,14 @@ export function HeroCard({ item, userId }: HeroCardProps) {
 
   async function handleStart() {
     const result = await startSession(userId, generator.id)
-    if (!result.ok) return Alert.alert(t('common.error'), result.error)
+    if (alertOnError(result)) return
     notifySuccess()
   }
 
   async function handleStop() {
     if (!openSession) return
     const result = await stopSession(userId, openSession.id)
-    if (!result.ok) return Alert.alert(t('common.error'), result.error)
+    if (alertOnError(result)) return
     notifySuccess()
   }
 

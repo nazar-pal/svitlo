@@ -33,7 +33,6 @@ export default function CompleteNameScreen() {
       setIsSubmitting(false)
       return
     }
-
   }
 
   return (

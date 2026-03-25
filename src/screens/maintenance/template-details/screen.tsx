@@ -12,7 +12,7 @@ import {
   useThemeColor
 } from 'heroui-native'
 
-import { confirmDeleteTemplate } from '@/lib/activity/confirm-delete'
+import { confirmDeleteTemplate } from '@/lib/alerts'
 import {
   getGenerator,
   getGeneratorSessions,

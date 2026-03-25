@@ -9,7 +9,7 @@ import type {
 } from '@/data/client/db-schema'
 import { useTranslation } from '@/lib/i18n'
 
-interface AssignedEmployeesSectionProps {
+interface AssignedMembersSectionProps {
   assignments: GeneratorUserAssignment[]
   unassignedMembers: OrganizationMember[]
   getUserName: (userId: string) => string
@@ -17,19 +17,19 @@ interface AssignedEmployeesSectionProps {
   onUnassign: (userId: string) => void
 }
 
-export function AssignedEmployeesSection({
+export function AssignedMembersSection({
   assignments,
   unassignedMembers,
   getUserName,
   onAssign,
   onUnassign
-}: AssignedEmployeesSectionProps) {
+}: AssignedMembersSectionProps) {
   const { t } = useTranslation()
   const foregroundColor = useThemeColor('foreground')
 
   return (
     <View className="gap-2">
-      <SectionHeader title={t('employees.assignedEmployees')} />
+      <SectionHeader title={t('assignedMembers.title')} />
       <ListGroup>
         {assignments.map((assignment, index) => (
           <View key={assignment.id}>
@@ -61,7 +61,7 @@ export function AssignedEmployeesSection({
           <ListGroup.Item>
             <ListGroup.ItemContent>
               <ListGroup.ItemTitle className="text-muted">
-                {t('employees.noEmployeesAssigned')}
+                {t('assignedMembers.noMembersAssigned')}
               </ListGroup.ItemTitle>
             </ListGroup.ItemContent>
           </ListGroup.Item>

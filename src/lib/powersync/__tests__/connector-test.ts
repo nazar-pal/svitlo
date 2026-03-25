@@ -11,7 +11,7 @@ jest.mock('@orpc/client', () => {
 jest.mock('@powersync/react-native', () => ({
   UpdateType: { DELETE: 'DELETE', PATCH: 'PATCH' }
 }))
-jest.mock('@/data/rpc-client', () => ({ rpcClient: {} }))
+jest.mock('@/data/client/rpc-client', () => ({ rpcClient: {} }))
 jest.mock('../sync-rejections', () => ({ addRejection: jest.fn() }))
 
 const { ORPCError } = require('@orpc/client')
