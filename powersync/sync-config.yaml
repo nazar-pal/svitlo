@@ -47,21 +47,27 @@ streams:
           WHERE LOWER(invitee_email) IN (SELECT LOWER(email) FROM "user" WHERE id = auth.user_id())
         )
 
-  # ── 3. Organizations the user belongs to (as admin or member) ──────────────
-  org_data:
+  # ── 3. Organizations, members, and invitations ────────────────────────────
+  # Merged from org_data + org_members_data + invitation_data to share
+  # admin_orgs and member_org_ids bucket instances
+  organization_data:
     auto_subscribe: true
     priority: 1
     with:
+      admin_orgs: SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
       member_org_ids: SELECT organization_id FROM organization_members WHERE user_id = auth.user_id()
     queries:
+      # Organizations where user is admin
       - >
         SELECT id, name, admin_user_id, created_at
         FROM organizations
         WHERE admin_user_id = auth.user_id()
+      # Organizations where user is member
       - >
         SELECT id, name, admin_user_id, created_at
         FROM organizations
         WHERE id IN member_org_ids
+      # Organizations that invited the user
       - >
         SELECT id, name, admin_user_id, created_at
         FROM organizations
@@ -69,41 +75,28 @@ streams:
           SELECT organization_id FROM invitations
           WHERE LOWER(invitee_email) IN (SELECT LOWER(email) FROM "user" WHERE id = auth.user_id())
         )
-
-  # ── 4. Organization members for the user's organizations ───────────────────
-  org_members_data:
-    auto_subscribe: true
-    priority: 2
-    with:
-      admin_orgs: SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
-      member_org_ids: SELECT organization_id FROM organization_members WHERE user_id = auth.user_id()
-    queries:
+      # Members of admin orgs
       - >
         SELECT id, organization_id, user_id, joined_at
         FROM organization_members
         WHERE organization_id IN admin_orgs
+      # Members of member orgs
       - >
         SELECT id, organization_id, user_id, joined_at
         FROM organization_members
         WHERE organization_id IN member_org_ids
-
-  # ── 5. Invitations — admin's orgs + invitations addressed to user's email ──
-  invitation_data:
-    auto_subscribe: true
-    priority: 2
-    with:
-      admin_orgs: SELECT id FROM organizations WHERE admin_user_id = auth.user_id()
-    queries:
+      # Invitations for admin orgs
       - >
         SELECT id, organization_id, invitee_email, invited_by_user_id, created_at
         FROM invitations
         WHERE organization_id IN admin_orgs
+      # Invitations addressed to user's email
       - >
         SELECT id, organization_id, invitee_email, invited_by_user_id, created_at
         FROM invitations
         WHERE LOWER(invitee_email) IN (SELECT LOWER(email) FROM "user" WHERE id = auth.user_id())
 
-  # ── 6. Generators — all in admin orgs, only assigned in member orgs ────────
+  # ── 4. Generators — all in admin orgs, only assigned in member orgs ────────
   generator_data:
     auto_subscribe: true
     priority: 2
@@ -125,7 +118,7 @@ streams:
           SELECT generator_id FROM generator_user_assignments WHERE user_id = auth.user_id()
         )
 
-  # ── 7. Generator user assignments for visible generators ───────────────────
+  # ── 5. Generator user assignments for visible generators ───────────────────
   assignment_data:
     auto_subscribe: true
     priority: 2
@@ -143,8 +136,10 @@ streams:
         FROM generator_user_assignments
         WHERE user_id = auth.user_id()
 
-  # ── 8. Generator sessions for visible generators ───────────────────────────
-  session_data:
+  # ── 6. Sessions, templates, and records for visible generators ─────────────
+  # Merged from session_data + template_data + record_data to share
+  # admin_org_generators and assigned_generators bucket instances
+  generator_detail_data:
     auto_subscribe: true
     with:
       admin_org_generators: >
@@ -153,55 +148,39 @@ streams:
       assigned_generators: >
         SELECT generator_id FROM generator_user_assignments WHERE user_id = auth.user_id()
     queries:
+      # Sessions for admin org generators
       - >
         SELECT id, generator_id, started_by_user_id, stopped_by_user_id,
                started_at, stopped_at
         FROM generator_sessions
         WHERE generator_id IN admin_org_generators
+      # Sessions for assigned generators
       - >
         SELECT id, generator_id, started_by_user_id, stopped_by_user_id,
                started_at, stopped_at
         FROM generator_sessions
         WHERE generator_id IN assigned_generators
-
-  # ── 9. Maintenance templates for visible generators ────────────────────────
-  template_data:
-    auto_subscribe: true
-    with:
-      admin_org_generators: >
-        SELECT id FROM generators
-        WHERE organization_id IN (SELECT id FROM organizations WHERE admin_user_id = auth.user_id())
-      assigned_generators: >
-        SELECT generator_id FROM generator_user_assignments WHERE user_id = auth.user_id()
-    queries:
+      # Maintenance templates for admin org generators
       - >
         SELECT id, generator_id, task_name, description,
                trigger_type, trigger_hours_interval, trigger_calendar_days,
                is_one_time, created_at
         FROM maintenance_templates
         WHERE generator_id IN admin_org_generators
+      # Maintenance templates for assigned generators
       - >
         SELECT id, generator_id, task_name, description,
                trigger_type, trigger_hours_interval, trigger_calendar_days,
                is_one_time, created_at
         FROM maintenance_templates
         WHERE generator_id IN assigned_generators
-
-  # ── 10. Maintenance records for visible generators ─────────────────────────
-  record_data:
-    auto_subscribe: true
-    with:
-      admin_org_generators: >
-        SELECT id FROM generators
-        WHERE organization_id IN (SELECT id FROM organizations WHERE admin_user_id = auth.user_id())
-      assigned_generators: >
-        SELECT generator_id FROM generator_user_assignments WHERE user_id = auth.user_id()
-    queries:
+      # Maintenance records for admin org generators
       - >
         SELECT id, template_id, generator_id, performed_by_user_id,
                performed_at, notes
         FROM maintenance_records
         WHERE generator_id IN admin_org_generators
+      # Maintenance records for assigned generators
       - >
         SELECT id, template_id, generator_id, performed_by_user_id,
                performed_at, notes
