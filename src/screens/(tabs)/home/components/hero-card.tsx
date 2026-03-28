@@ -16,10 +16,7 @@ import {
   type GeneratorStatus,
   type GeneratorStatusInfo
 } from '@/lib/generator/status'
-import {
-  useElapsedHours,
-  useElapsedTime
-} from '@/lib/generator/use-elapsed-time'
+import { useElapsedTimer } from '@/lib/generator/use-elapsed-time'
 import { useRestCountdown } from '@/lib/generator/use-rest-countdown'
 import { notifySuccess } from '@/lib/haptics'
 import { useTranslation } from '@/lib/i18n'
@@ -44,6 +41,7 @@ export interface HeroCardItem {
 interface HeroCardProps {
   item: HeroCardItem
   userId: string
+  isVisible: boolean
 }
 
 function statusColorClass(status: GeneratorStatus): string {
@@ -128,10 +126,153 @@ function InfoRow({
   )
 }
 
-export function HeroCard({ item, userId }: HeroCardProps) {
+function RunningDisplay({
+  startedAt,
+  consecutiveRunHours,
+  maxConsecutiveRunHours,
+  runWarningThresholdPct,
+  isVisible
+}: {
+  startedAt: string | null
+  consecutiveRunHours: number
+  maxConsecutiveRunHours: number
+  runWarningThresholdPct: number
+  isVisible: boolean
+}) {
   const { t } = useTranslation()
-  const [mutedColor, accentColor, dangerColor, warningColor, successColor] =
-    useThemeColor(['muted', 'accent', 'danger', 'warning', 'success'])
+  const successColor = useThemeColor('success')
+
+  const { elapsedTimeStr, elapsedHours } = useElapsedTimer(
+    isVisible ? startedAt : null
+  )
+
+  const totalRunHours = consecutiveRunHours + elapsedHours
+  const progress = Math.min(totalRunHours / maxConsecutiveRunHours, 1)
+  const warningFraction = runWarningThresholdPct / 100
+
+  const timeColor =
+    progress >= 1
+      ? 'text-danger'
+      : progress >= warningFraction
+        ? 'text-warning'
+        : 'text-success'
+
+  return (
+    <>
+      <Text
+        className={`text-13 text-center leading-none font-bold tracking-tight ${timeColor}`}
+        style={{ fontVariant: ['tabular-nums'] }}
+      >
+        {elapsedTimeStr}
+      </Text>
+
+      <View className="size-24 items-center justify-center">
+        {isVisible ? <IdlePulse color={successColor} /> : null}
+        <View className="border-success/20 bg-success/8 size-18 items-center justify-center rounded-full border">
+          <SymbolView name="stop.fill" size={28} tintColor={successColor} />
+        </View>
+      </View>
+
+      <Text className="text-success text-base font-medium">
+        {t('generator.tapToStop')}
+      </Text>
+
+      <View className="w-full gap-1.5">
+        <View className="bg-default h-2.5 overflow-hidden rounded-full">
+          <SkiaProgressBar
+            progress={progress}
+            warningFraction={warningFraction}
+            height={10}
+          />
+        </View>
+        <View className="flex-row justify-between">
+          <Text className="text-muted text-xs">
+            {t('generator.elapsed', {
+              hours: formatHours(totalRunHours)
+            })}
+          </Text>
+          <Text className="text-muted text-xs">
+            {t('generator.max', {
+              hours: formatHours(maxConsecutiveRunHours)
+            })}
+          </Text>
+        </View>
+      </View>
+    </>
+  )
+}
+
+function RestingDisplay({
+  restEndsAt,
+  requiredRestHours,
+  isVisible
+}: {
+  restEndsAt: Date | null
+  requiredRestHours: number
+  isVisible: boolean
+}) {
+  const { t } = useTranslation()
+  const warningColor = useThemeColor('warning')
+
+  const restCountdown = useRestCountdown(
+    isVisible ? restEndsAt : null,
+    requiredRestHours
+  )
+
+  return (
+    <>
+      <Text
+        className="text-warning text-13 text-center leading-none font-bold tracking-tight"
+        style={{ fontVariant: ['tabular-nums'] }}
+      >
+        {restCountdown.remainingFormatted}
+      </Text>
+
+      <View className="size-24 items-center justify-center">
+        {isVisible ? <IdlePulse color={warningColor} /> : null}
+        <View className="border-warning/20 bg-warning/8 size-18 items-center justify-center rounded-full border">
+          <SymbolView name="bolt.fill" size={28} tintColor={warningColor} />
+        </View>
+      </View>
+
+      <Text className="text-warning text-base font-medium">
+        {t('generatorStatus.resting')}
+      </Text>
+
+      <View className="w-full gap-1.5">
+        <View className="bg-default h-2.5 overflow-hidden rounded-full">
+          <SkiaProgressBar
+            progress={restCountdown.progress}
+            warningFraction={1}
+            height={10}
+            mode="resting"
+          />
+        </View>
+        <View className="flex-row justify-between">
+          <Text className="text-muted text-xs">
+            {t('generator.remaining', {
+              time: restCountdown.remainingFormatted
+            })}
+          </Text>
+          <Text className="text-muted text-xs">
+            {t('generator.required', {
+              hours: formatHours(requiredRestHours)
+            })}
+          </Text>
+        </View>
+      </View>
+    </>
+  )
+}
+
+export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
+  const { t } = useTranslation()
+  const [mutedColor, accentColor, dangerColor, warningColor] = useThemeColor([
+    'muted',
+    'accent',
+    'danger',
+    'warning'
+  ])
 
   const {
     generator,
@@ -143,28 +284,6 @@ export function HeroCard({ item, userId }: HeroCardProps) {
   } = item
 
   const { status, openSession, restEndsAt, consecutiveRunHours } = statusInfo
-
-  const startedAt =
-    status === 'running' ? (openSession?.startedAt ?? null) : null
-  const elapsedHours = useElapsedHours(startedAt)
-  const elapsedTimeStr = useElapsedTime(startedAt)
-
-  const totalRunHours = consecutiveRunHours + elapsedHours
-  const maxHours = generator.maxConsecutiveRunHours
-  const progress = Math.min(totalRunHours / maxHours, 1)
-  const warningFraction = generator.runWarningThresholdPct / 100
-
-  const restCountdown = useRestCountdown(
-    restEndsAt,
-    generator.requiredRestHours
-  )
-
-  const timeColor =
-    progress >= 1
-      ? 'text-danger'
-      : progress >= warningFraction
-        ? 'text-warning'
-        : 'text-success'
 
   function maintenanceLabelText(info: NextMaintenanceCardInfo): string {
     if (info.urgency === 'overdue') return t('generator.overdue')
@@ -234,100 +353,23 @@ export function HeroCard({ item, userId }: HeroCardProps) {
           className="flex-1 items-center justify-center gap-5 active:opacity-80"
         >
           {status === 'running' ? (
-            <>
-              <Text
-                className={`text-13 text-center leading-none font-bold tracking-tight ${timeColor}`}
-                style={{ fontVariant: ['tabular-nums'] }}
-              >
-                {elapsedTimeStr}
-              </Text>
-
-              <View className="size-24 items-center justify-center">
-                <IdlePulse color={successColor} />
-                <View className="border-success/20 bg-success/8 size-18 items-center justify-center rounded-full border">
-                  <SymbolView
-                    name="stop.fill"
-                    size={28}
-                    tintColor={successColor}
-                  />
-                </View>
-              </View>
-
-              <Text className="text-success text-base font-medium">
-                {t('generator.tapToStop')}
-              </Text>
-
-              <View className="w-full gap-1.5">
-                <View className="bg-default h-2.5 overflow-hidden rounded-full">
-                  <SkiaProgressBar
-                    progress={progress}
-                    warningFraction={warningFraction}
-                    height={10}
-                  />
-                </View>
-                <View className="flex-row justify-between">
-                  <Text className="text-muted text-xs">
-                    {t('generator.elapsed', {
-                      hours: formatHours(totalRunHours)
-                    })}
-                  </Text>
-                  <Text className="text-muted text-xs">
-                    {t('generator.max', { hours: formatHours(maxHours) })}
-                  </Text>
-                </View>
-              </View>
-            </>
+            <RunningDisplay
+              startedAt={openSession?.startedAt ?? null}
+              consecutiveRunHours={consecutiveRunHours}
+              maxConsecutiveRunHours={generator.maxConsecutiveRunHours}
+              runWarningThresholdPct={generator.runWarningThresholdPct}
+              isVisible={isVisible}
+            />
           ) : status === 'resting' ? (
-            <>
-              <Text
-                className="text-warning text-13 text-center leading-none font-bold tracking-tight"
-                style={{ fontVariant: ['tabular-nums'] }}
-              >
-                {restCountdown.remainingFormatted}
-              </Text>
-
-              <View className="size-24 items-center justify-center">
-                <IdlePulse color={warningColor} />
-                <View className="border-warning/20 bg-warning/8 size-18 items-center justify-center rounded-full border">
-                  <SymbolView
-                    name="bolt.fill"
-                    size={28}
-                    tintColor={warningColor}
-                  />
-                </View>
-              </View>
-
-              <Text className="text-warning text-base font-medium">
-                {t('generatorStatus.resting')}
-              </Text>
-
-              <View className="w-full gap-1.5">
-                <View className="bg-default h-2.5 overflow-hidden rounded-full">
-                  <SkiaProgressBar
-                    progress={restCountdown.progress}
-                    warningFraction={1}
-                    height={10}
-                    mode="resting"
-                  />
-                </View>
-                <View className="flex-row justify-between">
-                  <Text className="text-muted text-xs">
-                    {t('generator.remaining', {
-                      time: restCountdown.remainingFormatted
-                    })}
-                  </Text>
-                  <Text className="text-muted text-xs">
-                    {t('generator.required', {
-                      hours: formatHours(generator.requiredRestHours)
-                    })}
-                  </Text>
-                </View>
-              </View>
-            </>
+            <RestingDisplay
+              restEndsAt={restEndsAt}
+              requiredRestHours={generator.requiredRestHours}
+              isVisible={isVisible}
+            />
           ) : (
             <>
               <View className="size-40 items-center justify-center">
-                <IdlePulse />
+                {isVisible ? <IdlePulse /> : null}
                 <View className="border-accent/20 bg-accent/8 size-30 items-center justify-center rounded-full border">
                   <SymbolView
                     name="bolt.fill"

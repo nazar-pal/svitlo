@@ -4,43 +4,33 @@ import { differenceInMilliseconds, parseISO } from 'date-fns'
 
 import { formatDuration } from '@/lib/utils/time'
 
-/**
- * Returns live fractional hours elapsed since startedAt.
- * Updates every 60 seconds — sufficient for a progress bar.
- */
-export function useElapsedHours(startedAt: string | null): number {
-  const [now, setNow] = useState(() => new Date())
-
-  useEffect(() => {
-    if (!startedAt) return
-    const interval = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(interval)
-  }, [startedAt])
-
-  if (!startedAt) return 0
-  return (
-    Math.max(0, differenceInMilliseconds(now, parseISO(startedAt))) / 3_600_000
-  )
+interface ElapsedTimer {
+  elapsedTimeStr: string
+  elapsedHours: number
 }
 
 /**
- * Returns a live-updating formatted elapsed time string from a start timestamp.
- * Updates every second while the component is mounted.
+ * Returns a live-updating elapsed time string and fractional hours from a start
+ * timestamp. Updates every second while startedAt is non-null.
  */
-export function useElapsedTime(startedAt: string | null): string {
+export function useElapsedTimer(startedAt: string | null): ElapsedTimer {
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
     if (!startedAt) return
+    setNow(new Date())
     const interval = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(interval)
   }, [startedAt])
 
-  if (!startedAt) return '0:00:00'
+  if (!startedAt) return { elapsedTimeStr: '0:00:00', elapsedHours: 0 }
 
   const elapsed = Math.max(
     0,
     differenceInMilliseconds(now, parseISO(startedAt))
   )
-  return formatDuration(elapsed)
+  return {
+    elapsedTimeStr: formatDuration(elapsed),
+    elapsedHours: elapsed / 3_600_000
+  }
 }

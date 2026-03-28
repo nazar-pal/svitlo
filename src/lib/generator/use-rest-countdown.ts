@@ -22,6 +22,7 @@ export function useRestCountdown(
 
   useEffect(() => {
     if (!restEndsAt) return
+    setNow(new Date())
     const interval = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(interval)
   }, [restEndsAt])

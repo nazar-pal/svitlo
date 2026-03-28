@@ -308,7 +308,7 @@ export default function HomeScreen() {
             key={count}
             ref={flatListRef}
             data={loopedItems}
-            keyExtractor={(_, index) => String(index)}
+            keyExtractor={(item, index) => `${item.generator.id}-${index}`}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
@@ -323,11 +323,22 @@ export default function HomeScreen() {
             })}
             onScroll={scrollHandler}
             scrollEventThrottle={16}
-            renderItem={({ item }) => (
-              <View style={{ width: screenWidth, flex: 1 }}>
-                <HeroCard item={item} userId={userId} />
-              </View>
-            )}
+            extraData={currentIndex}
+            removeClippedSubviews
+            initialNumToRender={3}
+            maxToRenderPerBatch={2}
+            renderItem={({ item, index }) => {
+              const realIndex = looped ? index % count : index
+              return (
+                <View style={{ width: screenWidth, flex: 1 }}>
+                  <HeroCard
+                    item={item}
+                    userId={userId}
+                    isVisible={realIndex === currentIndex}
+                  />
+                </View>
+              )
+            }}
           />
 
           <PageIndicator
