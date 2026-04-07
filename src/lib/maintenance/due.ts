@@ -31,8 +31,8 @@ function sessionHoursSince(
 ): number {
   let total = 0
   for (const session of sessions) {
-    if (since && session.startedAt < since) continue
     const end = session.stoppedAt ?? new Date().toISOString()
+    if (since && end < since) continue
     const start = since && session.startedAt < since ? since : session.startedAt
     total += hoursBetween(start, end)
   }
