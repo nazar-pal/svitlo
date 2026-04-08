@@ -144,25 +144,47 @@ Check for:
 4. Successful upload → queue item removed, local state consistent
 5. `getCrudBatch(limit)` correctly batches operations for the `uploadData` connector
 
-### 2.5 Component testing with PowerSync context
+### 2.5 Extract logic from components; test hooks and utilities, not screens
 
-**Best practice:** Test components that use PowerSync hooks by wrapping them in a `PowerSyncContext.Provider` with a real test database — NOT by mocking the hooks.
+**This project uses many native dependencies** (react-native-reanimated, react-native-gesture-handler, @shopify/react-native-skia, react-native-screens, react-native-mmkv, expo-haptics, expo-network, react-native-keyboard-controller, etc.). Rendering almost any screen in tests requires mocking 10+ native modules. At that point, you're testing component behavior in a fictional environment where none of the real platform behavior exists — the things that actually break in production (gesture interactions, animation glitches, keyboard avoidance) are precisely what mocked tests can't catch.
+
+**The right strategy is: extract testable logic OUT of components, and test that logic directly.**
+
+**What to actively look for and refactor:**
+
+**1. Pure functions trapped inside components.**
+Any data transformation, filtering, sorting, formatting, date calculation, or business logic living inside a component should be extracted into standalone utility functions. These are trivially unit-testable with zero mocking.
+
+Example: Instead of testing a component that displays generator runtime stats, extract `calculateRuntimeStats(sessions: Session[]): RuntimeStats` and unit test that function with edge cases in milliseconds. Scan every component for inline logic that could be a pure function — if it takes data in and returns data out without touching React state or native APIs, extract it.
+
+**2. Custom hooks that wrap PowerSync queries.**
+A hook like `useGeneratorStatus(generatorId)` that calls `useQuery`, transforms the result, and returns a typed status object is an excellent test target. Test it with `renderHook` + a real PowerSync test DB + `PowerSyncContext.Provider`. This requires only one provider wrapper (no native module mocking), and it tests your actual SQL query + transformation logic without rendering any native UI.
 
 Check for:
-- A `TestWrapper` or `renderWithProviders` utility that provides `PowerSyncContext.Provider` with a real in-memory test DB from `test-db.ts`
-- Tests use `@testing-library/react-native` (RNTL) with:
-  - `screen` object pattern for queries
-  - `userEvent` API (preferred over `fireEvent`)
-  - `findBy*` / `waitFor` for async assertions on data-driven components
-  - `toBeOnTheScreen()` matcher
-- Tests that insert data into the test DB and verify the component re-renders with that data via PowerSync's reactive queries
-- Tests that verify `useStatus()` drives correct UI state (online/offline indicators, sync progress)
+- Custom hooks that combine `useQuery` / `useSuspenseQuery` with data transformation logic — these should ALL have `renderHook` tests against a real test DB
+- Hooks that derive computed state from query results (e.g., "is this generator overdue for maintenance?") — extract the computation into a pure function, test the function directly, and keep the hook thin
+- The `PowerSyncContext.Provider` wrapper for hook tests should use a real in-memory test DB from `test-db.ts` — never mock `useQuery` return values
 
-**Anti-patterns:**
-- Mocking `useQuery` or `useSuspenseQuery` return values instead of providing real data through the database
-- Snapshot testing data-driven components — prefer explicit assertions on rendered content
+**3. State machines and conditional logic.**
+If a screen has a complex state machine (loading → empty → data → error → offline), extract the state derivation into a function: `deriveScreenState(data, syncStatus, error): ScreenState`. Test that function with all state combinations as a unit test.
 
-**For Expo Router:** `renderRouter` from `expo-router/testing-library` enables route-level integration tests with `toHavePathname()`.
+**When component tests ARE worth the mock cost (rare):**
+Only for the 2-3 screens with genuinely complex conditional rendering — screens with multiple visual states, branching based on data + sync status + auth state, or components that orchestrate several hooks together. For these, accept the mock cost and use RNTL with a real PowerSync DB in context. But this should be the exception, not the default.
+
+**When component tests are NOT worth it (the majority):**
+A component that fetches data with `useQuery`, transforms it slightly, and renders a list does NOT need a component test. The query is tested by your data layer integration tests. The rendering is tested by Maestro E2E. The 10-module mock sandwich in between adds maintenance cost with minimal confidence.
+
+**Anti-patterns to flag:**
+- Component tests that mock `useQuery` or `useSuspenseQuery` return values — if you're mocking the data layer, you're testing nothing real. Either test the hook directly with a real DB, or skip the test entirely.
+- Component tests that exist primarily to satisfy coverage metrics — if the test mocks everything and asserts `toBeTruthy()`, delete it.
+- Business logic living inside `useEffect` or event handlers that could be extracted into pure functions.
+- Hooks that do too much (fetch + transform + format + derive state) — split them so the pure parts are independently testable.
+
+**The ideal test distribution for components in this app:**
+- **Heavy:** Unit tests for extracted pure utility functions (zero mocking)
+- **Heavy:** `renderHook` tests for custom PowerSync hooks (one provider wrapper, no native mocks)
+- **Rare:** Full component render tests (only for 2-3 complex screens)
+- **Maestro E2E** covers the real UI behavior that mocked tests can't
 
 **Docs:**
 - https://callstack.github.io/react-native-testing-library/
@@ -263,9 +285,11 @@ Do NOT write automated tests against Sync Streams internals — there's no stabl
 ### 2.11 Test distribution
 
 **Recommended distribution for this stack:**
-- ~40% unit tests (pure functions, transformations, validation, individual hooks via `renderHook`)
-- ~40% integration tests (real PowerSync DB, MSW-mocked network — HIGHEST VALUE)
-- ~10-20% E2E tests (Maestro for critical user journeys)
+- ~45% unit tests (extracted pure utility functions, data transformations, validation — zero mocking)
+- ~25% hook integration tests (`renderHook` with real PowerSync DB — one provider wrapper, no native mocks — HIGHEST VALUE)
+- ~15% data layer integration tests (CRUD, upload queue, server-side via PGlite + MSW)
+- ~10% E2E tests (Maestro for critical user journeys — covers all native behavior)
+- ~5% or less: full component render tests (only 2-3 complex screens with significant conditional rendering)
 - Static analysis foundation (TypeScript strict mode + ESLint)
 
 **Additional anti-patterns to flag:**
@@ -323,25 +347,27 @@ After auditing, produce a prioritized list of improvements ordered by impact:
 
 **Priority 1 (Critical — do these first):**
 - Remove unnecessary tests identified in section 2.10
+- Extract business logic from components into pure utility functions and thin custom hooks (section 2.5) — this unlocks testability without native module mocking
 - Fix DRY violations between production and test database setup (section 2.12) — especially duplicated trigger/constraint SQL and hardcoded table names
 - Fix any test that mocks PowerSync or SQLite instead of using the shared `test-db.ts` utility
 - Fix test isolation issues (shared DB state, missing cleanup)
 - Verify `applyServerConstraints` (client) and `applyTriggers` (server) are in sync with production
 
 **Priority 2 (High — significant quality improvement):**
+- Add `renderHook` tests for custom PowerSync hooks with real test DB (section 2.5)
+- Add unit tests for newly extracted utility functions
 - Set up MSW if not already configured (section 2.6)
-- Add component integration tests with real PowerSync context (section 2.5)
 - Add offline-first scenario tests (section 2.8)
 - Migrate any existing manual fetch mocks to MSW handlers
 
 **Priority 3 (Medium — good practices):**
-- Improve native module mocking completeness (section 2.7)
+- Improve native module mocking completeness (section 2.7) — but ONLY for the few screens that warrant full component tests
 - Strengthen upload queue tests with failure scenarios (section 2.4)
-- Add a `TestWrapper` / `renderWithProviders` utility if one doesn't exist
 
 **Priority 4 (Nice to have):**
-- Set up Maestro E2E for critical user journeys
+- Set up Maestro E2E for critical user journeys — this covers real native UI behavior that mocked component tests can't
 - Consider a migration-specific test for critical schema changes (section 2.3)
+- Add full component render tests for the 2-3 most complex screens (only if Maestro doesn't already cover the same scenarios)
 
 ## Step 4: Implement improvements
 
