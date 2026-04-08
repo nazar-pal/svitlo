@@ -26,8 +26,11 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['**/__tests__/**/*-integration-test.ts'],
       transform: {
-        '^.+\\.tsx?$': ['babel-jest', { presets: ['@babel/preset-typescript'] }]
-      }
+        '^.+\\.[jt]sx?$': ['babel-jest', { presets: ['babel-preset-expo'] }]
+      },
+      transformIgnorePatterns: [
+        'node_modules/(?!(@orpc|@orpc/.*|@powersync|@powersync/.*))'
+      ]
     }
   ]
 }

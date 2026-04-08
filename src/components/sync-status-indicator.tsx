@@ -7,69 +7,72 @@ import { useSessionStatus } from '@/lib/auth/session-status-context'
 import { useTranslation } from '@/lib/i18n'
 import { useSyncRejections } from '@/lib/powersync/sync-rejections'
 
+import { type SyncStateKey, deriveSyncState } from './derive-sync-state'
+
+const stateDisplay = {
+  changesNotSynced: {
+    labelKey: 'sync.changesNotSynced' as const,
+    icon: 'exclamationmark.triangle.fill' as const,
+    color: 'text-warning' as const
+  },
+  syncError: {
+    labelKey: 'sync.syncError' as const,
+    icon: 'exclamationmark.triangle.fill' as const,
+    color: 'text-danger' as const
+  },
+  syncingChanges: {
+    labelKey: 'sync.syncingChanges' as const,
+    icon: null,
+    color: 'text-muted' as const
+  },
+  sessionExpired: {
+    labelKey: 'sync.sessionExpired' as const,
+    icon: 'exclamationmark.arrow.circlepath' as const,
+    color: 'text-warning' as const
+  },
+  offline: {
+    labelKey: 'sync.offline' as const,
+    icon: 'wifi.slash' as const,
+    color: 'text-muted' as const
+  },
+  connecting: {
+    labelKey: 'sync.connecting' as const,
+    icon: null,
+    color: 'text-muted' as const
+  },
+  allSynced: {
+    labelKey: 'sync.allSynced' as const,
+    icon: 'checkmark.icloud.fill' as const,
+    color: 'text-muted' as const
+  }
+} satisfies Record<
+  SyncStateKey,
+  { labelKey: string; icon: string | null; color: string }
+>
+
 function useSyncState() {
   const { t } = useTranslation()
   const status = useStatus()
   const { sessionStatus } = useSessionStatus()
   const rejections = useSyncRejections()
 
-  if (rejections.length > 0)
-    return {
-      label: t('sync.changesNotSynced', { count: rejections.length }),
-      icon: 'exclamationmark.triangle.fill' as const,
-      color: 'text-warning' as const,
-      loading: false
-    }
+  const { key, loading } = deriveSyncState({
+    connected: status.connected,
+    connecting: status.connecting,
+    uploading: status.dataFlowStatus?.uploading ?? false,
+    uploadError: status.dataFlowStatus?.uploadError ?? null,
+    downloadError: status.dataFlowStatus?.downloadError ?? null,
+    sessionStatus,
+    rejectionsCount: rejections.length
+  })
 
-  if (
-    status.dataFlowStatus?.uploadError ||
-    status.dataFlowStatus?.downloadError
-  )
-    return {
-      label: t('sync.syncError'),
-      icon: 'exclamationmark.triangle.fill' as const,
-      color: 'text-danger' as const,
-      loading: false
-    }
+  const display = stateDisplay[key]
+  const label =
+    key === 'changesNotSynced'
+      ? t(display.labelKey, { count: rejections.length })
+      : t(display.labelKey)
 
-  if (status.dataFlowStatus?.uploading)
-    return {
-      label: t('sync.syncingChanges'),
-      icon: null,
-      color: 'text-muted' as const,
-      loading: true
-    }
-
-  if (sessionStatus === 'expired' && !status.connected)
-    return {
-      label: t('sync.sessionExpired'),
-      icon: 'exclamationmark.arrow.circlepath' as const,
-      color: 'text-warning' as const,
-      loading: false
-    }
-
-  if (!status.connected && !status.connecting)
-    return {
-      label: t('sync.offline'),
-      icon: 'wifi.slash' as const,
-      color: 'text-muted' as const,
-      loading: false
-    }
-
-  if (status.connecting && !status.connected)
-    return {
-      label: t('sync.connecting'),
-      icon: null,
-      color: 'text-muted' as const,
-      loading: true
-    }
-
-  return {
-    label: t('sync.allSynced'),
-    icon: 'checkmark.icloud.fill' as const,
-    color: 'text-muted' as const,
-    loading: false
-  }
+  return { label, icon: display.icon, color: display.color, loading }
 }
 
 export function SyncStatusIndicator() {

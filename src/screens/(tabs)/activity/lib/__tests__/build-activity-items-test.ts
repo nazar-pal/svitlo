@@ -9,14 +9,9 @@ jest.mock('@/lib/i18n', () => ({ t: (key: string) => key }))
 jest.mock('@/lib/utils/time', () => ({
   formatDuration: (ms: number) => `${Math.round(ms / 3600000)}h`
 }))
-jest.mock('@/lib/powersync/database', () => ({}))
-jest.mock('@powersync/react-native', () => ({ useQuery: jest.fn() }))
-jest.mock('@powersync/drizzle-driver', () => ({ toCompilableQuery: jest.fn() }))
-jest.mock('@/lib/generator/use-generator-scope', () => ({
-  useGeneratorScope: jest.fn()
-}))
 
-const { buildActivityItems } = require('../use-activity-data')
+const { buildActivityItems } =
+  require('../build-activity-items') as typeof import('../build-activity-items')
 
 const T = '2026-01-15T12:00:00Z'
 
@@ -152,8 +147,11 @@ describe('buildActivityItems', () => {
 
   it('in-progress session has isInProgress=true and i18n duration label', () => {
     const items = build([makeSession({ stoppedAt: null })], [])
-    expect(items[0].isInProgress).toBe(true)
-    expect(items[0].duration).toBe('activity.inProgress')
+    const item = items[0]
+    expect(item.type).toBe('session')
+    if (item.type !== 'session') throw new Error('expected session')
+    expect(item.isInProgress).toBe(true)
+    expect(item.duration).toBe('activity.inProgress')
   })
 
   it('completed session has isInProgress=false and computed duration', () => {
@@ -167,8 +165,11 @@ describe('buildActivityItems', () => {
       ],
       []
     )
-    expect(items[0].isInProgress).toBe(false)
-    expect(items[0].duration).toBe('2h')
+    const item = items[0]
+    expect(item.type).toBe('session')
+    if (item.type !== 'session') throw new Error('expected session')
+    expect(item.isInProgress).toBe(false)
+    expect(item.duration).toBe('2h')
   })
 
   it('unknown generator falls back to i18n key', () => {
@@ -183,7 +184,10 @@ describe('buildActivityItems', () => {
     const items = build([], [makeRecord({ templateId: 'missing' })], 'all', {
       templates: []
     })
-    expect(items[0].templateName).toBe('activity.unknownTask')
+    const item = items[0]
+    expect(item.type).toBe('maintenance')
+    if (item.type !== 'maintenance') throw new Error('expected maintenance')
+    expect(item.templateName).toBe('activity.unknownTask')
   })
 
   it('calls resolveUserName with correct userId', () => {
