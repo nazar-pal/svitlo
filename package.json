@@ -16,8 +16,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md}\"",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules' jest --watch",
     "flt": "npm run format && npm run lint && npm run typecheck",
     "fltt": "npm run format && npm run lint && npm run typecheck && npm run test",
     "ota:prod": "eas update --channel production --environment production --platform ios"
@@ -94,6 +94,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-async-generator-functions": "^7.29.0",
+    "@electric-sql/pglite": "^0.4.3",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "29.5.14",
     "@types/react": "~19.2.14",

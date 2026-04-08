@@ -76,6 +76,13 @@ describe('updateGenerator', () => {
     })
     expect(result.ok).toBe(false)
   })
+
+  it('fails when outsider tries to update', async () => {
+    const result = await updateGenerator(IDS.outsiderUser, IDS.generator, {
+      title: 'Hacked'
+    })
+    expect(result.ok).toBe(false)
+  })
 })
 
 // ── createGeneratorWithMaintenance ──────────────────────────────────────────
@@ -201,6 +208,45 @@ describe('createGeneratorWithMaintenance', () => {
       .all('Good Gen')
     expect(gens).toHaveLength(0)
   })
+
+  it('fails when outsider tries to create', async () => {
+    const result = await createGeneratorWithMaintenance(
+      IDS.outsiderUser,
+      {
+        organizationId: IDS.org,
+        title: 'Nope',
+        model: 'Test',
+        maxConsecutiveRunHours: 8,
+        requiredRestHours: 4,
+        runWarningThresholdPct: 80
+      },
+      []
+    )
+    expect(result.ok).toBe(false)
+  })
+
+  it('includes template taskName in validation error', async () => {
+    const result = await createGeneratorWithMaintenance(
+      IDS.adminUser,
+      {
+        organizationId: IDS.org,
+        title: 'Good Gen',
+        model: 'Test',
+        maxConsecutiveRunHours: 8,
+        requiredRestHours: 4,
+        runWarningThresholdPct: 80
+      },
+      [
+        {
+          taskName: 'Air Filter',
+          triggerType: 'hours'
+          // missing triggerHoursInterval
+        }
+      ]
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error).toContain('Air Filter')
+  })
 })
 
 // ── deleteGenerator ─────────────────────────────────────────────────────────
@@ -223,6 +269,11 @@ describe('deleteGenerator', () => {
 
   it('fails for nonexistent generator', async () => {
     const result = await deleteGenerator(IDS.adminUser, 'nonexistent')
+    expect(result.ok).toBe(false)
+  })
+
+  it('fails when outsider tries to delete', async () => {
+    const result = await deleteGenerator(IDS.outsiderUser, IDS.generator)
     expect(result.ok).toBe(false)
   })
 })

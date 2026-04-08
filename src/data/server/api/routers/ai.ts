@@ -51,7 +51,7 @@ const taskSchema = rawTaskSchema.superRefine((task, ctx) => {
     })
 })
 
-const maintenanceSuggestionSchema = z.object({
+export const maintenanceSuggestionSchema = z.object({
   maxConsecutiveRunHours: z
     .number()
     .nullable()
