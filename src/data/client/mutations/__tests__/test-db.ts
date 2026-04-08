@@ -81,22 +81,30 @@ function createPowerSyncShim(db: Database.Database) {
 }
 
 // ── Server-parity constraints (unique indexes that the server enforces) ─────
+// Each index mirrors a unique constraint from the server Drizzle schema.
+// When a server constraint is added, renamed, or removed, update this function.
+// session.token unique (auth.ts) is excluded — BetterAuth-only, not in client schema.
 
 function applyServerConstraints(db: Database.Database) {
   db.exec(`
+    -- server: db-schema/generators.ts — unique().on(generatorId, userId)
     CREATE UNIQUE INDEX "generator_user_assignments_generator_user_unique"
       ON "generator_user_assignments" ("generator_id", "user_id");
 
+    -- server: db-schema/organizations.ts — unique().on(organizationId, userId)
     CREATE UNIQUE INDEX "organization_members_org_user_unique"
       ON "organization_members" ("organization_id", "user_id");
 
+    -- server: db-schema/organizations.ts — unique().on(organizationId, inviteeEmail)
     CREATE UNIQUE INDEX "invitations_org_email_unique"
       ON "invitations" ("organization_id", "invitee_email");
 
+    -- server: db-schema/generators.ts — uniqueIndex().on(generatorId).where(stopped_at IS NULL)
     CREATE UNIQUE INDEX "generator_sessions_one_active_per_generator"
       ON "generator_sessions" ("generator_id")
       WHERE "stopped_at" IS NULL;
 
+    -- server: db-schema/auth.ts — .unique() on email column
     CREATE UNIQUE INDEX "user_email_unique"
       ON "user" ("email");
   `)
