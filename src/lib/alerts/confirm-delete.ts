@@ -6,37 +6,45 @@ import {
   deleteMaintenanceTemplate,
   deleteSession
 } from '@/data/client/mutations'
+import type { MutationResult } from '@/data/client/mutations'
 import { notifyWarning } from '@/lib/haptics'
 import { t } from '@/lib/i18n'
 
-export function confirmDeleteSession(userId: string, sessionId: string) {
-  Alert.alert(t('generator.deleteRun'), t('generator.deleteRunConfirm'), [
+function confirmDestructive(
+  title: string,
+  message: string,
+  mutation: () => Promise<MutationResult>,
+  onSuccess?: () => void
+) {
+  Alert.alert(title, message, [
     { text: t('common.cancel'), style: 'cancel' },
     {
       text: t('common.delete'),
       style: 'destructive',
       onPress: async () => {
-        const result = await deleteSession(userId, sessionId)
+        const result = await mutation()
         if (alertOnError(result)) return
         notifyWarning()
+        onSuccess?.()
       }
     }
   ])
 }
 
+export function confirmDeleteSession(userId: string, sessionId: string) {
+  confirmDestructive(
+    t('generator.deleteRun'),
+    t('generator.deleteRunConfirm'),
+    () => deleteSession(userId, sessionId)
+  )
+}
+
 export function confirmDeleteRecord(userId: string, recordId: string) {
-  Alert.alert(t('generator.deleteRecord'), t('generator.deleteRecordConfirm'), [
-    { text: t('common.cancel'), style: 'cancel' },
-    {
-      text: t('common.delete'),
-      style: 'destructive',
-      onPress: async () => {
-        const result = await deleteMaintenanceRecord(userId, recordId)
-        if (alertOnError(result)) return
-        notifyWarning()
-      }
-    }
-  ])
+  confirmDestructive(
+    t('generator.deleteRecord'),
+    t('generator.deleteRecordConfirm'),
+    () => deleteMaintenanceRecord(userId, recordId)
+  )
 }
 
 export function confirmDeleteTemplate(
@@ -44,21 +52,10 @@ export function confirmDeleteTemplate(
   templateId: string,
   onDeleted: () => void
 ) {
-  Alert.alert(
+  confirmDestructive(
     t('maintenanceTemplate.deleteTask'),
     t('maintenanceTemplate.deleteTaskConfirm'),
-    [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: async () => {
-          const result = await deleteMaintenanceTemplate(userId, templateId)
-          if (alertOnError(result)) return
-          notifyWarning()
-          onDeleted()
-        }
-      }
-    ]
+    () => deleteMaintenanceTemplate(userId, templateId),
+    onDeleted
   )
 }

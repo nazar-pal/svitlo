@@ -15,7 +15,7 @@ import { ActivityIndicator, Text, View } from 'react-native'
 import { setDatabaseReady, setUIReady } from '@/lib/app-ready'
 import { useLocalIdentity } from '@/lib/auth/local-identity-context'
 import { useSessionStatus } from '@/lib/auth/session-status-context'
-import { signOut } from '@/lib/auth/sign-out'
+import { disconnectAndSignOut } from '@/lib/auth/sign-out'
 
 import { Connector, clearCredentialCache } from './connector'
 import { powersync } from './database'
@@ -39,6 +39,15 @@ export function PowerSyncProvider({
   const [isReady, setIsReady] = useState(false)
   const connectorRef = useRef<Connector | null>(null)
   const connectedRef = useRef(false)
+
+  function disconnectIfConnected() {
+    if (!connectedRef.current) return
+    powersync.disconnect()
+    clearCredentialCache()
+    clearRejections()
+    connectorRef.current = null
+    connectedRef.current = false
+  }
 
   // Open the SQLite database and register status listener on mount
   useEffect(() => {
@@ -87,24 +96,10 @@ export function PowerSyncProvider({
       }
     } else {
       // 'expired' or 'unknown': disconnect but keep local data
-      if (connectedRef.current) {
-        powersync.disconnect()
-        clearCredentialCache()
-        clearRejections()
-        connectorRef.current = null
-        connectedRef.current = false
-      }
+      disconnectIfConnected()
     }
 
-    return () => {
-      if (connectedRef.current) {
-        powersync.disconnect()
-        clearCredentialCache()
-        clearRejections()
-        connectorRef.current = null
-        connectedRef.current = false
-      }
-    }
+    return disconnectIfConnected
   }, [isReady, userId, sessionStatus, setSessionStatus])
 
   return (
@@ -156,9 +151,7 @@ function InitialSyncScreen({
 
   async function handleEmergencySignOut() {
     try {
-      await powersync.disconnectAndClear()
-      clearCredentialCache()
-      await signOut()
+      await disconnectAndSignOut()
     } finally {
       applyIdentity(null)
     }
