@@ -31,8 +31,8 @@ import { removeMember, leaveOrganization } from '../members'
 beforeEach(() => {
   resetDatabase()
   mockIdCounter = 0
-  seedBaseScenario(mockTestDb.sqlite)
-  seedGenerator(mockTestDb.sqlite)
+  seedBaseScenario(mockTestDb.db)
+  seedGenerator(mockTestDb.db)
 })
 
 afterAll(() => closeDatabase())
@@ -51,7 +51,7 @@ describe('removeMember', () => {
   })
 
   it('reassigns member generator assignments to admin', async () => {
-    seedAssignment(mockTestDb.sqlite) // memberUser assigned to generator
+    seedAssignment(mockTestDb.db) // memberUser assigned to generator
     const result = await removeMember(IDS.adminUser, IDS.membership)
     expect(result.ok).toBe(true)
 
@@ -72,7 +72,7 @@ describe('removeMember', () => {
 
   it('does not create duplicate admin assignment if admin already assigned', async () => {
     // Assign both member and admin to the generator
-    seedAssignment(mockTestDb.sqlite) // memberUser
+    seedAssignment(mockTestDb.db) // memberUser
     mockTestDb.sqlite.exec(`
       INSERT INTO generator_user_assignments VALUES ('assign-admin', '${IDS.generator}', '${IDS.adminUser}', '2026-01-15T12:00:00Z');
     `)
@@ -116,7 +116,7 @@ describe('leaveOrganization', () => {
   })
 
   it('reassigns member generator assignments to admin on leave', async () => {
-    seedAssignment(mockTestDb.sqlite)
+    seedAssignment(mockTestDb.db)
     const result = await leaveOrganization(IDS.memberUser, IDS.org)
     expect(result.ok).toBe(true)
 

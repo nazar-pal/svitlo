@@ -48,7 +48,7 @@ import {
 beforeEach(() => {
   resetDatabase()
   mockIdCounter = 0
-  seedBaseScenario(mockTestDb.sqlite)
+  seedBaseScenario(mockTestDb.db)
 })
 
 afterAll(() => closeDatabase())
@@ -105,7 +105,7 @@ describe('createInvitation', () => {
   })
 
   it('fails with duplicate invitation', async () => {
-    seedInvitation(mockTestDb.sqlite, 'dup@test.com')
+    seedInvitation(mockTestDb.db, 'dup@test.com')
     const result = await createInvitation(IDS.adminUser, {
       organizationId: IDS.org,
       inviteeEmail: 'dup@test.com'
@@ -126,7 +126,7 @@ describe('createInvitation', () => {
 
 describe('acceptInvitation', () => {
   it('accepts invitation, adds member, deletes invitation', async () => {
-    seedInvitation(mockTestDb.sqlite, 'outsider@test.com')
+    seedInvitation(mockTestDb.db, 'outsider@test.com')
     const result = await acceptInvitation(
       IDS.outsiderUser,
       'outsider@test.com',
@@ -150,7 +150,7 @@ describe('acceptInvitation', () => {
   })
 
   it('accepts with case-insensitive email matching', async () => {
-    seedInvitation(mockTestDb.sqlite, 'Outsider@Test.COM')
+    seedInvitation(mockTestDb.db, 'Outsider@Test.COM')
     const result = await acceptInvitation(
       IDS.outsiderUser,
       'outsider@test.com',
@@ -169,7 +169,7 @@ describe('acceptInvitation', () => {
   })
 
   it('fails when email does not match', async () => {
-    seedInvitation(mockTestDb.sqlite, 'someone@test.com')
+    seedInvitation(mockTestDb.db, 'someone@test.com')
     const result = await acceptInvitation(
       IDS.outsiderUser,
       'wrong@test.com',
@@ -179,7 +179,7 @@ describe('acceptInvitation', () => {
   })
 
   it('fails when user is already a member', async () => {
-    seedInvitation(mockTestDb.sqlite, 'member@test.com')
+    seedInvitation(mockTestDb.db, 'member@test.com')
     const result = await acceptInvitation(
       IDS.memberUser,
       'member@test.com',
@@ -193,7 +193,7 @@ describe('acceptInvitation', () => {
 
 describe('declineInvitation', () => {
   it('declines invitation, invitation deleted', async () => {
-    seedInvitation(mockTestDb.sqlite, 'outsider@test.com')
+    seedInvitation(mockTestDb.db, 'outsider@test.com')
     const result = await declineInvitation('outsider@test.com', IDS.invitation)
     expect(result.ok).toBe(true)
 
@@ -209,7 +209,7 @@ describe('declineInvitation', () => {
   })
 
   it('fails when email does not match', async () => {
-    seedInvitation(mockTestDb.sqlite, 'someone@test.com')
+    seedInvitation(mockTestDb.db, 'someone@test.com')
     const result = await declineInvitation('wrong@test.com', IDS.invitation)
     expect(result.ok).toBe(false)
   })
@@ -219,7 +219,7 @@ describe('declineInvitation', () => {
 
 describe('cancelInvitation', () => {
   it('admin cancels invitation', async () => {
-    seedInvitation(mockTestDb.sqlite)
+    seedInvitation(mockTestDb.db)
     const result = await cancelInvitation(IDS.adminUser, IDS.invitation)
     expect(result.ok).toBe(true)
 
@@ -230,7 +230,7 @@ describe('cancelInvitation', () => {
   })
 
   it('fails when non-admin tries to cancel', async () => {
-    seedInvitation(mockTestDb.sqlite)
+    seedInvitation(mockTestDb.db)
     const result = await cancelInvitation(IDS.memberUser, IDS.invitation)
     expect(result.ok).toBe(false)
   })
@@ -276,12 +276,12 @@ describe('renameOrganization', () => {
 describe('deleteOrganization', () => {
   it('admin deletes org and all related data is cascaded', async () => {
     // Seed all related data
-    seedGenerator(mockTestDb.sqlite)
-    seedAssignment(mockTestDb.sqlite)
-    seedActiveSession(mockTestDb.sqlite)
-    seedInvitation(mockTestDb.sqlite)
-    seedMaintenanceTemplate(mockTestDb.sqlite)
-    seedMaintenanceRecord(mockTestDb.sqlite)
+    seedGenerator(mockTestDb.db)
+    seedAssignment(mockTestDb.db)
+    seedActiveSession(mockTestDb.db)
+    seedInvitation(mockTestDb.db)
+    seedMaintenanceTemplate(mockTestDb.db)
+    seedMaintenanceRecord(mockTestDb.db)
 
     const result = await deleteOrganization(IDS.adminUser, IDS.org)
     expect(result.ok).toBe(true)

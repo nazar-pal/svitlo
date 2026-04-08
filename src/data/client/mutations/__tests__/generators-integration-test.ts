@@ -35,8 +35,8 @@ import {
 beforeEach(() => {
   resetDatabase()
   mockIdCounter = 0
-  seedBaseScenario(mockTestDb.sqlite)
-  seedGenerator(mockTestDb.sqlite)
+  seedBaseScenario(mockTestDb.db)
+  seedGenerator(mockTestDb.db)
 })
 
 afterAll(() => closeDatabase())

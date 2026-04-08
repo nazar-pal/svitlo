@@ -1,3 +1,4 @@
+import type { drizzle } from 'drizzle-orm/better-sqlite3'
 import { renderHook, waitFor } from '@testing-library/react-native'
 
 import {
@@ -11,7 +12,7 @@ import {
 } from '@/data/client/mutations/__tests__/seed'
 
 let mockDb: unknown
-let mockSqlite: import('better-sqlite3').Database
+let mockDrizzleDb: ReturnType<typeof drizzle>
 
 jest.mock('@powersync/react-native', () => ({
   useQuery: (query: unknown) => {
@@ -60,7 +61,7 @@ const { usePendingInvitations } = require('../use-pending-invitations')
 beforeAll(async () => {
   const testDb = await createTestDatabase()
   mockDb = testDb.db
-  mockSqlite = testDb.sqlite
+  mockDrizzleDb = testDb.db
 })
 
 beforeEach(() => {
@@ -83,8 +84,8 @@ it('returns [] when user has no invitations', async () => {
 })
 
 it('returns matching invitations for user email', async () => {
-  seedBaseScenario(mockSqlite)
-  seedInvitation(mockSqlite, 'user@test.com')
+  seedBaseScenario(mockDrizzleDb)
+  seedInvitation(mockDrizzleDb, 'user@test.com')
 
   useLocalUser.mockReturnValue({ email: 'user@test.com' })
 
@@ -97,8 +98,8 @@ it('returns matching invitations for user email', async () => {
 })
 
 it('matches email case-insensitively via normalization', async () => {
-  seedBaseScenario(mockSqlite)
-  seedInvitation(mockSqlite, 'user@test.com')
+  seedBaseScenario(mockDrizzleDb)
+  seedInvitation(mockDrizzleDb, 'user@test.com')
 
   useLocalUser.mockReturnValue({ email: 'User@Test.COM' })
 
@@ -110,8 +111,8 @@ it('matches email case-insensitively via normalization', async () => {
 })
 
 it('ignores invitations for other emails', async () => {
-  seedBaseScenario(mockSqlite)
-  seedInvitation(mockSqlite, 'other@test.com')
+  seedBaseScenario(mockDrizzleDb)
+  seedInvitation(mockDrizzleDb, 'other@test.com')
 
   useLocalUser.mockReturnValue({ email: 'mine@test.com' })
 

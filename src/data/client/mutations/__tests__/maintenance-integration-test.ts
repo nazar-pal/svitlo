@@ -45,8 +45,8 @@ import {
 beforeEach(() => {
   resetDatabase()
   mockIdCounter = 0
-  seedBaseScenario(mockTestDb.sqlite)
-  seedGenerator(mockTestDb.sqlite)
+  seedBaseScenario(mockTestDb.db)
+  seedGenerator(mockTestDb.db)
 })
 
 afterAll(() => closeDatabase())
@@ -131,7 +131,7 @@ describe('createMaintenanceTemplate', () => {
 
 describe('updateMaintenanceTemplate', () => {
   beforeEach(() => {
-    seedMaintenanceTemplate(mockTestDb.sqlite)
+    seedMaintenanceTemplate(mockTestDb.db)
   })
 
   it('admin updates template fields', async () => {
@@ -205,7 +205,7 @@ describe('updateMaintenanceTemplate', () => {
 
 describe('deleteMaintenanceTemplate', () => {
   beforeEach(() => {
-    seedMaintenanceTemplate(mockTestDb.sqlite)
+    seedMaintenanceTemplate(mockTestDb.db)
   })
 
   it('admin deletes a template', async () => {
@@ -233,7 +233,7 @@ describe('deleteMaintenanceTemplate', () => {
 
 describe('recordMaintenance', () => {
   beforeEach(() => {
-    seedMaintenanceTemplate(mockTestDb.sqlite)
+    seedMaintenanceTemplate(mockTestDb.db)
   })
 
   it('admin records maintenance', async () => {
@@ -251,7 +251,7 @@ describe('recordMaintenance', () => {
   })
 
   it('assigned member records maintenance', async () => {
-    seedAssignment(mockTestDb.sqlite)
+    seedAssignment(mockTestDb.db)
     const result = await recordMaintenance(IDS.memberUser, {
       templateId: IDS.template,
       generatorId: IDS.generator
@@ -308,8 +308,8 @@ describe('recordMaintenance', () => {
 
 describe('deleteMaintenanceRecord', () => {
   beforeEach(() => {
-    seedMaintenanceTemplate(mockTestDb.sqlite)
-    seedMaintenanceRecord(mockTestDb.sqlite)
+    seedMaintenanceTemplate(mockTestDb.db)
+    seedMaintenanceRecord(mockTestDb.db)
   })
 
   it('admin deletes a record', async () => {
@@ -323,7 +323,7 @@ describe('deleteMaintenanceRecord', () => {
   })
 
   it('assigned member deletes a record', async () => {
-    seedAssignment(mockTestDb.sqlite)
+    seedAssignment(mockTestDb.db)
     const result = await deleteMaintenanceRecord(IDS.memberUser, IDS.record)
     expect(result.ok).toBe(true)
   })
@@ -343,8 +343,8 @@ describe('deleteMaintenanceRecord', () => {
 
 describe('updateMaintenanceRecord', () => {
   beforeEach(() => {
-    seedMaintenanceTemplate(mockTestDb.sqlite)
-    seedMaintenanceRecord(mockTestDb.sqlite)
+    seedMaintenanceTemplate(mockTestDb.db)
+    seedMaintenanceRecord(mockTestDb.db)
   })
 
   it('admin updates a record', async () => {
@@ -362,7 +362,7 @@ describe('updateMaintenanceRecord', () => {
   })
 
   it('assigned member updates a record', async () => {
-    seedAssignment(mockTestDb.sqlite)
+    seedAssignment(mockTestDb.db)
     const result = await updateMaintenanceRecord(IDS.memberUser, IDS.record, {
       performedAt: '2026-01-10T08:00:00Z',
       notes: null

@@ -4,6 +4,7 @@ import { generateDrizzleJson, generateMigration } from 'drizzle-kit/api'
 import { sql } from 'drizzle-orm'
 
 import * as schema from '@/data/server/db-schema'
+import { ORG_ADMIN_IMMUTABLE_TRIGGER } from '@/data/server/db-schema/triggers'
 
 let client: PGlite
 let drizzleDb: ReturnType<typeof drizzle<typeof schema>>
@@ -38,49 +39,10 @@ export async function closeServerDatabase() {
   await client.close()
 }
 
-// ── Triggers (cannot be expressed in Drizzle schema, from migration 0002) ───
+// ── Triggers (cannot be expressed in Drizzle schema) ───────────────────────
 
 async function applyTriggers() {
-  await client.exec(`
-    CREATE OR REPLACE FUNCTION validate_org_admin_immutable()
-    RETURNS TRIGGER AS $$
-    BEGIN
-      IF NEW.admin_user_id IS DISTINCT FROM OLD.admin_user_id THEN
-        RAISE EXCEPTION 'admin_user_id cannot be changed';
-      END IF;
-      RETURN NEW;
-    END;
-    $$ LANGUAGE plpgsql;
-
-    CREATE TRIGGER trg_validate_org_admin_immutable
-      BEFORE UPDATE ON "organizations"
-      FOR EACH ROW
-      EXECUTE FUNCTION validate_org_admin_immutable();
-
-    CREATE OR REPLACE FUNCTION validate_maintenance_template_trigger_fields()
-    RETURNS TRIGGER AS $$
-    BEGIN
-      IF NEW.trigger_type IN ('hours', 'whichever_first')
-         AND NEW.trigger_hours_interval IS NULL THEN
-        RAISE EXCEPTION 'trigger_hours_interval is required when trigger_type is %',
-          NEW.trigger_type;
-      END IF;
-
-      IF NEW.trigger_type IN ('calendar', 'whichever_first')
-         AND NEW.trigger_calendar_days IS NULL THEN
-        RAISE EXCEPTION 'trigger_calendar_days is required when trigger_type is %',
-          NEW.trigger_type;
-      END IF;
-
-      RETURN NEW;
-    END;
-    $$ LANGUAGE plpgsql;
-
-    CREATE TRIGGER trg_validate_maintenance_template_fields
-      BEFORE INSERT OR UPDATE ON "maintenance_templates"
-      FOR EACH ROW
-      EXECUTE FUNCTION validate_maintenance_template_trigger_fields();
-  `)
+  await client.exec(ORG_ADMIN_IMMUTABLE_TRIGGER)
 }
 
 // ── DDL from Drizzle schema ─────────────────────────────────────────────────

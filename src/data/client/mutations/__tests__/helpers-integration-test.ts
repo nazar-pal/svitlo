@@ -29,8 +29,8 @@ import {
 
 beforeEach(() => {
   resetDatabase()
-  seedBaseScenario(mockTestDb.sqlite)
-  seedGenerator(mockTestDb.sqlite)
+  seedBaseScenario(mockTestDb.db)
+  seedGenerator(mockTestDb.db)
 })
 
 afterAll(() => closeDatabase())
@@ -93,7 +93,7 @@ describe('canAccessGenerator', () => {
   })
 
   it('returns true for assigned member', async () => {
-    seedAssignment(mockTestDb.sqlite)
+    seedAssignment(mockTestDb.db)
     expect(await canAccessGenerator(IDS.memberUser, IDS.generator)).toBe(true)
   })
 

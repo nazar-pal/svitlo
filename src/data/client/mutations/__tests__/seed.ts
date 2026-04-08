@@ -1,4 +1,22 @@
-import type Database from 'better-sqlite3'
+import type { drizzle } from 'drizzle-orm/better-sqlite3'
+
+import {
+  generatorSessions,
+  generatorUserAssignments,
+  generators
+} from '@/data/client/db-schema/generators'
+import {
+  maintenanceRecords,
+  maintenanceTemplates
+} from '@/data/client/db-schema/maintenance'
+import {
+  invitations,
+  organizationMembers,
+  organizations
+} from '@/data/client/db-schema/organizations'
+import { user } from '@/data/client/db-schema/user'
+
+type Db = ReturnType<typeof drizzle>
 
 export const IDS = {
   adminUser: 'user-admin',
@@ -16,57 +34,139 @@ export const IDS = {
 
 const T = '2026-01-15T12:00:00Z'
 
-export function seedBaseScenario(db: Database.Database) {
-  db.exec(`
-    INSERT INTO user VALUES ('${IDS.adminUser}', 'Admin', 'admin@test.com', 1, NULL, '${T}', '${T}');
-    INSERT INTO user VALUES ('${IDS.memberUser}', 'Member', 'member@test.com', 1, NULL, '${T}', '${T}');
-    INSERT INTO user VALUES ('${IDS.outsiderUser}', 'Outsider', 'outsider@test.com', 1, NULL, '${T}', '${T}');
-    INSERT INTO organizations VALUES ('${IDS.org}', 'Test Org', '${IDS.adminUser}', '${T}');
-    INSERT INTO organization_members VALUES ('${IDS.membership}', '${IDS.org}', '${IDS.memberUser}', '${T}');
-  `)
+export function seedBaseScenario(db: Db) {
+  db.insert(user)
+    .values([
+      {
+        id: IDS.adminUser,
+        name: 'Admin',
+        email: 'admin@test.com',
+        emailVerified: 1,
+        createdAt: T,
+        updatedAt: T
+      },
+      {
+        id: IDS.memberUser,
+        name: 'Member',
+        email: 'member@test.com',
+        emailVerified: 1,
+        createdAt: T,
+        updatedAt: T
+      },
+      {
+        id: IDS.outsiderUser,
+        name: 'Outsider',
+        email: 'outsider@test.com',
+        emailVerified: 1,
+        createdAt: T,
+        updatedAt: T
+      }
+    ])
+    .run()
+
+  db.insert(organizations)
+    .values({
+      id: IDS.org,
+      name: 'Test Org',
+      adminUserId: IDS.adminUser,
+      createdAt: T
+    })
+    .run()
+
+  db.insert(organizationMembers)
+    .values({
+      id: IDS.membership,
+      organizationId: IDS.org,
+      userId: IDS.memberUser,
+      joinedAt: T
+    })
+    .run()
 }
 
-export function seedGenerator(db: Database.Database) {
-  db.exec(`
-    INSERT INTO generators VALUES ('${IDS.generator}', '${IDS.org}', 'Honda EU2200i', 'EU2200i', NULL, 8, 4, 80, '${T}');
-  `)
+export function seedGenerator(db: Db) {
+  db.insert(generators)
+    .values({
+      id: IDS.generator,
+      organizationId: IDS.org,
+      title: 'Honda EU2200i',
+      model: 'EU2200i',
+      maxConsecutiveRunHours: 8,
+      requiredRestHours: 4,
+      runWarningThresholdPct: 80,
+      createdAt: T
+    })
+    .run()
 }
 
-export function seedAssignment(db: Database.Database, userId = IDS.memberUser) {
-  db.exec(`
-    INSERT INTO generator_user_assignments VALUES ('${IDS.assignment}', '${IDS.generator}', '${userId}', '${T}');
-  `)
+export function seedAssignment(db: Db, userId = IDS.memberUser) {
+  db.insert(generatorUserAssignments)
+    .values({
+      id: IDS.assignment,
+      generatorId: IDS.generator,
+      userId,
+      assignedAt: T
+    })
+    .run()
 }
 
-export function seedActiveSession(db: Database.Database) {
-  db.exec(`
-    INSERT INTO generator_sessions VALUES ('${IDS.session.active}', '${IDS.generator}', '${IDS.adminUser}', NULL, '${T}', NULL);
-  `)
+export function seedActiveSession(db: Db) {
+  db.insert(generatorSessions)
+    .values({
+      id: IDS.session.active,
+      generatorId: IDS.generator,
+      startedByUserId: IDS.adminUser,
+      startedAt: T
+    })
+    .run()
 }
 
-export function seedStoppedSession(db: Database.Database) {
-  db.exec(`
-    INSERT INTO generator_sessions VALUES ('${IDS.session.stopped}', '${IDS.generator}', '${IDS.adminUser}', '${IDS.adminUser}', '2026-01-15T10:00:00Z', '2026-01-15T12:00:00Z');
-  `)
+export function seedStoppedSession(db: Db) {
+  db.insert(generatorSessions)
+    .values({
+      id: IDS.session.stopped,
+      generatorId: IDS.generator,
+      startedByUserId: IDS.adminUser,
+      stoppedByUserId: IDS.adminUser,
+      startedAt: '2026-01-15T10:00:00Z',
+      stoppedAt: '2026-01-15T12:00:00Z'
+    })
+    .run()
 }
 
-export function seedInvitation(
-  db: Database.Database,
-  email = 'invitee@test.com'
-) {
-  db.exec(`
-    INSERT INTO invitations VALUES ('${IDS.invitation}', '${IDS.org}', '${email}', '${IDS.adminUser}', '${T}');
-  `)
+export function seedInvitation(db: Db, email = 'invitee@test.com') {
+  db.insert(invitations)
+    .values({
+      id: IDS.invitation,
+      organizationId: IDS.org,
+      inviteeEmail: email,
+      invitedByUserId: IDS.adminUser,
+      createdAt: T
+    })
+    .run()
 }
 
-export function seedMaintenanceTemplate(db: Database.Database) {
-  db.exec(`
-    INSERT INTO maintenance_templates VALUES ('${IDS.template}', '${IDS.generator}', 'Oil change', NULL, 'hours', 100, NULL, 0, '${T}');
-  `)
+export function seedMaintenanceTemplate(db: Db) {
+  db.insert(maintenanceTemplates)
+    .values({
+      id: IDS.template,
+      generatorId: IDS.generator,
+      taskName: 'Oil change',
+      triggerType: 'hours',
+      triggerHoursInterval: 100,
+      isOneTime: 0,
+      createdAt: T
+    })
+    .run()
 }
 
-export function seedMaintenanceRecord(db: Database.Database) {
-  db.exec(`
-    INSERT INTO maintenance_records VALUES ('${IDS.record}', '${IDS.template}', '${IDS.generator}', '${IDS.adminUser}', '${T}', NULL);
-  `)
+export function seedMaintenanceRecord(db: Db) {
+  db.insert(maintenanceRecords)
+    .values({
+      id: IDS.record,
+      templateId: IDS.template,
+      generatorId: IDS.generator,
+      performedByUserId: IDS.adminUser,
+      performedAt: T
+    })
+    .run()
 }

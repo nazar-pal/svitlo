@@ -44,8 +44,8 @@ import {
 beforeEach(() => {
   resetDatabase()
   mockIdCounter = 0
-  seedBaseScenario(mockTestDb.sqlite)
-  seedGenerator(mockTestDb.sqlite)
+  seedBaseScenario(mockTestDb.db)
+  seedGenerator(mockTestDb.db)
 })
 
 afterAll(() => closeDatabase())
@@ -69,7 +69,7 @@ describe('startSession', () => {
   })
 
   it('succeeds when assigned member starts a session', async () => {
-    seedAssignment(mockTestDb.sqlite)
+    seedAssignment(mockTestDb.db)
     const result = await startSession(IDS.memberUser, IDS.generator)
     expect(result.ok).toBe(true)
   })
@@ -85,13 +85,13 @@ describe('startSession', () => {
   })
 
   it('fails when session already active', async () => {
-    seedActiveSession(mockTestDb.sqlite)
+    seedActiveSession(mockTestDb.db)
     const result = await startSession(IDS.adminUser, IDS.generator)
     expect(result.ok).toBe(false)
   })
 
   it('allows starting after previous session was stopped', async () => {
-    seedStoppedSession(mockTestDb.sqlite)
+    seedStoppedSession(mockTestDb.db)
     const result = await startSession(IDS.adminUser, IDS.generator)
     expect(result.ok).toBe(true)
   })
@@ -101,7 +101,7 @@ describe('startSession', () => {
 
 describe('stopSession', () => {
   it('updates stoppedAt and stoppedByUserId', async () => {
-    seedActiveSession(mockTestDb.sqlite)
+    seedActiveSession(mockTestDb.db)
     const result = await stopSession(IDS.adminUser, IDS.session.active)
     expect(result.ok).toBe(true)
 
@@ -121,20 +121,20 @@ describe('stopSession', () => {
   })
 
   it('fails when session already stopped', async () => {
-    seedStoppedSession(mockTestDb.sqlite)
+    seedStoppedSession(mockTestDb.db)
     const result = await stopSession(IDS.adminUser, IDS.session.stopped)
     expect(result.ok).toBe(false)
   })
 
   it('fails when outsider tries to stop', async () => {
-    seedActiveSession(mockTestDb.sqlite)
+    seedActiveSession(mockTestDb.db)
     const result = await stopSession(IDS.outsiderUser, IDS.session.active)
     expect(result.ok).toBe(false)
   })
 
   it('succeeds when assigned member stops a session', async () => {
-    seedActiveSession(mockTestDb.sqlite)
-    seedAssignment(mockTestDb.sqlite)
+    seedActiveSession(mockTestDb.db)
+    seedAssignment(mockTestDb.db)
     const result = await stopSession(IDS.memberUser, IDS.session.active)
     expect(result.ok).toBe(true)
   })
@@ -144,7 +144,7 @@ describe('stopSession', () => {
 
 describe('deleteSession', () => {
   it('deletes a stopped session', async () => {
-    seedStoppedSession(mockTestDb.sqlite)
+    seedStoppedSession(mockTestDb.db)
     const result = await deleteSession(IDS.adminUser, IDS.session.stopped)
     expect(result.ok).toBe(true)
 
@@ -160,13 +160,13 @@ describe('deleteSession', () => {
   })
 
   it('fails when session is still active', async () => {
-    seedActiveSession(mockTestDb.sqlite)
+    seedActiveSession(mockTestDb.db)
     const result = await deleteSession(IDS.adminUser, IDS.session.active)
     expect(result.ok).toBe(false)
   })
 
   it('fails when outsider tries to delete', async () => {
-    seedStoppedSession(mockTestDb.sqlite)
+    seedStoppedSession(mockTestDb.db)
     const result = await deleteSession(IDS.outsiderUser, IDS.session.stopped)
     expect(result.ok).toBe(false)
   })
@@ -176,7 +176,7 @@ describe('deleteSession', () => {
 
 describe('updateSession', () => {
   it('updates startedAt and stoppedAt on a stopped session', async () => {
-    seedStoppedSession(mockTestDb.sqlite)
+    seedStoppedSession(mockTestDb.db)
     const result = await updateSession(IDS.adminUser, IDS.session.stopped, {
       startedAt: '2026-01-15T08:00:00Z',
       stoppedAt: '2026-01-15T10:00:00Z'
@@ -202,7 +202,7 @@ describe('updateSession', () => {
   })
 
   it('fails when session is still active', async () => {
-    seedActiveSession(mockTestDb.sqlite)
+    seedActiveSession(mockTestDb.db)
     const result = await updateSession(IDS.adminUser, IDS.session.active, {
       startedAt: '2026-01-15T08:00:00Z',
       stoppedAt: '2026-01-15T10:00:00Z'
@@ -211,7 +211,7 @@ describe('updateSession', () => {
   })
 
   it('fails when outsider tries to update', async () => {
-    seedStoppedSession(mockTestDb.sqlite)
+    seedStoppedSession(mockTestDb.db)
     const result = await updateSession(IDS.outsiderUser, IDS.session.stopped, {
       startedAt: '2026-01-15T08:00:00Z',
       stoppedAt: '2026-01-15T10:00:00Z'
@@ -220,7 +220,7 @@ describe('updateSession', () => {
   })
 
   it('fails when startedAt >= stoppedAt', async () => {
-    seedStoppedSession(mockTestDb.sqlite)
+    seedStoppedSession(mockTestDb.db)
     const result = await updateSession(IDS.adminUser, IDS.session.stopped, {
       startedAt: '2026-01-15T12:00:00Z',
       stoppedAt: '2026-01-15T10:00:00Z'
@@ -229,7 +229,7 @@ describe('updateSession', () => {
   })
 
   it('fails when stoppedAt is in the future', async () => {
-    seedStoppedSession(mockTestDb.sqlite)
+    seedStoppedSession(mockTestDb.db)
     const result = await updateSession(IDS.adminUser, IDS.session.stopped, {
       startedAt: '2026-01-15T10:00:00Z',
       stoppedAt: '2099-01-01T00:00:00Z'
@@ -265,7 +265,7 @@ describe('logManualSession', () => {
   })
 
   it('succeeds for assigned member', async () => {
-    seedAssignment(mockTestDb.sqlite)
+    seedAssignment(mockTestDb.db)
     const result = await logManualSession(IDS.memberUser, {
       generatorId: IDS.generator,
       startedAt: '2026-01-15T08:00:00Z',
