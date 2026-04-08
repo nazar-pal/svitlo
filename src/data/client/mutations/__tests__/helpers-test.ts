@@ -1,6 +1,10 @@
 import { Alert } from 'react-native'
 
-import { mockDatabase, mockSelectChain, mockSelectChainSequence } from './mock-db'
+import {
+  mockDatabase,
+  mockSelectChain,
+  mockSelectChainSequence
+} from './mock-db'
 
 jest.mock('@/lib/powersync/database', () => mockDatabase())
 
@@ -187,7 +191,7 @@ describe('canAccessGenerator', () => {
     mockSelectChainSequence(db, [
       [{ organizationId: 'org-1' }],
       [], // org not found → isOrgAdmin returns false
-      []  // no assignment either
+      [] // no assignment either
     ])
     expect(await canAccessGenerator('user-1', 'gen-1')).toBe(false)
   })

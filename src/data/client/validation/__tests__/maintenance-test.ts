@@ -159,16 +159,11 @@ describe('updateMaintenanceTemplateSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('validates trigger fields when triggerType is provided', () => {
+  it('accepts triggerType without companion fields (mutation layer validates against existing values)', () => {
     const result = updateMaintenanceTemplateSchema.safeParse({
       triggerType: 'hours'
-      // triggerHoursInterval missing — should fail superRefine
     })
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      const paths = result.error.issues.map(i => i.path.join('.'))
-      expect(paths).toContain('triggerHoursInterval')
-    }
+    expect(result.success).toBe(true)
   })
 })
 

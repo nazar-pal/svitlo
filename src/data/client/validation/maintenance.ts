@@ -64,7 +64,6 @@ export const updateMaintenanceTemplateSchema = z
   .refine(data => Object.keys(data).length > 0, {
     error: () => t('validation.atLeastOneField')
   })
-  .superRefine(refineTriggerFields)
 
 export type UpdateMaintenanceTemplateInput = z.input<
   typeof updateMaintenanceTemplateSchema

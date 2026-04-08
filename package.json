@@ -94,8 +94,10 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-async-generator-functions": "^7.29.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "29.5.14",
     "@types/react": "~19.2.14",
+    "better-sqlite3": "^12.8.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.4",
     "eslint-config-expo": "^55.0.0",
@@ -104,7 +106,8 @@
     "typescript": "~5.9.3"
   },
   "trustedDependencies": [
-    "@shopify/react-native-skia"
+    "@shopify/react-native-skia",
+    "better-sqlite3"
   ],
   "private": true,
   "patchedDependencies": {
