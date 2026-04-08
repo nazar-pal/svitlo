@@ -1,3 +1,7 @@
+import { and, eq } from 'drizzle-orm'
+
+import { generatorUserAssignments } from '@/data/client/db-schema/generators'
+
 import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
 import { IDS, seedBaseScenario, seedGenerator, seedAssignment } from './seed'
 
@@ -51,13 +55,13 @@ describe('assignUserToGenerator', () => {
     )
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.sqlite
-      .prepare(
-        'SELECT * FROM generator_user_assignments WHERE generator_id = ?'
-      )
-      .all(IDS.generator) as { user_id: string }[]
+    const rows = mockTestDb.db
+      .select()
+      .from(generatorUserAssignments)
+      .where(eq(generatorUserAssignments.generatorId, IDS.generator))
+      .all()
     expect(rows).toHaveLength(1)
-    expect(rows[0].user_id).toBe(IDS.memberUser)
+    expect(rows[0].userId).toBe(IDS.memberUser)
   })
 
   it('admin assigns self (no membership check needed)', async () => {
@@ -119,11 +123,16 @@ describe('unassignUserFromGenerator', () => {
     )
     expect(result.ok).toBe(true)
 
-    const row = mockTestDb.sqlite
-      .prepare(
-        'SELECT * FROM generator_user_assignments WHERE generator_id = ? AND user_id = ?'
+    const [row] = mockTestDb.db
+      .select()
+      .from(generatorUserAssignments)
+      .where(
+        and(
+          eq(generatorUserAssignments.generatorId, IDS.generator),
+          eq(generatorUserAssignments.userId, IDS.memberUser)
+        )
       )
-      .get(IDS.generator, IDS.memberUser)
+      .all()
     expect(row).toBeUndefined()
   })
 

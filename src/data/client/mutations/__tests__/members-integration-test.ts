@@ -1,3 +1,8 @@
+import { and, eq } from 'drizzle-orm'
+
+import { generatorUserAssignments } from '@/data/client/db-schema/generators'
+import { organizationMembers } from '@/data/client/db-schema/organizations'
+
 import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
 import { IDS, seedBaseScenario, seedGenerator, seedAssignment } from './seed'
 
@@ -44,9 +49,11 @@ describe('removeMember', () => {
     const result = await removeMember(IDS.adminUser, IDS.membership)
     expect(result.ok).toBe(true)
 
-    const row = mockTestDb.sqlite
-      .prepare('SELECT * FROM organization_members WHERE id = ?')
-      .get(IDS.membership)
+    const [row] = mockTestDb.db
+      .select()
+      .from(organizationMembers)
+      .where(eq(organizationMembers.id, IDS.membership))
+      .all()
     expect(row).toBeUndefined()
   })
 
@@ -56,36 +63,54 @@ describe('removeMember', () => {
     expect(result.ok).toBe(true)
 
     // Member assignment deleted
-    const memberAssignment = mockTestDb.sqlite
-      .prepare('SELECT * FROM generator_user_assignments WHERE user_id = ?')
-      .get(IDS.memberUser)
+    const [memberAssignment] = mockTestDb.db
+      .select()
+      .from(generatorUserAssignments)
+      .where(eq(generatorUserAssignments.userId, IDS.memberUser))
+      .all()
     expect(memberAssignment).toBeUndefined()
 
     // Admin now assigned to generator
-    const adminAssignment = mockTestDb.sqlite
-      .prepare(
-        'SELECT * FROM generator_user_assignments WHERE user_id = ? AND generator_id = ?'
+    const [adminAssignment] = mockTestDb.db
+      .select()
+      .from(generatorUserAssignments)
+      .where(
+        and(
+          eq(generatorUserAssignments.userId, IDS.adminUser),
+          eq(generatorUserAssignments.generatorId, IDS.generator)
+        )
       )
-      .get(IDS.adminUser, IDS.generator)
+      .all()
     expect(adminAssignment).toBeDefined()
   })
 
   it('does not create duplicate admin assignment if admin already assigned', async () => {
     // Assign both member and admin to the generator
     seedAssignment(mockTestDb.db) // memberUser
-    mockTestDb.sqlite.exec(`
-      INSERT INTO generator_user_assignments VALUES ('assign-admin', '${IDS.generator}', '${IDS.adminUser}', '2026-01-15T12:00:00Z');
-    `)
+    mockTestDb.db
+      .insert(generatorUserAssignments)
+      .values({
+        id: 'assign-admin',
+        generatorId: IDS.generator,
+        userId: IDS.adminUser,
+        assignedAt: '2026-01-15T12:00:00Z'
+      })
+      .run()
 
     const result = await removeMember(IDS.adminUser, IDS.membership)
     expect(result.ok).toBe(true)
 
     // Should be exactly 1 assignment for admin (no duplicate)
-    const adminAssignments = mockTestDb.sqlite
-      .prepare(
-        'SELECT * FROM generator_user_assignments WHERE user_id = ? AND generator_id = ?'
+    const adminAssignments = mockTestDb.db
+      .select()
+      .from(generatorUserAssignments)
+      .where(
+        and(
+          eq(generatorUserAssignments.userId, IDS.adminUser),
+          eq(generatorUserAssignments.generatorId, IDS.generator)
+        )
       )
-      .all(IDS.adminUser, IDS.generator)
+      .all()
     expect(adminAssignments).toHaveLength(1)
   })
 
@@ -107,11 +132,16 @@ describe('leaveOrganization', () => {
     const result = await leaveOrganization(IDS.memberUser, IDS.org)
     expect(result.ok).toBe(true)
 
-    const row = mockTestDb.sqlite
-      .prepare(
-        'SELECT * FROM organization_members WHERE user_id = ? AND organization_id = ?'
+    const [row] = mockTestDb.db
+      .select()
+      .from(organizationMembers)
+      .where(
+        and(
+          eq(organizationMembers.userId, IDS.memberUser),
+          eq(organizationMembers.organizationId, IDS.org)
+        )
       )
-      .get(IDS.memberUser, IDS.org)
+      .all()
     expect(row).toBeUndefined()
   })
 
@@ -121,11 +151,16 @@ describe('leaveOrganization', () => {
     expect(result.ok).toBe(true)
 
     // Admin now assigned
-    const adminAssignment = mockTestDb.sqlite
-      .prepare(
-        'SELECT * FROM generator_user_assignments WHERE user_id = ? AND generator_id = ?'
+    const [adminAssignment] = mockTestDb.db
+      .select()
+      .from(generatorUserAssignments)
+      .where(
+        and(
+          eq(generatorUserAssignments.userId, IDS.adminUser),
+          eq(generatorUserAssignments.generatorId, IDS.generator)
+        )
       )
-      .get(IDS.adminUser, IDS.generator)
+      .all()
     expect(adminAssignment).toBeDefined()
   })
 

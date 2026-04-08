@@ -52,6 +52,15 @@ find . -maxdepth 4 -name "handlers*" -path "*msw*" -o -name "server*" -path "*ms
 
 # Check for Maestro flows
 find . -maxdepth 3 -name "*.yaml" -path "*maestro*" -o -name "*.yaml" -path "*.maestro*" | head -10
+
+# Hunt for DRY violations: raw SQL in test files that might duplicate production setup
+grep -rn "CREATE INDEX\|CREATE TRIGGER\|CREATE UNIQUE\|ALTER TABLE" --include="*.ts" --include="*.tsx" | head -20
+
+# Find shared modules for triggers/constraints/SQL
+find . -maxdepth 5 -name "triggers*" -o -name "constraints*" -o -name "shared-sql*" | head -10
+
+# Check for hardcoded table names in test files (potential DRY violation)
+grep -rn "INSERT INTO\|SELECT.*FROM\|DELETE FROM\|UPDATE " --include="*.test.*" --include="*.spec.*" | head -20
 ```
 
 Read the test config, the shared `test-db.ts` and `test-server-db.ts` utilities, a representative sample of existing tests, and any test setup files. Understand the full picture before proceeding.
@@ -265,12 +274,56 @@ Do NOT write automated tests against Sync Streams internals — there's no stabl
 3. Missing `db.close()` in `afterEach`
 4. Testing only happy-path online flows in a local-first app
 
+### 2.12 DRY: Eliminating duplication between production and test database setup
+
+**This is a critical maintenance concern.** In a local-first app with two databases (client SQLite + server Postgres), there's a constant risk of production and test database setups drifting apart. When raw SQL or configuration is duplicated between production code and test utilities, changing one without updating the other creates silent test fidelity bugs — tests pass, but they're no longer testing what production actually does.
+
+**Actively search for and eliminate these specific duplication patterns:**
+
+**1. Raw SQL defined in both production and test setup.**
+If the same `CREATE INDEX`, `CREATE TRIGGER`, or constraint SQL appears in both a production setup file and in `test-db.ts` / `test-server-db.ts`, that's a DRY violation. When the production SQL changes, the test copy is easily forgotten.
+
+Fix: Extract shared SQL into a single source — either a shared module that both production and test code import, or derive it programmatically from the Drizzle schema. For example, if `applyServerConstraints` in `test-db.ts` manually defines unique indexes, check whether those can be derived from the server Drizzle schema's `.unique()` constraints rather than being hand-written SQL strings.
+
+**2. Trigger definitions duplicated between production migrations and `applyTriggers`.**
+The `applyTriggers` function in `test-server-db.ts` manually applies triggers that Drizzle can't express in its schema. If these same triggers are also defined in a migration file or a separate production setup script, the definitions exist in two places.
+
+Fix: Extract trigger SQL into a shared `triggers.ts` module that exports the raw SQL strings. Both the production migration and `applyTriggers` import from the same source. When a trigger changes, there's only one place to update.
+
+**3. Constraint definitions duplicated between server schema and `applyServerConstraints`.**
+The `applyServerConstraints` function in `test-db.ts` applies unique indexes to the client test database that mirror server-side constraints. If these are hand-written to match the server Drizzle schema, they'll drift when the server schema changes.
+
+Fix: Where possible, derive constraint SQL programmatically by introspecting the Drizzle server schema objects. At minimum, add a comment in `applyServerConstraints` referencing the exact server schema field each constraint mirrors, so the link is explicit and searchable. Ideally, write a helper that reads `.unique()` definitions from the server schema and generates the corresponding SQLite `CREATE UNIQUE INDEX` statements.
+
+**4. Table/column names hardcoded as string literals in tests.**
+If tests use raw SQL strings like `SELECT * FROM generators WHERE ...` instead of referencing the Drizzle schema's table and column objects, renaming a table or column in the schema won't cause a type error in tests — they'll just silently break at runtime.
+
+Fix: Use Drizzle's query builder or at minimum reference table/column names from schema objects (`schema.generators.name`, `schema.generators.columns.id`) rather than hand-writing SQL strings. Where raw SQL is unavoidable, import table name constants from the schema module.
+
+**5. Test data factories duplicating insert logic.**
+If multiple test files each construct their own test data with inline `db.execute('INSERT INTO ...')` calls using hand-written SQL and manually generated UUIDs, that's both duplication and fragility — every INSERT must match the current schema.
+
+Fix: Create shared test data factories (one per table/entity) that use the Drizzle schema to construct valid records with sensible defaults. Tests call `createTestGenerator({ name: 'override' })` instead of writing raw INSERTs. When a required column is added to the schema, only the factory needs updating. The `@praha/drizzle-factory` package provides this pattern for Drizzle specifically if a library-based approach is preferred.
+
+**6. PowerSync `AppSchema` and Drizzle client schema defining the same tables independently.**
+The PowerSync `AppSchema` (used at runtime) and the Drizzle client schema (used for test DDL generation) both describe the same client-side tables. If they're defined independently, adding a column to one but not the other means tests won't reflect the real table structure.
+
+Fix: Verify that the Drizzle client schema and the PowerSync `AppSchema` are derived from the same source, or at minimum that one is generated from the other. If they're maintained separately, add a test that compares the two schemas programmatically — asserting that every table and column in `AppSchema` has a corresponding definition in the Drizzle client schema.
+
+**7. Environment configuration and connection strings duplicated across files.**
+If database URLs, API base URLs, or auth configuration are hardcoded in both production config and test setup files rather than pulled from a shared config module, they'll drift.
+
+Fix: Use a shared config/env module that both production and test code reference. Tests override specific values (e.g., using PGlite instead of Neon URL) but inherit everything else.
+
+**The general principle:** The Drizzle schema should be the single source of truth for database structure. Everything else — test DDL generation, constraints, indexes, data factories — should derive from it rather than redefine it. When you find raw SQL in a test file, ask: "Could this be derived from the Drizzle schema instead?" If yes, refactor.
+
 ## Step 3: Produce a prioritized improvement plan
 
 After auditing, produce a prioritized list of improvements ordered by impact:
 
 **Priority 1 (Critical — do these first):**
 - Remove unnecessary tests identified in section 2.10
+- Fix DRY violations between production and test database setup (section 2.12) — especially duplicated trigger/constraint SQL and hardcoded table names
 - Fix any test that mocks PowerSync or SQLite instead of using the shared `test-db.ts` utility
 - Fix test isolation issues (shared DB state, missing cleanup)
 - Verify `applyServerConstraints` (client) and `applyTriggers` (server) are in sync with production

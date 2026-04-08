@@ -1,42 +1,48 @@
 import Database from 'better-sqlite3'
+import { getTableName } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import {
+  generateDrizzleJson,
   generateSQLiteDrizzleJson,
   generateSQLiteMigration
 } from 'drizzle-kit/api'
 
-import * as schema from '@/data/client/db-schema'
+import * as clientSchema from '@/data/client/db-schema'
+import * as serverSchema from '@/data/server/db-schema'
 
 let sqlite: Database.Database
 let drizzleDb: ReturnType<typeof drizzle>
+
+// Client tables in deletion order (children before parents).
+// Add new tables here when extending the client schema.
+const CLIENT_TABLES = [
+  clientSchema.maintenanceRecords,
+  clientSchema.maintenanceTemplates,
+  clientSchema.generatorSessions,
+  clientSchema.generatorUserAssignments,
+  clientSchema.generators,
+  clientSchema.invitations,
+  clientSchema.organizationMembers,
+  clientSchema.organizations,
+  clientSchema.user
+]
 
 export async function createTestDatabase() {
   sqlite = new Database(':memory:')
   await createTables(sqlite)
   applyServerConstraints(sqlite)
 
-  drizzleDb = drizzle(sqlite, { schema })
+  drizzleDb = drizzle(sqlite, { schema: clientSchema })
 
   return {
     db: drizzleDb,
-    powersync: createPowerSyncShim(sqlite),
-    sqlite
+    powersync: createPowerSyncShim(sqlite)
   }
 }
 
 export function resetDatabase() {
-  const tables = [
-    'maintenance_records',
-    'maintenance_templates',
-    'generator_sessions',
-    'generator_user_assignments',
-    'generators',
-    'invitations',
-    'organization_members',
-    'organizations',
-    'user'
-  ]
-  for (const table of tables) sqlite.exec(`DELETE FROM ${table}`)
+  for (const table of CLIENT_TABLES)
+    sqlite.exec(`DELETE FROM "${getTableName(table)}"`)
 }
 
 export function closeDatabase() {
@@ -80,34 +86,59 @@ function createPowerSyncShim(db: Database.Database) {
   }
 }
 
-// ── Server-parity constraints (unique indexes that the server enforces) ─────
-// Each index mirrors a unique constraint from the server Drizzle schema.
-// When a server constraint is added, renamed, or removed, update this function.
-// session.token unique (auth.ts) is excluded — BetterAuth-only, not in client schema.
+// ── Server-parity constraints ───────────────────────────────────────────────
+// Derived automatically from the server Drizzle schema via drizzle-kit snapshot.
+// When you add/modify/remove a unique constraint or index in the server schema,
+// it propagates here with zero manual sync.
+
+interface SnapshotUniqueConstraint {
+  name: string
+  columns: string[]
+}
+
+interface SnapshotIndexColumn {
+  expression: string
+}
+
+interface SnapshotIndex {
+  name: string
+  columns: SnapshotIndexColumn[]
+  isUnique: boolean
+  where?: string
+}
+
+interface SnapshotTable {
+  name: string
+  uniqueConstraints?: Record<string, SnapshotUniqueConstraint>
+  indexes?: Record<string, SnapshotIndex>
+}
 
 function applyServerConstraints(db: Database.Database) {
-  db.exec(`
-    -- server: db-schema/generators.ts — unique().on(generatorId, userId)
-    CREATE UNIQUE INDEX "generator_user_assignments_generator_user_unique"
-      ON "generator_user_assignments" ("generator_id", "user_id");
+  const snapshot = generateDrizzleJson(serverSchema)
+  const clientTableNames = new Set<string>(
+    CLIENT_TABLES.map(t => getTableName(t))
+  )
 
-    -- server: db-schema/organizations.ts — unique().on(organizationId, userId)
-    CREATE UNIQUE INDEX "organization_members_org_user_unique"
-      ON "organization_members" ("organization_id", "user_id");
+  for (const tableData of Object.values(snapshot.tables)) {
+    const table = tableData as SnapshotTable
+    if (!clientTableNames.has(table.name)) continue
 
-    -- server: db-schema/organizations.ts — unique().on(organizationId, inviteeEmail)
-    CREATE UNIQUE INDEX "invitations_org_email_unique"
-      ON "invitations" ("organization_id", "invitee_email");
+    // unique() constraints
+    for (const uc of Object.values(table.uniqueConstraints ?? {})) {
+      const cols = uc.columns.map(c => `"${c}"`).join(', ')
+      db.exec(`CREATE UNIQUE INDEX "${uc.name}" ON "${table.name}" (${cols})`)
+    }
 
-    -- server: db-schema/generators.ts — uniqueIndex().on(generatorId).where(stopped_at IS NULL)
-    CREATE UNIQUE INDEX "generator_sessions_one_active_per_generator"
-      ON "generator_sessions" ("generator_id")
-      WHERE "stopped_at" IS NULL;
-
-    -- server: db-schema/auth.ts — .unique() on email column
-    CREATE UNIQUE INDEX "user_email_unique"
-      ON "user" ("email");
-  `)
+    // uniqueIndex() indexes (may have WHERE clause for partial indexes)
+    for (const idx of Object.values(table.indexes ?? {})) {
+      if (!idx.isUnique) continue
+      const cols = idx.columns.map(c => `"${c.expression}"`).join(', ')
+      const where = idx.where ? ` WHERE ${idx.where}` : ''
+      db.exec(
+        `CREATE UNIQUE INDEX "${idx.name}" ON "${table.name}" (${cols})${where}`
+      )
+    }
+  }
 }
 
 // ── DDL from Drizzle schema ─────────────────────────────────────────────────
@@ -124,7 +155,7 @@ async function createTables(db: Database.Database) {
     _meta: { tables: {}, columns: {} }
   }
 
-  const currentSnapshot = await generateSQLiteDrizzleJson(schema)
+  const currentSnapshot = await generateSQLiteDrizzleJson(clientSchema)
   const statements = await generateSQLiteMigration(
     emptySnapshot,
     currentSnapshot

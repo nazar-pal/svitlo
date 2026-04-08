@@ -1,13 +1,27 @@
 import { PGlite } from '@electric-sql/pglite'
+import { getTableName, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/pglite'
 import { generateDrizzleJson, generateMigration } from 'drizzle-kit/api'
-import { sql } from 'drizzle-orm'
 
 import * as schema from '@/data/server/db-schema'
 import { ORG_ADMIN_IMMUTABLE_TRIGGER } from '@/data/server/db-schema/triggers'
 
 let client: PGlite
 let drizzleDb: ReturnType<typeof drizzle<typeof schema>>
+
+// App tables in dependency-safe order (children before parents).
+// Add new tables here when extending the server schema.
+const SERVER_TABLES = [
+  schema.maintenanceRecords,
+  schema.maintenanceTemplates,
+  schema.generatorSessions,
+  schema.generatorUserAssignments,
+  schema.generators,
+  schema.invitations,
+  schema.organizationMembers,
+  schema.organizations,
+  schema.user
+]
 
 export async function createTestServerDatabase() {
   client = new PGlite()
@@ -20,19 +34,8 @@ export async function createTestServerDatabase() {
 }
 
 export async function resetServerDatabase() {
-  // Truncate all app tables in dependency order (CASCADE handles FKs)
-  await drizzleDb.execute(sql`
-    TRUNCATE TABLE maintenance_records,
-                   maintenance_templates,
-                   generator_sessions,
-                   generator_user_assignments,
-                   generators,
-                   invitations,
-                   organization_members,
-                   organizations,
-                   "user"
-    CASCADE
-  `)
+  const tableNames = SERVER_TABLES.map(t => `"${getTableName(t)}"`).join(', ')
+  await drizzleDb.execute(sql.raw(`TRUNCATE TABLE ${tableNames} CASCADE`))
 }
 
 export async function closeServerDatabase() {

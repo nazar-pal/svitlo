@@ -1,3 +1,11 @@
+import { eq } from 'drizzle-orm'
+
+import { generators } from '@/data/client/db-schema/generators'
+import {
+  maintenanceRecords,
+  maintenanceTemplates
+} from '@/data/client/db-schema/maintenance'
+
 import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
 import {
   IDS,
@@ -63,17 +71,15 @@ describe('createMaintenanceTemplate', () => {
     })
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.sqlite
-      .prepare('SELECT * FROM maintenance_templates WHERE generator_id = ?')
-      .all(IDS.generator) as {
-      task_name: string
-      trigger_type: string
-      trigger_hours_interval: number
-    }[]
+    const rows = mockTestDb.db
+      .select()
+      .from(maintenanceTemplates)
+      .where(eq(maintenanceTemplates.generatorId, IDS.generator))
+      .all()
     expect(rows).toHaveLength(1)
-    expect(rows[0].task_name).toBe('Oil Change')
-    expect(rows[0].trigger_type).toBe('hours')
-    expect(rows[0].trigger_hours_interval).toBe(100)
+    expect(rows[0].taskName).toBe('Oil Change')
+    expect(rows[0].triggerType).toBe('hours')
+    expect(rows[0].triggerHoursInterval).toBe(100)
   })
 
   it('admin creates a calendar-based template', async () => {
@@ -142,10 +148,12 @@ describe('updateMaintenanceTemplate', () => {
     )
     expect(result.ok).toBe(true)
 
-    const template = mockTestDb.sqlite
-      .prepare('SELECT * FROM maintenance_templates WHERE id = ?')
-      .get(IDS.template) as { task_name: string }
-    expect(template.task_name).toBe('Updated Task')
+    const [template] = mockTestDb.db
+      .select()
+      .from(maintenanceTemplates)
+      .where(eq(maintenanceTemplates.id, IDS.template))
+      .all()
+    expect(template.taskName).toBe('Updated Task')
   })
 
   it('fails when non-admin tries to update', async () => {
@@ -212,9 +220,11 @@ describe('deleteMaintenanceTemplate', () => {
     const result = await deleteMaintenanceTemplate(IDS.adminUser, IDS.template)
     expect(result.ok).toBe(true)
 
-    const row = mockTestDb.sqlite
-      .prepare('SELECT * FROM maintenance_templates WHERE id = ?')
-      .get(IDS.template)
+    const [row] = mockTestDb.db
+      .select()
+      .from(maintenanceTemplates)
+      .where(eq(maintenanceTemplates.id, IDS.template))
+      .all()
     expect(row).toBeUndefined()
   })
 
@@ -243,11 +253,13 @@ describe('recordMaintenance', () => {
     })
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.sqlite
-      .prepare('SELECT * FROM maintenance_records WHERE template_id = ?')
-      .all(IDS.template) as { performed_by_user_id: string }[]
+    const rows = mockTestDb.db
+      .select()
+      .from(maintenanceRecords)
+      .where(eq(maintenanceRecords.templateId, IDS.template))
+      .all()
     expect(rows).toHaveLength(1)
-    expect(rows[0].performed_by_user_id).toBe(IDS.adminUser)
+    expect(rows[0].performedByUserId).toBe(IDS.adminUser)
   })
 
   it('assigned member records maintenance', async () => {
@@ -267,10 +279,12 @@ describe('recordMaintenance', () => {
     })
     expect(result.ok).toBe(true)
 
-    const record = mockTestDb.sqlite
-      .prepare('SELECT * FROM maintenance_records WHERE template_id = ?')
-      .get(IDS.template) as { performed_at: string }
-    expect(record.performed_at).toBe('2026-01-15T12:00:00Z')
+    const [record] = mockTestDb.db
+      .select()
+      .from(maintenanceRecords)
+      .where(eq(maintenanceRecords.templateId, IDS.template))
+      .all()
+    expect(record.performedAt).toBe('2026-01-15T12:00:00Z')
   })
 
   it('fails when outsider tries to record', async () => {
@@ -291,10 +305,31 @@ describe('recordMaintenance', () => {
 
   it('fails when template does not belong to generator', async () => {
     // Create a second generator with its own template
-    mockTestDb.sqlite.exec(`
-      INSERT INTO generators VALUES ('gen-2', '${IDS.org}', 'Other Gen', 'Model', NULL, 8, 4, 80, '2026-01-15T12:00:00Z');
-      INSERT INTO maintenance_templates VALUES ('tmpl-2', 'gen-2', 'Other Task', NULL, 'hours', 50, NULL, 0, '2026-01-15T12:00:00Z');
-    `)
+    mockTestDb.db
+      .insert(generators)
+      .values({
+        id: 'gen-2',
+        organizationId: IDS.org,
+        title: 'Other Gen',
+        model: 'Model',
+        maxConsecutiveRunHours: 8,
+        requiredRestHours: 4,
+        runWarningThresholdPct: 80,
+        createdAt: '2026-01-15T12:00:00Z'
+      })
+      .run()
+    mockTestDb.db
+      .insert(maintenanceTemplates)
+      .values({
+        id: 'tmpl-2',
+        generatorId: 'gen-2',
+        taskName: 'Other Task',
+        triggerType: 'hours',
+        triggerHoursInterval: 50,
+        isOneTime: 0,
+        createdAt: '2026-01-15T12:00:00Z'
+      })
+      .run()
 
     const result = await recordMaintenance(IDS.adminUser, {
       templateId: 'tmpl-2',
@@ -316,9 +351,11 @@ describe('deleteMaintenanceRecord', () => {
     const result = await deleteMaintenanceRecord(IDS.adminUser, IDS.record)
     expect(result.ok).toBe(true)
 
-    const row = mockTestDb.sqlite
-      .prepare('SELECT * FROM maintenance_records WHERE id = ?')
-      .get(IDS.record)
+    const [row] = mockTestDb.db
+      .select()
+      .from(maintenanceRecords)
+      .where(eq(maintenanceRecords.id, IDS.record))
+      .all()
     expect(row).toBeUndefined()
   })
 
@@ -354,10 +391,12 @@ describe('updateMaintenanceRecord', () => {
     })
     expect(result.ok).toBe(true)
 
-    const record = mockTestDb.sqlite
-      .prepare('SELECT * FROM maintenance_records WHERE id = ?')
-      .get(IDS.record) as { performed_at: string; notes: string }
-    expect(record.performed_at).toBe('2026-01-10T08:00:00Z')
+    const [record] = mockTestDb.db
+      .select()
+      .from(maintenanceRecords)
+      .where(eq(maintenanceRecords.id, IDS.record))
+      .all()
+    expect(record.performedAt).toBe('2026-01-10T08:00:00Z')
     expect(record.notes).toBe('Changed oil and filter')
   })
 

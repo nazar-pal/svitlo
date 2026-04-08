@@ -1,3 +1,7 @@
+import { eq } from 'drizzle-orm'
+
+import { generatorSessions } from '@/data/client/db-schema/generators'
+
 import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
 import {
   IDS,
@@ -50,22 +54,21 @@ beforeEach(() => {
 
 afterAll(() => closeDatabase())
 
-// ── startSession ────────────────────────────────────────────────────────────
+// ── startSession ───────────────────────────��────────────────────────────────
 
 describe('startSession', () => {
   it('succeeds when admin starts a session', async () => {
     const result = await startSession(IDS.adminUser, IDS.generator)
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.sqlite
-      .prepare('SELECT * FROM generator_sessions WHERE generator_id = ?')
-      .all(IDS.generator) as {
-      started_by_user_id: string
-      stopped_at: string | null
-    }[]
+    const rows = mockTestDb.db
+      .select()
+      .from(generatorSessions)
+      .where(eq(generatorSessions.generatorId, IDS.generator))
+      .all()
     expect(rows).toHaveLength(1)
-    expect(rows[0].started_by_user_id).toBe(IDS.adminUser)
-    expect(rows[0].stopped_at).toBeNull()
+    expect(rows[0].startedByUserId).toBe(IDS.adminUser)
+    expect(rows[0].stoppedAt).toBeNull()
   })
 
   it('succeeds when assigned member starts a session', async () => {
@@ -97,7 +100,7 @@ describe('startSession', () => {
   })
 })
 
-// ── stopSession ─────────────────────────────────────────────────────────────
+// ── stopSession ────���────────────────────────────────────────────────────────
 
 describe('stopSession', () => {
   it('updates stoppedAt and stoppedByUserId', async () => {
@@ -105,14 +108,13 @@ describe('stopSession', () => {
     const result = await stopSession(IDS.adminUser, IDS.session.active)
     expect(result.ok).toBe(true)
 
-    const session = mockTestDb.sqlite
-      .prepare('SELECT * FROM generator_sessions WHERE id = ?')
-      .get(IDS.session.active) as {
-      stopped_at: string | null
-      stopped_by_user_id: string | null
-    }
-    expect(session.stopped_at).not.toBeNull()
-    expect(session.stopped_by_user_id).toBe(IDS.adminUser)
+    const [session] = mockTestDb.db
+      .select()
+      .from(generatorSessions)
+      .where(eq(generatorSessions.id, IDS.session.active))
+      .all()
+    expect(session.stoppedAt).not.toBeNull()
+    expect(session.stoppedByUserId).toBe(IDS.adminUser)
   })
 
   it('fails when session does not exist', async () => {
@@ -140,7 +142,7 @@ describe('stopSession', () => {
   })
 })
 
-// ── deleteSession ───────────────────────────────────────────────────────────
+// ── deleteSession ──────────���────────────────────────────���───────────────────
 
 describe('deleteSession', () => {
   it('deletes a stopped session', async () => {
@@ -148,9 +150,11 @@ describe('deleteSession', () => {
     const result = await deleteSession(IDS.adminUser, IDS.session.stopped)
     expect(result.ok).toBe(true)
 
-    const row = mockTestDb.sqlite
-      .prepare('SELECT * FROM generator_sessions WHERE id = ?')
-      .get(IDS.session.stopped)
+    const [row] = mockTestDb.db
+      .select()
+      .from(generatorSessions)
+      .where(eq(generatorSessions.id, IDS.session.stopped))
+      .all()
     expect(row).toBeUndefined()
   })
 
@@ -172,7 +176,7 @@ describe('deleteSession', () => {
   })
 })
 
-// ── updateSession ───────────────────────────────────────────────────────────
+// ── updateSession ───────────���───────────────────────────────────────────────
 
 describe('updateSession', () => {
   it('updates startedAt and stoppedAt on a stopped session', async () => {
@@ -183,14 +187,13 @@ describe('updateSession', () => {
     })
     expect(result.ok).toBe(true)
 
-    const session = mockTestDb.sqlite
-      .prepare('SELECT * FROM generator_sessions WHERE id = ?')
-      .get(IDS.session.stopped) as {
-      started_at: string
-      stopped_at: string
-    }
-    expect(session.started_at).toBe('2026-01-15T08:00:00Z')
-    expect(session.stopped_at).toBe('2026-01-15T10:00:00Z')
+    const [session] = mockTestDb.db
+      .select()
+      .from(generatorSessions)
+      .where(eq(generatorSessions.id, IDS.session.stopped))
+      .all()
+    expect(session.startedAt).toBe('2026-01-15T08:00:00Z')
+    expect(session.stoppedAt).toBe('2026-01-15T10:00:00Z')
   })
 
   it('fails when session does not exist', async () => {
@@ -238,7 +241,7 @@ describe('updateSession', () => {
   })
 })
 
-// ── logManualSession ────────────────────────────────────────────────────────
+// ── logManualSession ─────────��──────────────────────────────────────────────
 
 describe('logManualSession', () => {
   it('inserts a completed session for admin', async () => {
@@ -249,19 +252,16 @@ describe('logManualSession', () => {
     })
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.sqlite
-      .prepare('SELECT * FROM generator_sessions WHERE generator_id = ?')
-      .all(IDS.generator) as {
-      started_by_user_id: string
-      stopped_by_user_id: string
-      started_at: string
-      stopped_at: string
-    }[]
+    const rows = mockTestDb.db
+      .select()
+      .from(generatorSessions)
+      .where(eq(generatorSessions.generatorId, IDS.generator))
+      .all()
     expect(rows).toHaveLength(1)
-    expect(rows[0].started_by_user_id).toBe(IDS.adminUser)
-    expect(rows[0].stopped_by_user_id).toBe(IDS.adminUser)
-    expect(rows[0].started_at).toBe('2026-01-15T08:00:00Z')
-    expect(rows[0].stopped_at).toBe('2026-01-15T10:00:00Z')
+    expect(rows[0].startedByUserId).toBe(IDS.adminUser)
+    expect(rows[0].stoppedByUserId).toBe(IDS.adminUser)
+    expect(rows[0].startedAt).toBe('2026-01-15T08:00:00Z')
+    expect(rows[0].stoppedAt).toBe('2026-01-15T10:00:00Z')
   })
 
   it('succeeds for assigned member', async () => {

@@ -1,3 +1,20 @@
+import { eq } from 'drizzle-orm'
+
+import {
+  generators,
+  generatorSessions,
+  generatorUserAssignments
+} from '@/data/client/db-schema/generators'
+import {
+  maintenanceRecords,
+  maintenanceTemplates
+} from '@/data/client/db-schema/maintenance'
+import {
+  invitations,
+  organizationMembers,
+  organizations
+} from '@/data/client/db-schema/organizations'
+
 import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
 import {
   IDS,
@@ -62,11 +79,13 @@ describe('createOrganization', () => {
     })
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.sqlite
-      .prepare('SELECT * FROM organizations WHERE name = ?')
-      .all('New Org') as { admin_user_id: string }[]
+    const rows = mockTestDb.db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.name, 'New Org'))
+      .all()
     expect(rows).toHaveLength(1)
-    expect(rows[0].admin_user_id).toBe(IDS.adminUser)
+    expect(rows[0].adminUserId).toBe(IDS.adminUser)
   })
 
   it('fails with empty name', async () => {
@@ -90,9 +109,11 @@ describe('createInvitation', () => {
     })
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.sqlite
-      .prepare('SELECT * FROM invitations WHERE invitee_email = ?')
-      .all('new@test.com')
+    const rows = mockTestDb.db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.inviteeEmail, 'new@test.com'))
+      .all()
     expect(rows).toHaveLength(1)
   })
 
@@ -135,17 +156,19 @@ describe('acceptInvitation', () => {
     expect(result.ok).toBe(true)
 
     // Membership created
-    const member = mockTestDb.sqlite
-      .prepare(
-        'SELECT * FROM organization_members WHERE user_id = ? AND organization_id = ?'
-      )
-      .get(IDS.outsiderUser, IDS.org)
+    const [member] = mockTestDb.db
+      .select()
+      .from(organizationMembers)
+      .where(eq(organizationMembers.userId, IDS.outsiderUser))
+      .all()
     expect(member).toBeDefined()
 
     // Invitation deleted
-    const inv = mockTestDb.sqlite
-      .prepare('SELECT * FROM invitations WHERE id = ?')
-      .get(IDS.invitation)
+    const [inv] = mockTestDb.db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, IDS.invitation))
+      .all()
     expect(inv).toBeUndefined()
   })
 
@@ -189,7 +212,7 @@ describe('acceptInvitation', () => {
   })
 })
 
-// ── declineInvitation ───────────────────────────────────────────────────────
+// ── declineInvitation ──────────────────────────────────────────────────────
 
 describe('declineInvitation', () => {
   it('declines invitation, invitation deleted', async () => {
@@ -197,9 +220,11 @@ describe('declineInvitation', () => {
     const result = await declineInvitation('outsider@test.com', IDS.invitation)
     expect(result.ok).toBe(true)
 
-    const inv = mockTestDb.sqlite
-      .prepare('SELECT * FROM invitations WHERE id = ?')
-      .get(IDS.invitation)
+    const [inv] = mockTestDb.db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, IDS.invitation))
+      .all()
     expect(inv).toBeUndefined()
   })
 
@@ -223,9 +248,11 @@ describe('cancelInvitation', () => {
     const result = await cancelInvitation(IDS.adminUser, IDS.invitation)
     expect(result.ok).toBe(true)
 
-    const inv = mockTestDb.sqlite
-      .prepare('SELECT * FROM invitations WHERE id = ?')
-      .get(IDS.invitation)
+    const [inv] = mockTestDb.db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, IDS.invitation))
+      .all()
     expect(inv).toBeUndefined()
   })
 
@@ -250,9 +277,11 @@ describe('renameOrganization', () => {
     })
     expect(result.ok).toBe(true)
 
-    const org = mockTestDb.sqlite
-      .prepare('SELECT * FROM organizations WHERE id = ?')
-      .get(IDS.org) as { name: string }
+    const [org] = mockTestDb.db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, IDS.org))
+      .all()
     expect(org.name).toBe('Renamed Org')
   })
 
@@ -287,47 +316,68 @@ describe('deleteOrganization', () => {
     expect(result.ok).toBe(true)
 
     // All tables should be empty for this org
-    const org = mockTestDb.sqlite
-      .prepare('SELECT * FROM organizations WHERE id = ?')
-      .get(IDS.org)
+    const [org] = mockTestDb.db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, IDS.org))
+      .all()
     expect(org).toBeUndefined()
 
-    const members = mockTestDb.sqlite
-      .prepare('SELECT * FROM organization_members WHERE organization_id = ?')
-      .all(IDS.org)
-    expect(members).toHaveLength(0)
+    expect(
+      mockTestDb.db
+        .select()
+        .from(organizationMembers)
+        .where(eq(organizationMembers.organizationId, IDS.org))
+        .all()
+    ).toHaveLength(0)
 
-    const invs = mockTestDb.sqlite
-      .prepare('SELECT * FROM invitations WHERE organization_id = ?')
-      .all(IDS.org)
-    expect(invs).toHaveLength(0)
+    expect(
+      mockTestDb.db
+        .select()
+        .from(invitations)
+        .where(eq(invitations.organizationId, IDS.org))
+        .all()
+    ).toHaveLength(0)
 
-    const gens = mockTestDb.sqlite
-      .prepare('SELECT * FROM generators WHERE organization_id = ?')
-      .all(IDS.org)
-    expect(gens).toHaveLength(0)
+    expect(
+      mockTestDb.db
+        .select()
+        .from(generators)
+        .where(eq(generators.organizationId, IDS.org))
+        .all()
+    ).toHaveLength(0)
 
-    const assignments = mockTestDb.sqlite
-      .prepare(
-        'SELECT * FROM generator_user_assignments WHERE generator_id = ?'
-      )
-      .all(IDS.generator)
-    expect(assignments).toHaveLength(0)
+    expect(
+      mockTestDb.db
+        .select()
+        .from(generatorUserAssignments)
+        .where(eq(generatorUserAssignments.generatorId, IDS.generator))
+        .all()
+    ).toHaveLength(0)
 
-    const sessions = mockTestDb.sqlite
-      .prepare('SELECT * FROM generator_sessions WHERE generator_id = ?')
-      .all(IDS.generator)
-    expect(sessions).toHaveLength(0)
+    expect(
+      mockTestDb.db
+        .select()
+        .from(generatorSessions)
+        .where(eq(generatorSessions.generatorId, IDS.generator))
+        .all()
+    ).toHaveLength(0)
 
-    const templates = mockTestDb.sqlite
-      .prepare('SELECT * FROM maintenance_templates WHERE generator_id = ?')
-      .all(IDS.generator)
-    expect(templates).toHaveLength(0)
+    expect(
+      mockTestDb.db
+        .select()
+        .from(maintenanceTemplates)
+        .where(eq(maintenanceTemplates.generatorId, IDS.generator))
+        .all()
+    ).toHaveLength(0)
 
-    const records = mockTestDb.sqlite
-      .prepare('SELECT * FROM maintenance_records WHERE generator_id = ?')
-      .all(IDS.generator)
-    expect(records).toHaveLength(0)
+    expect(
+      mockTestDb.db
+        .select()
+        .from(maintenanceRecords)
+        .where(eq(maintenanceRecords.generatorId, IDS.generator))
+        .all()
+    ).toHaveLength(0)
   })
 
   it('fails when non-admin tries to delete', async () => {

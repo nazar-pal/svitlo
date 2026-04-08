@@ -1,3 +1,8 @@
+import { eq } from 'drizzle-orm'
+
+import { generators } from '@/data/client/db-schema/generators'
+import { maintenanceTemplates } from '@/data/client/db-schema/maintenance'
+
 import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
 import { IDS, seedBaseScenario, seedGenerator } from './seed'
 
@@ -41,7 +46,7 @@ beforeEach(() => {
 
 afterAll(() => closeDatabase())
 
-// ── updateGenerator ─────────────────────────────────────────────────────────
+// ── updateGenerator ──────────────────���──────────────────────────────────────
 
 describe('updateGenerator', () => {
   it('admin updates generator fields', async () => {
@@ -51,9 +56,11 @@ describe('updateGenerator', () => {
     })
     expect(result.ok).toBe(true)
 
-    const gen = mockTestDb.sqlite
-      .prepare('SELECT * FROM generators WHERE id = ?')
-      .get(IDS.generator) as { title: string; model: string }
+    const [gen] = mockTestDb.db
+      .select()
+      .from(generators)
+      .where(eq(generators.id, IDS.generator))
+      .all()
     expect(gen.title).toBe('Updated Title')
     expect(gen.model).toBe('EU7000is')
   })
@@ -85,7 +92,7 @@ describe('updateGenerator', () => {
   })
 })
 
-// ── createGeneratorWithMaintenance ──────────────────────────────────────────
+// ── createGeneratorWithMaintenance ───────���──────────────────────────────────
 
 describe('createGeneratorWithMaintenance', () => {
   it('admin creates generator with maintenance templates', async () => {
@@ -115,16 +122,19 @@ describe('createGeneratorWithMaintenance', () => {
     expect(result.ok).toBe(true)
 
     // Generator inserted
-    const gens = mockTestDb.sqlite
-      .prepare('SELECT * FROM generators WHERE title = ?')
-      .all('New Gen')
+    const gens = mockTestDb.db
+      .select()
+      .from(generators)
+      .where(eq(generators.title, 'New Gen'))
+      .all()
     expect(gens).toHaveLength(1)
 
     // Both templates inserted
-    const generatorId = (gens[0] as { id: string }).id
-    const templates = mockTestDb.sqlite
-      .prepare('SELECT * FROM maintenance_templates WHERE generator_id = ?')
-      .all(generatorId)
+    const templates = mockTestDb.db
+      .select()
+      .from(maintenanceTemplates)
+      .where(eq(maintenanceTemplates.generatorId, gens[0].id))
+      .all()
     expect(templates).toHaveLength(2)
   })
 
@@ -143,9 +153,11 @@ describe('createGeneratorWithMaintenance', () => {
     )
     expect(result.ok).toBe(true)
 
-    const gens = mockTestDb.sqlite
-      .prepare('SELECT * FROM generators WHERE title = ?')
-      .all('Bare Gen')
+    const gens = mockTestDb.db
+      .select()
+      .from(generators)
+      .where(eq(generators.title, 'Bare Gen'))
+      .all()
     expect(gens).toHaveLength(1)
   })
 
@@ -203,9 +215,11 @@ describe('createGeneratorWithMaintenance', () => {
     expect(result.ok).toBe(false)
 
     // Generator should NOT have been created (validation before transaction)
-    const gens = mockTestDb.sqlite
-      .prepare('SELECT * FROM generators WHERE title = ?')
-      .all('Good Gen')
+    const gens = mockTestDb.db
+      .select()
+      .from(generators)
+      .where(eq(generators.title, 'Good Gen'))
+      .all()
     expect(gens).toHaveLength(0)
   })
 
@@ -256,9 +270,11 @@ describe('deleteGenerator', () => {
     const result = await deleteGenerator(IDS.adminUser, IDS.generator)
     expect(result.ok).toBe(true)
 
-    const row = mockTestDb.sqlite
-      .prepare('SELECT * FROM generators WHERE id = ?')
-      .get(IDS.generator)
+    const [row] = mockTestDb.db
+      .select()
+      .from(generators)
+      .where(eq(generators.id, IDS.generator))
+      .all()
     expect(row).toBeUndefined()
   })
 

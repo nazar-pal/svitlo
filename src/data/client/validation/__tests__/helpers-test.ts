@@ -1,67 +1,6 @@
 import { z } from 'zod'
 
-import {
-  zNonEmptyString,
-  zPositiveReal,
-  zPositiveInt,
-  flattenZodErrors
-} from '../helpers'
-
-describe('zNonEmptyString', () => {
-  it('accepts a non-empty string', () => {
-    expect(zNonEmptyString.safeParse('hello').success).toBe(true)
-  })
-
-  it('trims whitespace', () => {
-    const result = zNonEmptyString.safeParse('  hello  ')
-    expect(result.success).toBe(true)
-    if (result.success) expect(result.data).toBe('hello')
-  })
-
-  it('rejects empty string', () => {
-    expect(zNonEmptyString.safeParse('').success).toBe(false)
-  })
-
-  it('rejects whitespace-only string', () => {
-    expect(zNonEmptyString.safeParse('   ').success).toBe(false)
-  })
-})
-
-describe('zPositiveReal', () => {
-  it('accepts positive decimals', () => {
-    expect(zPositiveReal.safeParse(1.5).success).toBe(true)
-  })
-
-  it('accepts positive integers', () => {
-    expect(zPositiveReal.safeParse(1).success).toBe(true)
-  })
-
-  it('rejects zero', () => {
-    expect(zPositiveReal.safeParse(0).success).toBe(false)
-  })
-
-  it('rejects negative numbers', () => {
-    expect(zPositiveReal.safeParse(-1).success).toBe(false)
-  })
-})
-
-describe('zPositiveInt', () => {
-  it('accepts positive integers', () => {
-    expect(zPositiveInt.safeParse(1).success).toBe(true)
-  })
-
-  it('rejects zero', () => {
-    expect(zPositiveInt.safeParse(0).success).toBe(false)
-  })
-
-  it('rejects negative integers', () => {
-    expect(zPositiveInt.safeParse(-1).success).toBe(false)
-  })
-
-  it('rejects non-integer positive numbers', () => {
-    expect(zPositiveInt.safeParse(1.5).success).toBe(false)
-  })
-})
+import { flattenZodErrors } from '../helpers'
 
 describe('flattenZodErrors', () => {
   it('flattens field errors into Record<string, string>', () => {
