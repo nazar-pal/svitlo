@@ -356,6 +356,29 @@ describe('handleInvitations', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('insert: duplicate invitation for same org+email is idempotent (onConflictDoNothing)', async () => {
+    await seedInvitation(testDb.db)
+    const duplicateId = crypto.randomUUID()
+    const result = await handleInvitations(
+      makeCtx({
+        op: 'insert',
+        id: duplicateId,
+        data: {
+          organization_id: IDS.org,
+          invitee_email: 'invitee@test.com',
+          invited_by_user_id: IDS.admin
+        }
+      })
+    )
+    expect(result.ok).toBe(true)
+    const rows = await testDb.db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.organizationId, IDS.org))
+    expect(rows).toHaveLength(1)
+    expect(rows[0].id).toBe(IDS.invitation)
+  })
+
   it('delete: unauthorized (neither admin nor invitee)', async () => {
     await seedInvitation(testDb.db, 'someone@test.com')
     const result = await handleInvitations(
@@ -674,6 +697,23 @@ describe('handleGenerators', () => {
     await expect(result).rejects.toThrow()
   })
 
+  it('insert: PG rejects warning threshold of 0 via CHECK constraint', async () => {
+    const result = handleGenerators(
+      makeCtx({
+        op: 'insert',
+        data: {
+          organization_id: IDS.org,
+          title: 'Gen',
+          model: 'Honda',
+          max_consecutive_run_hours: '8',
+          required_rest_hours: '4',
+          run_warning_threshold_pct: '0'
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
   it('insert: PG rejects warning threshold outside 1-100 via CHECK constraint', async () => {
     const result = handleGenerators(
       makeCtx({
@@ -975,6 +1015,25 @@ describe('handleGeneratorSessions', () => {
     )
     expect(result.ok).toBe(true)
   })
+
+  it('insert: second active session for same generator is idempotent (onConflictDoNothing)', async () => {
+    await seedSession(testDb.db)
+    const secondId = crypto.randomUUID()
+    const result = await handleGeneratorSessions(
+      makeCtx({
+        op: 'insert',
+        id: secondId,
+        data: { generator_id: IDS.generator }
+      })
+    )
+    expect(result.ok).toBe(true)
+    const rows = await testDb.db
+      .select()
+      .from(generatorSessions)
+      .where(eq(generatorSessions.generatorId, IDS.generator))
+    expect(rows).toHaveLength(1)
+    expect(rows[0].id).toBe(IDS.session)
+  })
 })
 
 // ── handleMaintenanceTemplates ──────────────────────────────────────────────
@@ -1126,6 +1185,53 @@ describe('handleMaintenanceTemplates', () => {
           task_name: 'Oil change',
           trigger_type: 'hours',
           trigger_hours_interval: '0',
+          is_one_time: 0
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
+  it('insert: PG rejects calendar type missing calendar_days via CHECK constraint', async () => {
+    const result = handleMaintenanceTemplates(
+      makeCtx({
+        op: 'insert',
+        data: {
+          generator_id: IDS.generator,
+          task_name: 'Filter change',
+          trigger_type: 'calendar',
+          is_one_time: 0
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
+  it('insert: PG rejects whichever_first missing hours_interval via CHECK constraint', async () => {
+    const result = handleMaintenanceTemplates(
+      makeCtx({
+        op: 'insert',
+        data: {
+          generator_id: IDS.generator,
+          task_name: 'Full service',
+          trigger_type: 'whichever_first',
+          trigger_calendar_days: '30',
+          is_one_time: 0
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
+  it('insert: PG rejects whichever_first missing calendar_days via CHECK constraint', async () => {
+    const result = handleMaintenanceTemplates(
+      makeCtx({
+        op: 'insert',
+        data: {
+          generator_id: IDS.generator,
+          task_name: 'Full service',
+          trigger_type: 'whichever_first',
+          trigger_hours_interval: '100',
           is_one_time: 0
         }
       })
