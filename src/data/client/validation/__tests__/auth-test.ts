@@ -1,4 +1,4 @@
-import { signInSchema, signUpSchema } from '../auth'
+import { signInSchema, signUpSchema, completeNameSchema } from '../auth'
 
 describe('signInSchema', () => {
   it('accepts valid input', () => {
@@ -40,6 +40,24 @@ describe('signInSchema', () => {
     })
     expect(result.success).toBe(true)
     if (result.success) expect(result.data.email).toBe('user@example.com')
+  })
+})
+
+describe('completeNameSchema', () => {
+  it('accepts valid name', () => {
+    const result = completeNameSchema.safeParse({ name: 'Nazar' })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects empty name', () => {
+    const result = completeNameSchema.safeParse({ name: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('trims whitespace from name', () => {
+    const result = completeNameSchema.safeParse({ name: '  Nazar  ' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.name).toBe('Nazar')
   })
 })
 

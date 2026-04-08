@@ -11,12 +11,30 @@ jest.mock('@orpc/client', () => {
 jest.mock('@powersync/react-native', () => ({
   UpdateType: { DELETE: 'DELETE', PATCH: 'PATCH' }
 }))
-jest.mock('@/data/client/rpc-client', () => ({ rpcClient: {} }))
-jest.mock('../sync-rejections', () => ({ addRejection: jest.fn() }))
+const mockToken = jest.fn()
+const mockApplyWrite = jest.fn()
+jest.mock('@/data/client/rpc-client', () => ({
+  rpcClient: {
+    powersync: {
+      token: (...args: unknown[]) => mockToken(...args),
+      applyWrite: (...args: unknown[]) => mockApplyWrite(...args)
+    }
+  }
+}))
+const mockAddRejection = jest.fn()
+jest.mock('../sync-rejections', () => ({
+  addRejection: (...args: unknown[]) => mockAddRejection(...args)
+}))
 
 const { ORPCError } = require('@orpc/client')
 
-import { isAuthError, extractSqlState, categorizeError } from '../connector'
+import {
+  isAuthError,
+  extractSqlState,
+  categorizeError,
+  Connector,
+  clearCredentialCache
+} from '../connector'
 
 describe('isAuthError', () => {
   it('returns true for ORPCError with UNAUTHORIZED code', () => {
@@ -149,5 +167,288 @@ describe('categorizeError', () => {
     const result = categorizeError(new Error('something unexpected'))
     expect(result.category).toBe('unknown')
     expect(result.isRecoverable).toBe(false)
+  })
+})
+
+// ── Connector class ───────────────────────────────────────────────────────────
+
+function makeMockTransaction(
+  crud: {
+    op: string
+    table: string
+    id: string
+    opData?: Record<string, unknown>
+  }[]
+) {
+  return { crud, complete: jest.fn() }
+}
+
+function makeMockDatabase(
+  transaction: ReturnType<typeof makeMockTransaction> | null = null
+) {
+  return { getNextCrudTransaction: jest.fn().mockResolvedValue(transaction) }
+}
+
+describe('Connector.fetchCredentials', () => {
+  beforeEach(() => {
+    clearCredentialCache()
+    jest.resetAllMocks()
+  })
+
+  it('returns credentials from RPC on first call', async () => {
+    const connector = new Connector()
+    mockToken.mockResolvedValue({
+      endpoint: 'https://ps.example.com',
+      token: 'tok_123',
+      expiresAt: new Date(Date.now() + 600_000).toISOString()
+    })
+
+    const creds = await connector.fetchCredentials()
+    expect(creds.endpoint).toBe('https://ps.example.com')
+    expect(creds.token).toBe('tok_123')
+    expect(mockToken).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns cached credentials when not expired', async () => {
+    const connector = new Connector()
+    mockToken.mockResolvedValue({
+      endpoint: 'https://ps.example.com',
+      token: 'tok_123',
+      expiresAt: new Date(Date.now() + 600_000).toISOString()
+    })
+
+    await connector.fetchCredentials()
+    const creds = await connector.fetchCredentials()
+    expect(creds.token).toBe('tok_123')
+    expect(mockToken).toHaveBeenCalledTimes(1)
+  })
+
+  it('refetches when cached credentials are within 30s of expiry', async () => {
+    const connector = new Connector()
+    // First call: expires in 10s (within 30s buffer)
+    mockToken.mockResolvedValueOnce({
+      endpoint: 'https://ps.example.com',
+      token: 'tok_old',
+      expiresAt: new Date(Date.now() + 10_000).toISOString()
+    })
+    await connector.fetchCredentials()
+
+    // Second call should refetch because expiry is within 30s buffer
+    mockToken.mockResolvedValueOnce({
+      endpoint: 'https://ps.example.com',
+      token: 'tok_new',
+      expiresAt: new Date(Date.now() + 600_000).toISOString()
+    })
+    const creds = await connector.fetchCredentials()
+    expect(creds.token).toBe('tok_new')
+    expect(mockToken).toHaveBeenCalledTimes(2)
+  })
+
+  it('clears cache and calls onAuthFailure on auth error', async () => {
+    const onAuthFailure = jest.fn()
+    const connector = new Connector(onAuthFailure)
+    mockToken.mockRejectedValue(
+      new ORPCError('Unauthorized', { code: 'UNAUTHORIZED' })
+    )
+
+    await expect(connector.fetchCredentials()).rejects.toThrow('Unauthorized')
+    expect(onAuthFailure).toHaveBeenCalledTimes(1)
+
+    // Cache was cleared — next call should attempt RPC again
+    mockToken.mockResolvedValue({
+      endpoint: 'https://ps.example.com',
+      token: 'tok_fresh',
+      expiresAt: new Date(Date.now() + 600_000).toISOString()
+    })
+    const creds = await connector.fetchCredentials()
+    expect(creds.token).toBe('tok_fresh')
+  })
+
+  it('throws non-auth errors without calling onAuthFailure', async () => {
+    const onAuthFailure = jest.fn()
+    const connector = new Connector(onAuthFailure)
+    mockToken.mockRejectedValue(new Error('server down'))
+
+    await expect(connector.fetchCredentials()).rejects.toThrow('server down')
+    expect(onAuthFailure).not.toHaveBeenCalled()
+  })
+})
+
+describe('Connector.uploadData', () => {
+  let consoleErrorSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    clearCredentialCache()
+    jest.resetAllMocks()
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
+  })
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('returns early when no transaction', async () => {
+    const connector = new Connector()
+    const db = makeMockDatabase(null)
+    await connector.uploadData(db as never)
+    expect(mockApplyWrite).not.toHaveBeenCalled()
+  })
+
+  it('processes CRUD operations and completes transaction', async () => {
+    const connector = new Connector()
+    const tx = makeMockTransaction([
+      { op: 'DELETE', table: 'session', id: 'id1' },
+      { op: 'PATCH', table: 'generator', id: 'id2', opData: { name: 'G1' } },
+      { op: 'PUT', table: 'organization', id: 'id3', opData: { name: 'Org' } }
+    ])
+    const db = makeMockDatabase(tx)
+    mockApplyWrite.mockResolvedValue({ ok: true })
+
+    await connector.uploadData(db as never)
+
+    expect(mockApplyWrite).toHaveBeenCalledTimes(3)
+    expect(mockApplyWrite).toHaveBeenCalledWith({
+      table: 'session',
+      op: 'delete',
+      id: 'id1',
+      data: undefined
+    })
+    expect(mockApplyWrite).toHaveBeenCalledWith({
+      table: 'generator',
+      op: 'update',
+      id: 'id2',
+      data: { name: 'G1' }
+    })
+    expect(mockApplyWrite).toHaveBeenCalledWith({
+      table: 'organization',
+      op: 'insert',
+      id: 'id3',
+      data: { name: 'Org' }
+    })
+    expect(tx.complete).toHaveBeenCalledTimes(1)
+  })
+
+  it('handles result.rejection by calling addRejection', async () => {
+    const connector = new Connector()
+    const tx = makeMockTransaction([
+      { op: 'PUT', table: 'session', id: 'id1', opData: {} }
+    ])
+    const db = makeMockDatabase(tx)
+    mockApplyWrite.mockResolvedValue({
+      ok: false,
+      rejection: { table: 'session', message: 'FK violation' }
+    })
+
+    await connector.uploadData(db as never)
+
+    expect(mockAddRejection).toHaveBeenCalledWith({
+      table: 'session',
+      op: 'insert',
+      id: 'id1',
+      reason: 'FK violation'
+    })
+    expect(tx.complete).toHaveBeenCalledTimes(1)
+  })
+
+  it('handles result.error by calling addRejection', async () => {
+    const connector = new Connector()
+    const tx = makeMockTransaction([
+      { op: 'PATCH', table: 'generator', id: 'id1', opData: {} }
+    ])
+    const db = makeMockDatabase(tx)
+    mockApplyWrite.mockResolvedValue({
+      ok: false,
+      error: 'something went wrong'
+    })
+
+    await connector.uploadData(db as never)
+
+    expect(mockAddRejection).toHaveBeenCalledWith({
+      table: 'generator',
+      op: 'update',
+      id: 'id1',
+      reason: 'something went wrong'
+    })
+    expect(tx.complete).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-throws recoverable network errors without completing transaction', async () => {
+    const connector = new Connector()
+    const tx = makeMockTransaction([
+      { op: 'PUT', table: 'session', id: 'id1', opData: {} }
+    ])
+    const db = makeMockDatabase(tx)
+    mockApplyWrite.mockRejectedValue(new Error('network timeout'))
+
+    await expect(connector.uploadData(db as never)).rejects.toThrow(
+      'network timeout'
+    )
+    expect(tx.complete).not.toHaveBeenCalled()
+  })
+
+  it('completes transaction and adds rejection for non-recoverable errors', async () => {
+    const connector = new Connector()
+    const tx = makeMockTransaction([
+      { op: 'PUT', table: 'session', id: 'id1', opData: {} }
+    ])
+    const db = makeMockDatabase(tx)
+    const error = Object.assign(new Error('unique_violation'), {
+      code: '23505'
+    })
+    mockApplyWrite.mockRejectedValue(error)
+
+    await connector.uploadData(db as never)
+
+    expect(mockAddRejection).toHaveBeenCalledWith({
+      table: 'session',
+      op: 'insert',
+      id: 'id1',
+      reason: 'unique_violation'
+    })
+    expect(tx.complete).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears cache and calls onAuthFailure on auth error during upload', async () => {
+    const onAuthFailure = jest.fn()
+    const connector = new Connector(onAuthFailure)
+    const tx = makeMockTransaction([
+      { op: 'PUT', table: 'session', id: 'id1', opData: {} }
+    ])
+    const db = makeMockDatabase(tx)
+    mockApplyWrite.mockRejectedValue(
+      new ORPCError('Unauthorized', { code: 'UNAUTHORIZED' })
+    )
+
+    // Auth errors are categorized as recoverable, so they re-throw
+    await expect(connector.uploadData(db as never)).rejects.toThrow(
+      'Unauthorized'
+    )
+    expect(onAuthFailure).toHaveBeenCalledTimes(1)
+    expect(tx.complete).not.toHaveBeenCalled()
+  })
+})
+
+describe('clearCredentialCache', () => {
+  it('forces next fetchCredentials to refetch', async () => {
+    const connector = new Connector()
+    mockToken.mockResolvedValue({
+      endpoint: 'https://ps.example.com',
+      token: 'tok_1',
+      expiresAt: new Date(Date.now() + 600_000).toISOString()
+    })
+
+    await connector.fetchCredentials()
+    expect(mockToken).toHaveBeenCalledTimes(1)
+
+    clearCredentialCache()
+
+    mockToken.mockResolvedValue({
+      endpoint: 'https://ps.example.com',
+      token: 'tok_2',
+      expiresAt: new Date(Date.now() + 600_000).toISOString()
+    })
+    const creds = await connector.fetchCredentials()
+    expect(creds.token).toBe('tok_2')
+    expect(mockToken).toHaveBeenCalledTimes(2)
   })
 })
