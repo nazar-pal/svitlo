@@ -45,6 +45,18 @@ export const maintenanceTemplates = pgTable(
     check(
       'trigger_fields_match_type',
       sql`(trigger_type = 'hours' AND trigger_hours_interval IS NOT NULL) OR (trigger_type = 'calendar' AND trigger_calendar_days IS NOT NULL) OR (trigger_type = 'whichever_first' AND trigger_hours_interval IS NOT NULL AND trigger_calendar_days IS NOT NULL)`
+    ),
+    check(
+      'chk_templates_task_name_not_empty',
+      sql`length(trim("task_name")) > 0`
+    ),
+    check(
+      'chk_templates_hours_interval_positive',
+      sql`"trigger_hours_interval" IS NULL OR "trigger_hours_interval" > 0`
+    ),
+    check(
+      'chk_templates_calendar_days_positive',
+      sql`"trigger_calendar_days" IS NULL OR "trigger_calendar_days" > 0`
     )
   ]
 )

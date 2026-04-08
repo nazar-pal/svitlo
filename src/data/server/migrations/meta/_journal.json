@@ -50,6 +50,20 @@
       "when": 1773606599519,
       "tag": "0006_pretty_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775647103764,
+      "tag": "0007_drop_handwritten_constraints",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775647118703,
+      "tag": "0008_overconfident_night_nurse",
+      "breakpoints": true
     }
   ]
 }

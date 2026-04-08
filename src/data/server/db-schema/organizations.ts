@@ -1,5 +1,5 @@
-import { relations } from 'drizzle-orm'
-import { index, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core'
+import { relations, sql } from 'drizzle-orm'
+import { check, index, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core'
 
 import { user } from './auth'
 import { pgTimestamp, uuidId } from './utils'
@@ -16,7 +16,10 @@ export const organizations = pgTable(
       .references(() => user.id, { onDelete: 'restrict' }),
     createdAt: pgTimestamp('created_at')
   },
-  table => [index('organizations_admin_user_id_idx').on(table.adminUserId)]
+  table => [
+    index('organizations_admin_user_id_idx').on(table.adminUserId),
+    check('chk_organizations_name_not_empty', sql`length(trim("name")) > 0`)
+  ]
 )
 
 export const organizationsRelations = relations(
@@ -88,7 +91,11 @@ export const invitations = pgTable(
       table.organizationId,
       table.inviteeEmail
     ),
-    index('invitations_invitee_email_idx').on(table.inviteeEmail)
+    index('invitations_invitee_email_idx').on(table.inviteeEmail),
+    check(
+      'chk_invitations_email_not_empty',
+      sql`length(trim("invitee_email")) > 0`
+    )
   ]
 )
 

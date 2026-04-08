@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm'
 import {
+  check,
   index,
   integer,
   pgTable,
@@ -34,7 +35,19 @@ export const generators = pgTable(
       .notNull(),
     createdAt: pgTimestamp('created_at')
   },
-  table => [index('generators_organization_id_idx').on(table.organizationId)]
+  table => [
+    index('generators_organization_id_idx').on(table.organizationId),
+    check('chk_generators_title_not_empty', sql`length(trim("title")) > 0`),
+    check(
+      'chk_generators_max_run_hours_positive',
+      sql`"max_consecutive_run_hours" > 0`
+    ),
+    check('chk_generators_rest_hours_positive', sql`"required_rest_hours" > 0`),
+    check(
+      'chk_generators_warning_pct_range',
+      sql`"run_warning_threshold_pct" BETWEEN 1 AND 100`
+    )
+  ]
 )
 
 export const generatorsRelations = relations(generators, ({ one, many }) => ({

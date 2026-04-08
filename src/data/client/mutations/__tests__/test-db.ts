@@ -13,6 +13,7 @@ let drizzleDb: ReturnType<typeof drizzle>
 export async function createTestDatabase() {
   sqlite = new Database(':memory:')
   await createTables(sqlite)
+  applyServerConstraints(sqlite)
 
   drizzleDb = drizzle(sqlite, { schema })
 
@@ -77,6 +78,25 @@ function createPowerSyncShim(db: Database.Database) {
       }
     }
   }
+}
+
+// ── Server-parity constraints (unique indexes that the server enforces) ─────
+
+function applyServerConstraints(db: Database.Database) {
+  db.exec(`
+    CREATE UNIQUE INDEX "generator_user_assignments_generator_user_unique"
+      ON "generator_user_assignments" ("generator_id", "user_id");
+
+    CREATE UNIQUE INDEX "organization_members_org_user_unique"
+      ON "organization_members" ("organization_id", "user_id");
+
+    CREATE UNIQUE INDEX "invitations_org_email_unique"
+      ON "invitations" ("organization_id", "invitee_email");
+
+    CREATE UNIQUE INDEX "generator_sessions_one_active_per_generator"
+      ON "generator_sessions" ("generator_id")
+      WHERE "stopped_at" IS NULL;
+  `)
 }
 
 // ── DDL from Drizzle schema ─────────────────────────────────────────────────
