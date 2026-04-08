@@ -247,6 +247,17 @@ describe('handleOrganizations', () => {
     expect(row!.adminUserId).toBe(IDS.admin)
   })
 
+  // PG CHECK constraint
+  it('insert: PG rejects empty name via CHECK constraint', async () => {
+    const result = handleOrganizations(
+      makeCtx({
+        op: 'insert',
+        data: { name: '  ', admin_user_id: IDS.admin }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
   it('delete denied for non-admin', async () => {
     const result = await handleOrganizations(
       makeCtx({ op: 'delete', id: IDS.org, userId: IDS.member })
@@ -361,6 +372,21 @@ describe('handleInvitations', () => {
   it('invalid op (update) denied', async () => {
     const result = await handleInvitations(makeCtx({ op: 'update' }))
     expect(result.ok).toBe(false)
+  })
+
+  // PG CHECK constraint
+  it('insert: PG rejects empty invitee email via CHECK constraint', async () => {
+    const result = handleInvitations(
+      makeCtx({
+        op: 'insert',
+        data: {
+          organization_id: IDS.org,
+          invitee_email: '  ',
+          invited_by_user_id: IDS.admin
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
   })
 })
 
@@ -594,6 +620,75 @@ describe('handleGenerators', () => {
       makeCtx({ op: 'delete', id: IDS.generator, userId: IDS.member })
     )
     expect(result.ok).toBe(false)
+  })
+
+  // PG CHECK constraints
+  it('insert: PG rejects empty title via CHECK constraint', async () => {
+    const result = handleGenerators(
+      makeCtx({
+        op: 'insert',
+        data: {
+          organization_id: IDS.org,
+          title: '  ',
+          model: 'Honda',
+          max_consecutive_run_hours: '8',
+          required_rest_hours: '4',
+          run_warning_threshold_pct: '80'
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
+  it('insert: PG rejects non-positive max_consecutive_run_hours via CHECK constraint', async () => {
+    const result = handleGenerators(
+      makeCtx({
+        op: 'insert',
+        data: {
+          organization_id: IDS.org,
+          title: 'Gen',
+          model: 'Honda',
+          max_consecutive_run_hours: '0',
+          required_rest_hours: '4',
+          run_warning_threshold_pct: '80'
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
+  it('insert: PG rejects non-positive required_rest_hours via CHECK constraint', async () => {
+    const result = handleGenerators(
+      makeCtx({
+        op: 'insert',
+        data: {
+          organization_id: IDS.org,
+          title: 'Gen',
+          model: 'Honda',
+          max_consecutive_run_hours: '8',
+          required_rest_hours: '0',
+          run_warning_threshold_pct: '80'
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
+  it('insert: PG rejects warning threshold outside 1-100 via CHECK constraint', async () => {
+    const result = handleGenerators(
+      makeCtx({
+        op: 'insert',
+        data: {
+          organization_id: IDS.org,
+          title: 'Gen',
+          model: 'Honda',
+          max_consecutive_run_hours: '8',
+          required_rest_hours: '4',
+          run_warning_threshold_pct: '101'
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
   })
 
   it('delete: cascades to sessions, templates, and assignments', async () => {
@@ -999,6 +1094,54 @@ describe('handleMaintenanceTemplates', () => {
           task_name: 'Bad template',
           trigger_type: 'hours',
           // trigger_hours_interval is missing — CHECK constraint should reject
+          is_one_time: 0
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
+  it('insert: PG rejects empty task name via CHECK constraint', async () => {
+    const result = handleMaintenanceTemplates(
+      makeCtx({
+        op: 'insert',
+        data: {
+          generator_id: IDS.generator,
+          task_name: '  ',
+          trigger_type: 'hours',
+          trigger_hours_interval: '100',
+          is_one_time: 0
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
+  it('insert: PG rejects non-positive trigger_hours_interval via CHECK constraint', async () => {
+    const result = handleMaintenanceTemplates(
+      makeCtx({
+        op: 'insert',
+        data: {
+          generator_id: IDS.generator,
+          task_name: 'Oil change',
+          trigger_type: 'hours',
+          trigger_hours_interval: '0',
+          is_one_time: 0
+        }
+      })
+    )
+    await expect(result).rejects.toThrow()
+  })
+
+  it('insert: PG rejects non-positive trigger_calendar_days via CHECK constraint', async () => {
+    const result = handleMaintenanceTemplates(
+      makeCtx({
+        op: 'insert',
+        data: {
+          generator_id: IDS.generator,
+          task_name: 'Filter change',
+          trigger_type: 'calendar',
+          trigger_calendar_days: '0',
           is_one_time: 0
         }
       })
