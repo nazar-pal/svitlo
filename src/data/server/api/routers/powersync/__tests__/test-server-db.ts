@@ -1,7 +1,8 @@
 import { PGlite } from '@electric-sql/pglite'
-import { getTableName, sql } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/pglite'
 import { generateDrizzleJson, generateMigration } from 'drizzle-kit/api'
+import { getTableName, is, sql } from 'drizzle-orm'
+import { PgTable } from 'drizzle-orm/pg-core'
+import { drizzle } from 'drizzle-orm/pglite'
 
 import * as schema from '@/data/server/db-schema'
 import { ORG_ADMIN_IMMUTABLE_TRIGGER } from '@/data/server/db-schema/triggers'
@@ -9,19 +10,8 @@ import { ORG_ADMIN_IMMUTABLE_TRIGGER } from '@/data/server/db-schema/triggers'
 let client: PGlite
 let drizzleDb: ReturnType<typeof drizzle<typeof schema>>
 
-// App tables in dependency-safe order (children before parents).
-// Add new tables here when extending the server schema.
-const SERVER_TABLES = [
-  schema.maintenanceRecords,
-  schema.maintenanceTemplates,
-  schema.generatorSessions,
-  schema.generatorUserAssignments,
-  schema.generators,
-  schema.invitations,
-  schema.organizationMembers,
-  schema.organizations,
-  schema.user
-]
+// Auto-derived from schema exports. No manual sync needed.
+const SERVER_TABLES = Object.values(schema).filter(v => is(v, PgTable))
 
 export async function createTestServerDatabase() {
   client = new PGlite()

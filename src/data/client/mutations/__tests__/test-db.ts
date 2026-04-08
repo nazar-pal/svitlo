@@ -1,11 +1,12 @@
 import Database from 'better-sqlite3'
-import { getTableName } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
 import {
   generateDrizzleJson,
   generateSQLiteDrizzleJson,
   generateSQLiteMigration
 } from 'drizzle-kit/api'
+import { getTableName, is } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { SQLiteTable } from 'drizzle-orm/sqlite-core'
 
 import * as clientSchema from '@/data/client/db-schema'
 import * as serverSchema from '@/data/server/db-schema'
@@ -13,19 +14,10 @@ import * as serverSchema from '@/data/server/db-schema'
 let sqlite: Database.Database
 let drizzleDb: ReturnType<typeof drizzle>
 
-// Client tables in deletion order (children before parents).
-// Add new tables here when extending the client schema.
-const CLIENT_TABLES = [
-  clientSchema.maintenanceRecords,
-  clientSchema.maintenanceTemplates,
-  clientSchema.generatorSessions,
-  clientSchema.generatorUserAssignments,
-  clientSchema.generators,
-  clientSchema.invitations,
-  clientSchema.organizationMembers,
-  clientSchema.organizations,
-  clientSchema.user
-]
+// Auto-derived from schema exports. No manual sync needed.
+const CLIENT_TABLES = Object.values(clientSchema).filter(v =>
+  is(v, SQLiteTable)
+)
 
 export async function createTestDatabase() {
   sqlite = new Database(':memory:')

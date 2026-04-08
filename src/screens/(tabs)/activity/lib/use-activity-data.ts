@@ -77,7 +77,7 @@ export function useActivityData(filter: Filter) {
   }
 }
 
-function buildActivityItems(
+export function buildActivityItems(
   sessions: GeneratorSession[],
   records: MaintenanceRecord[],
   templates: { id: string; taskName: string }[],
