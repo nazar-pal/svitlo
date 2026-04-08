@@ -56,6 +56,30 @@ async function applyTriggers() {
       BEFORE UPDATE ON "organizations"
       FOR EACH ROW
       EXECUTE FUNCTION validate_org_admin_immutable();
+
+    CREATE OR REPLACE FUNCTION validate_maintenance_template_trigger_fields()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      IF NEW.trigger_type IN ('hours', 'whichever_first')
+         AND NEW.trigger_hours_interval IS NULL THEN
+        RAISE EXCEPTION 'trigger_hours_interval is required when trigger_type is %',
+          NEW.trigger_type;
+      END IF;
+
+      IF NEW.trigger_type IN ('calendar', 'whichever_first')
+         AND NEW.trigger_calendar_days IS NULL THEN
+        RAISE EXCEPTION 'trigger_calendar_days is required when trigger_type is %',
+          NEW.trigger_type;
+      END IF;
+
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE TRIGGER trg_validate_maintenance_template_fields
+      BEFORE INSERT OR UPDATE ON "maintenance_templates"
+      FOR EACH ROW
+      EXECUTE FUNCTION validate_maintenance_template_trigger_fields();
   `)
 }
 

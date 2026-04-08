@@ -1,6 +1,6 @@
 import { lazy } from '@orpc/server'
 
-import { appTestRouter } from './routers/app-test'
+import { appTestRouter } from './routers/test-router'
 import { powersyncRouter } from './routers/powersync'
 import { userRouter } from './routers/user'
 

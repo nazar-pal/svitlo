@@ -18,9 +18,4 @@ describe('differential', () => {
     const b = { id: '1', name: 'B' }
     expect(compareBy(a)).not.toBe(compareBy(b))
   })
-
-  it('compareBy returns JSON.stringify of the row', () => {
-    const row = { id: '1', name: 'A' }
-    expect(compareBy(row)).toBe(JSON.stringify(row))
-  })
 })

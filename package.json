@@ -95,6 +95,7 @@
   "devDependencies": {
     "@babel/plugin-transform-async-generator-functions": "^7.29.0",
     "@electric-sql/pglite": "^0.4.3",
+    "@testing-library/react-native": "^13.3.3",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "29.5.14",
     "@types/react": "~19.2.14",
@@ -113,5 +114,8 @@
   "private": true,
   "patchedDependencies": {
     "react-native-screens@4.23.0": "patches/react-native-screens@4.23.0.patch"
+  },
+  "overrides": {
+    "@powersync/common": "1.50.0"
   }
 }

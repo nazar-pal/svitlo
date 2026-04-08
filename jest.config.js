@@ -14,6 +14,7 @@ module.exports = {
       displayName: 'unit',
       preset: 'jest-expo/ios',
       setupFiles: ['<rootDir>/jest.setup.js'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup-after-env.js'],
       testMatch: ['**/__tests__/**/*-test.ts?(x)', '!**/*-integration-test.ts'],
       transformIgnorePatterns: [
         'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|i18next|react-i18next|zod|date-fns|drizzle-orm|@orpc|@powersync)'

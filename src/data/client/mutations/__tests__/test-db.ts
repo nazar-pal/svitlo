@@ -96,6 +96,9 @@ function applyServerConstraints(db: Database.Database) {
     CREATE UNIQUE INDEX "generator_sessions_one_active_per_generator"
       ON "generator_sessions" ("generator_id")
       WHERE "stopped_at" IS NULL;
+
+    CREATE UNIQUE INDEX "user_email_unique"
+      ON "user" ("email");
   `)
 }
 
