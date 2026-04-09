@@ -20,8 +20,11 @@ appId: com.devnazar.svitlo.dev
 
 # Dismiss keyboard by tapping a non-interactive label above the keyboard.
 # The hours input sits below the keyboard fold, so tapping it directly would
-# land on a keyboard key instead of the input.
-- tapOn: 'Trigger Type'
+# land on a keyboard key instead of the input. Tapped by id (not text) so
+# this subflow survives running under a non-English device locale — the
+# label text itself is localized via i18next.
+- tapOn:
+    id: 'create-template-trigger-type-label'
 
 # Default trigger type is "By Hours" — enter hours interval
 - tapOn:

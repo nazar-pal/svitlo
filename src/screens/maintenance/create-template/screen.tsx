@@ -135,7 +135,10 @@ export default function CreateMaintenanceTemplateScreen() {
 
             {/* Trigger Type Selector */}
             <View className="gap-2">
-              <Text className="text-foreground text-sm font-medium">
+              <Text
+                testID="create-template-trigger-type-label"
+                className="text-foreground text-sm font-medium"
+              >
                 {t('maintenanceTemplate.triggerType')}
               </Text>
               <Tabs

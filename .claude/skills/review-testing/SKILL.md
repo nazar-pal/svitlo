@@ -321,6 +321,8 @@ Do NOT write automated tests against Sync Streams internals — there's no stabl
 
 4. **Flows dependent on the English onboarding overlay of `expo-dev-client`** — this is an external component with hardcoded English strings. Can't be fixed by adding a testID; locale pinning is the only workaround, and only at the `start-device` level.
 
+5. **Non-interactive labels tapped to dismiss the keyboard.** Maestro's iOS `hideKeyboard` implementation swipes in the middle of the screen and fires stray gestures, so Maestro's own docs recommend tapping a non-interactive label that sits above the keyboard instead. Teams implementing this workaround almost always tap a visible copy string (e.g. `tapOn: 'Trigger Type'`), which is a silent i18n time-bomb — the label text comes from i18next/Intl and will not match under a non-English device locale. The fix is non-obvious because the label is usually a bare `<Text>` with no `onPress` handler, and developers don't think of non-interactive components as testID targets. React Native propagates `testID` to `accessibilityIdentifier` on any host `<Text>` regardless of interactivity, so the fix is: add a `testID` to the bare `<Text>` and tap it by id. Grep for any `tapOn:` targeting a bare copy string and cross-reference against the project's i18n resource files — if the string appears as a translation key, it's a hazard.
+
 **Validate changes against the running suite.** After any component-level testID addition or flow edit:
 
 1. Use `mcp__maestro__check_flow_syntax` on every edited flow file
