@@ -1,7 +1,14 @@
 import { desc, eq } from 'drizzle-orm'
 
-import { maintenanceRecords, maintenanceTemplates } from '../db-schema'
+import {
+  maintenanceRecords,
+  maintenanceTemplates,
+  type MaintenanceRecord,
+  type MaintenanceTemplate
+} from '../db-schema'
 import { db } from '@/lib/powersync/database'
+
+// ── Builder form (for useDrizzleQuery) ──────────────────────────────────────
 
 export function getMaintenanceTemplate(id: string) {
   return db
@@ -48,4 +55,28 @@ export function getMaintenanceRecord(id: string) {
 
 export function getAllMaintenanceRecords() {
   return db.select().from(maintenanceRecords)
+}
+
+// ── Row form (awaited, for mutations) ───────────────────────────────────────
+
+export async function getMaintenanceTemplateById(
+  id: string
+): Promise<MaintenanceTemplate | null> {
+  const [row] = await db
+    .select()
+    .from(maintenanceTemplates)
+    .where(eq(maintenanceTemplates.id, id))
+    .limit(1)
+  return row ?? null
+}
+
+export async function getMaintenanceRecordById(
+  id: string
+): Promise<MaintenanceRecord | null> {
+  const [row] = await db
+    .select()
+    .from(maintenanceRecords)
+    .where(eq(maintenanceRecords.id, id))
+    .limit(1)
+  return row ?? null
 }

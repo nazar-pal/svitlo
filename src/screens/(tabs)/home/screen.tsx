@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Alert, useWindowDimensions, View } from 'react-native'
 import Animated, {
   scrollTo,
@@ -9,7 +9,6 @@ import Animated, {
 import { SafeAreaView } from 'react-native-screens/experimental'
 import { scheduleOnRN } from 'react-native-worklets'
 
-import { setUIReady } from '@/lib/app-ready'
 import { storage } from '@/lib/storage'
 import { EmptyState } from '@/components/empty-state'
 import { deleteGenerator } from '@/data/client/mutations/generators'
@@ -29,6 +28,7 @@ import { HeroCard, type HeroCardItem } from './components/hero-card'
 import { PageIndicator } from './components/page-indicator'
 import { buildHomeCarouselItems } from './lib/build-home-carousel-items'
 import { useHomeData } from './lib/use-home-data'
+import { useHomeReadiness } from './lib/use-home-readiness'
 
 export default function HomeScreen() {
   const router = useRouter()
@@ -52,47 +52,13 @@ export default function HomeScreen() {
   } = useHomeData()
 
   // Signal app readiness once data has settled so the splash overlay can fade out.
-  // The splash stays visible until setUIReady() fires via one of three paths:
-  //  1. generators loaded → data is ready to display
-  //  2. org selected, generators genuinely empty (uses a short timer because
-  //     PowerSync doesn't transition through isLoading when the query SQL
-  //     changes — the stale deferred result persists for a few renders)
-  //  3. orgs query done, user has no organizations
-  const [dataReady, setDataReady] = useState(false)
-  useEffect(() => {
-    if (dataReady || !userId) return
-
-    if (generators.length > 0) {
-      setDataReady(true)
-      setUIReady()
-      return
-    }
-
-    if (!isOrgsLoading && userOrgs.length === 0) {
-      setDataReady(true)
-      setUIReady()
-      return
-    }
-
-    if (!selectedOrgId) return
-
-    // When selectedOrgId first appears the generators query switches from
-    // a no-op to a real SQLite query, but the hook still returns the old
-    // empty result for a few renders. The timer lets that query settle;
-    // if generators arrive first, this effect re-runs and clears the timer.
-    const timer = setTimeout(() => {
-      setDataReady(true)
-      setUIReady()
-    }, 150)
-    return () => clearTimeout(timer)
-  }, [
-    userId,
-    generators.length,
-    selectedOrgId,
+  const dataReady = useHomeReadiness({
+    hasUserId: !!userId,
+    hasGenerators: generators.length > 0,
     isOrgsLoading,
-    userOrgs.length,
-    dataReady
-  ])
+    hasUserOrgs: userOrgs.length > 0,
+    hasSelectedOrg: !!selectedOrgId
+  })
 
   const count = generators.length
   const looped = count > 1

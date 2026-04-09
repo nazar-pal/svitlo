@@ -4,6 +4,10 @@ import {
   maintenanceRecords,
   maintenanceTemplates
 } from '@/data/client/db-schema'
+import {
+  getMaintenanceRecordById,
+  getMaintenanceTemplateById
+} from '@/data/client/queries'
 import { t } from '@/lib/i18n'
 import {
   insertMaintenanceRecordSchema,
@@ -58,29 +62,16 @@ export async function updateMaintenanceTemplate(
   const parsed = updateMaintenanceTemplateSchema.safeParse(input)
   if (!parsed.success) return fail(parsed.error.issues[0].message)
 
-  const [template] = await db
-    .select({ generatorId: maintenanceTemplates.generatorId })
-    .from(maintenanceTemplates)
-    .where(eq(maintenanceTemplates.id, templateId))
-    .limit(1)
+  const existing = await getMaintenanceTemplateById(templateId)
+  if (!existing) return fail(t('errors.templateNotFound'))
 
-  if (!template) return fail(t('errors.templateNotFound'))
-
-  if (!(await isGeneratorOrgAdmin(userId, template.generatorId)))
+  if (!(await isGeneratorOrgAdmin(userId, existing.generatorId)))
     return fail(t('errors.onlyAdminCanUpdateTemplates'))
 
   // When updating triggerType, validate that the required companion fields
   // will be present after the update. If they're not in the update payload,
   // check the existing template values.
   if (parsed.data.triggerType) {
-    const [existing] = await db
-      .select()
-      .from(maintenanceTemplates)
-      .where(eq(maintenanceTemplates.id, templateId))
-      .limit(1)
-
-    if (!existing) return fail(t('errors.templateNotFound'))
-
     const mergedHours =
       parsed.data.triggerHoursInterval ?? existing.triggerHoursInterval
     const mergedDays =
@@ -115,12 +106,7 @@ export async function deleteMaintenanceTemplate(
   userId: string,
   templateId: string
 ): Promise<MutationResult> {
-  const [template] = await db
-    .select({ generatorId: maintenanceTemplates.generatorId })
-    .from(maintenanceTemplates)
-    .where(eq(maintenanceTemplates.id, templateId))
-    .limit(1)
-
+  const template = await getMaintenanceTemplateById(templateId)
   if (!template) return fail(t('errors.templateNotFound'))
 
   if (!(await isGeneratorOrgAdmin(userId, template.generatorId)))
@@ -139,12 +125,7 @@ export async function deleteMaintenanceRecord(
   userId: string,
   recordId: string
 ): Promise<MutationResult> {
-  const [record] = await db
-    .select()
-    .from(maintenanceRecords)
-    .where(eq(maintenanceRecords.id, recordId))
-    .limit(1)
-
+  const record = await getMaintenanceRecordById(recordId)
   if (!record) return fail(t('errors.recordNotFound'))
 
   if (!(await canAccessGenerator(userId, record.generatorId)))
@@ -162,12 +143,7 @@ export async function updateMaintenanceRecord(
   recordId: string,
   input: { performedAt: string; notes: string | null }
 ): Promise<MutationResult> {
-  const [record] = await db
-    .select()
-    .from(maintenanceRecords)
-    .where(eq(maintenanceRecords.id, recordId))
-    .limit(1)
-
+  const record = await getMaintenanceRecordById(recordId)
   if (!record) return fail(t('errors.recordNotFound'))
 
   if (!(await canAccessGenerator(userId, record.generatorId)))
@@ -198,12 +174,7 @@ export async function recordMaintenance(
     return fail(t('errors.notAuthorizedForGenerator'))
 
   // Verify template exists and belongs to the generator
-  const [template] = await db
-    .select({ generatorId: maintenanceTemplates.generatorId })
-    .from(maintenanceTemplates)
-    .where(eq(maintenanceTemplates.id, parsed.data.templateId))
-    .limit(1)
-
+  const template = await getMaintenanceTemplateById(parsed.data.templateId)
   if (!template) return fail(t('errors.maintenanceTemplateNotFound'))
   if (template.generatorId !== parsed.data.generatorId)
     return fail(t('errors.templateNotForGenerator'))

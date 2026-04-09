@@ -1,7 +1,15 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
-import { invitations, organizationMembers, organizations } from '../db-schema'
+import {
+  invitations,
+  organizationMembers,
+  organizations,
+  type Invitation,
+  type OrganizationMember
+} from '../db-schema'
 import { db } from '@/lib/powersync/database'
+
+// ── Builder form (for useDrizzleQuery) ──────────────────────────────────────
 
 export function getAllOrganizations() {
   return db.select().from(organizations)
@@ -37,4 +45,73 @@ export function getInvitationsByEmail(email: string) {
     .select()
     .from(invitations)
     .where(eq(invitations.inviteeEmail, email))
+}
+
+// ── Row form (awaited, for mutations) ───────────────────────────────────────
+
+export async function getOrganizationAdminUserId(
+  id: string
+): Promise<string | null> {
+  const [row] = await db
+    .select({ adminUserId: organizations.adminUserId })
+    .from(organizations)
+    .where(eq(organizations.id, id))
+    .limit(1)
+  return row?.adminUserId ?? null
+}
+
+export async function getOrgMemberById(
+  userId: string,
+  organizationId: string
+): Promise<OrganizationMember | null> {
+  const [row] = await db
+    .select()
+    .from(organizationMembers)
+    .where(
+      and(
+        eq(organizationMembers.organizationId, organizationId),
+        eq(organizationMembers.userId, userId)
+      )
+    )
+    .limit(1)
+  return row ?? null
+}
+
+export async function getOrgMembershipById(
+  id: string
+): Promise<OrganizationMember | null> {
+  const [row] = await db
+    .select()
+    .from(organizationMembers)
+    .where(eq(organizationMembers.id, id))
+    .limit(1)
+  return row ?? null
+}
+
+export async function getInvitationById(
+  id: string
+): Promise<Invitation | null> {
+  const [row] = await db
+    .select()
+    .from(invitations)
+    .where(eq(invitations.id, id))
+    .limit(1)
+  return row ?? null
+}
+
+export async function getInvitationByOrgAndEmail(
+  organizationId: string,
+  inviteeEmail: string
+): Promise<Invitation | null> {
+  const [row] = await db
+    .select()
+    .from(invitations)
+    .where(
+      and(
+        eq(invitations.organizationId, organizationId),
+        eq(invitations.inviteeEmail, inviteeEmail)
+      )
+    )
+    .limit(1)
+  return row ?? null
 }

@@ -7,13 +7,9 @@ export function getAllUsers() {
   return db.select().from(user)
 }
 
-interface GetUserParams {
-  userId: string
-}
-
-export function getUser({ userId }: GetUserParams) {
+export function getUserById(id: string) {
   return db.query.user.findFirst({
-    where: eq(user.id, userId),
+    where: eq(user.id, id),
     columns: {
       createdAt: false,
       updatedAt: false

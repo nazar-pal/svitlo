@@ -1,11 +1,16 @@
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq, isNull } from 'drizzle-orm'
 
 import {
   generators,
   generatorSessions,
-  generatorUserAssignments
+  generatorUserAssignments,
+  type Generator,
+  type GeneratorSession,
+  type GeneratorUserAssignment
 } from '../db-schema'
 import { db } from '@/lib/powersync/database'
+
+// ── Builder form (for useDrizzleQuery) ──────────────────────────────────────
 
 export function getGenerator(id: string) {
   return db.select().from(generators).where(eq(generators.id, id))
@@ -50,4 +55,70 @@ export function getUserAssignments(userId: string) {
     .select()
     .from(generatorUserAssignments)
     .where(eq(generatorUserAssignments.userId, userId))
+}
+
+// ── Row form (awaited, for mutations) ───────────────────────────────────────
+
+export async function getGeneratorById(id: string): Promise<Generator | null> {
+  const [row] = await db
+    .select()
+    .from(generators)
+    .where(eq(generators.id, id))
+    .limit(1)
+  return row ?? null
+}
+
+export async function getGeneratorSessionById(
+  id: string
+): Promise<GeneratorSession | null> {
+  const [row] = await db
+    .select()
+    .from(generatorSessions)
+    .where(eq(generatorSessions.id, id))
+    .limit(1)
+  return row ?? null
+}
+
+export async function getOpenSessionForGenerator(
+  generatorId: string
+): Promise<GeneratorSession | null> {
+  const [row] = await db
+    .select()
+    .from(generatorSessions)
+    .where(
+      and(
+        eq(generatorSessions.generatorId, generatorId),
+        isNull(generatorSessions.stoppedAt)
+      )
+    )
+    .limit(1)
+  return row ?? null
+}
+
+export async function getGeneratorOrgId(
+  generatorId: string
+): Promise<string | null> {
+  const [row] = await db
+    .select({ organizationId: generators.organizationId })
+    .from(generators)
+    .where(eq(generators.id, generatorId))
+    .limit(1)
+  return row?.organizationId ?? null
+}
+
+export async function getAssignmentForUserAndGenerator(
+  userId: string,
+  generatorId: string
+): Promise<GeneratorUserAssignment | null> {
+  const [row] = await db
+    .select()
+    .from(generatorUserAssignments)
+    .where(
+      and(
+        eq(generatorUserAssignments.generatorId, generatorId),
+        eq(generatorUserAssignments.userId, userId)
+      )
+    )
+    .limit(1)
+  return row ?? null
 }

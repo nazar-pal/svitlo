@@ -1,15 +1,16 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
+import { generatorUserAssignments } from '@/data/client/db-schema'
 import {
-  generatorUserAssignments,
-  organizationMembers
-} from '@/data/client/db-schema'
+  getAssignmentForUserAndGenerator,
+  getGeneratorOrgId,
+  getOrgMemberById
+} from '@/data/client/queries'
 import { t } from '@/lib/i18n'
 import { db } from '@/lib/powersync/database'
 
 import {
   fail,
-  getGeneratorOrg,
   isOrgAdmin,
   newId,
   nowISO,
@@ -22,40 +23,22 @@ export async function assignUserToGenerator(
   generatorId: string,
   targetUserId: string
 ): Promise<MutationResult> {
-  const gen = await getGeneratorOrg(generatorId)
-  if (!gen) return fail(t('errors.generatorNotFound'))
+  const orgId = await getGeneratorOrgId(generatorId)
+  if (!orgId) return fail(t('errors.generatorNotFound'))
 
-  if (!(await isOrgAdmin(adminUserId, gen.organizationId)))
+  if (!(await isOrgAdmin(adminUserId, orgId)))
     return fail(t('errors.onlyAdminCanAssignUsers'))
 
   // Check target is a member of the org (not needed for admin)
   if (targetUserId !== adminUserId) {
-    const [member] = await db
-      .select({ id: organizationMembers.id })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.organizationId, gen.organizationId),
-          eq(organizationMembers.userId, targetUserId)
-        )
-      )
-      .limit(1)
-
+    const member = await getOrgMemberById(targetUserId, orgId)
     if (!member) return fail(t('errors.userNotOrgMember'))
   }
 
-  // Check not already assigned
-  const [existing] = await db
-    .select({ id: generatorUserAssignments.id })
-    .from(generatorUserAssignments)
-    .where(
-      and(
-        eq(generatorUserAssignments.generatorId, generatorId),
-        eq(generatorUserAssignments.userId, targetUserId)
-      )
-    )
-    .limit(1)
-
+  const existing = await getAssignmentForUserAndGenerator(
+    targetUserId,
+    generatorId
+  )
   if (existing) return fail(t('errors.userAlreadyAssigned'))
 
   await db.insert(generatorUserAssignments).values({
@@ -73,23 +56,16 @@ export async function unassignUserFromGenerator(
   generatorId: string,
   targetUserId: string
 ): Promise<MutationResult> {
-  const gen = await getGeneratorOrg(generatorId)
-  if (!gen) return fail(t('errors.generatorNotFound'))
+  const orgId = await getGeneratorOrgId(generatorId)
+  if (!orgId) return fail(t('errors.generatorNotFound'))
 
-  if (!(await isOrgAdmin(adminUserId, gen.organizationId)))
+  if (!(await isOrgAdmin(adminUserId, orgId)))
     return fail(t('errors.onlyAdminCanUnassignUsers'))
 
-  const [assignment] = await db
-    .select({ id: generatorUserAssignments.id })
-    .from(generatorUserAssignments)
-    .where(
-      and(
-        eq(generatorUserAssignments.generatorId, generatorId),
-        eq(generatorUserAssignments.userId, targetUserId)
-      )
-    )
-    .limit(1)
-
+  const assignment = await getAssignmentForUserAndGenerator(
+    targetUserId,
+    generatorId
+  )
   if (!assignment) return fail(t('errors.userNotAssigned'))
 
   await db

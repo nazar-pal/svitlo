@@ -1,10 +1,15 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import {
   invitations,
   organizationMembers,
   organizations
 } from '@/data/client/db-schema'
+import {
+  getInvitationById,
+  getInvitationByOrgAndEmail,
+  getOrgMemberById
+} from '@/data/client/queries'
 import { t } from '@/lib/i18n'
 import {
   insertInvitationSchema,
@@ -52,18 +57,10 @@ export async function createInvitation(
   if (!(await isOrgAdmin(userId, parsed.data.organizationId)))
     return fail(t('errors.onlyAdminCanInvite'))
 
-  // Check no duplicate invitation
-  const [existing] = await db
-    .select({ id: invitations.id })
-    .from(invitations)
-    .where(
-      and(
-        eq(invitations.organizationId, parsed.data.organizationId),
-        eq(invitations.inviteeEmail, parsed.data.inviteeEmail)
-      )
-    )
-    .limit(1)
-
+  const existing = await getInvitationByOrgAndEmail(
+    parsed.data.organizationId,
+    parsed.data.inviteeEmail
+  )
   if (existing) return fail(t('errors.invitationAlreadySent'))
 
   await db.insert(invitations).values({
@@ -82,31 +79,15 @@ export async function acceptInvitation(
   userEmail: string,
   invitationId: string
 ): Promise<MutationResult> {
-  const [invitation] = await db
-    .select()
-    .from(invitations)
-    .where(eq(invitations.id, invitationId))
-    .limit(1)
+  const invitation = await getInvitationById(invitationId)
 
   if (!invitation) return fail(t('errors.invitationNotFound'))
   if (invitation.inviteeEmail.toLowerCase() !== userEmail.toLowerCase())
     return fail(t('errors.invitationNotForYou'))
 
-  // Check not already a member
-  const [existing] = await db
-    .select({ id: organizationMembers.id })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.organizationId, invitation.organizationId),
-        eq(organizationMembers.userId, userId)
-      )
-    )
-    .limit(1)
-
+  const existing = await getOrgMemberById(userId, invitation.organizationId)
   if (existing) return fail(t('errors.alreadyMember'))
 
-  // Insert member and delete invitation
   await db.insert(organizationMembers).values({
     id: newId(),
     organizationId: invitation.organizationId,
@@ -123,11 +104,7 @@ export async function declineInvitation(
   userEmail: string,
   invitationId: string
 ): Promise<MutationResult> {
-  const [invitation] = await db
-    .select()
-    .from(invitations)
-    .where(eq(invitations.id, invitationId))
-    .limit(1)
+  const invitation = await getInvitationById(invitationId)
 
   if (!invitation) return fail(t('errors.invitationNotFound'))
   if (invitation.inviteeEmail.toLowerCase() !== userEmail.toLowerCase())
@@ -142,11 +119,7 @@ export async function cancelInvitation(
   userId: string,
   invitationId: string
 ): Promise<MutationResult> {
-  const [invitation] = await db
-    .select()
-    .from(invitations)
-    .where(eq(invitations.id, invitationId))
-    .limit(1)
+  const invitation = await getInvitationById(invitationId)
 
   if (!invitation) return fail(t('errors.invitationNotFound'))
 

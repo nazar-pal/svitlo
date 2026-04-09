@@ -8,12 +8,9 @@ import {
 } from '@/data/client/queries'
 import { differential } from '@/lib/powersync'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import {
-  computeNextMaintenance,
-  type NextMaintenanceCardInfo
-} from '@/lib/maintenance/due'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
-import { groupBy } from '@/lib/utils/group-by'
+
+import { buildGeneratorListModel } from './generator-list-model'
 
 export function useGeneratorListData() {
   const { selectedOrgId } = useSelectedOrg()
@@ -40,32 +37,13 @@ export function useGeneratorListData() {
   )
   const { data: users } = useDrizzleQuery(getAllUsers(), differential())
 
-  const sessionsByGenerator = groupBy(allSessions, s => s.generatorId)
-  const templatesByGenerator = groupBy(allTemplates, t => t.generatorId)
-  const recordsByGenerator = groupBy(allRecords, r => r.generatorId)
-  const assignmentsByGenerator = groupBy(allAssignments, a => a.generatorId)
-
-  const nextMaintenanceByGenerator = new Map<
-    string,
-    NextMaintenanceCardInfo | null
-  >()
-  for (const gen of generators) {
-    nextMaintenanceByGenerator.set(
-      gen.id,
-      computeNextMaintenance(
-        templatesByGenerator.get(gen.id) ?? [],
-        recordsByGenerator.get(gen.id) ?? [],
-        sessionsByGenerator.get(gen.id) ?? []
-      )
-    )
-  }
-
-  return {
+  const model = buildGeneratorListModel({
     generators,
     allSessions,
-    sessionsByGenerator,
-    nextMaintenanceByGenerator,
-    assignmentsByGenerator,
-    users
-  }
+    allTemplates,
+    allRecords,
+    allAssignments
+  })
+
+  return { ...model, users }
 }

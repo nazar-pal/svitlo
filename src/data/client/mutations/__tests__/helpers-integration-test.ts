@@ -20,12 +20,9 @@ jest.mock('expo-crypto', () => ({ randomUUID: () => 'mock-uuid' }))
 jest.mock('@/lib/i18n', () => ({ t: (key: string) => key }))
 jest.mock('react-native', () => ({ Alert: { alert: jest.fn() } }))
 
-import {
-  isOrgAdmin,
-  getGeneratorOrg,
-  isGeneratorOrgAdmin,
-  canAccessGenerator
-} from '../helpers'
+import { getGeneratorOrgId } from '@/data/client/queries'
+
+import { isOrgAdmin, isGeneratorOrgAdmin, canAccessGenerator } from '../helpers'
 
 beforeEach(() => {
   resetDatabase(mockTestDb.sqlite)
@@ -55,16 +52,16 @@ describe('isOrgAdmin', () => {
   })
 })
 
-// ── getGeneratorOrg ─────────────────────────────────────────────────────────
+// ── getGeneratorOrgId ───────────────────────────────────────────────────────
 
-describe('getGeneratorOrg', () => {
+describe('getGeneratorOrgId', () => {
   it('returns the organizationId for an existing generator', async () => {
-    const result = await getGeneratorOrg(IDS.generator)
-    expect(result).toEqual({ organizationId: IDS.org })
+    const result = await getGeneratorOrgId(IDS.generator)
+    expect(result).toBe(IDS.org)
   })
 
   it('returns null for a nonexistent generator', async () => {
-    const result = await getGeneratorOrg('nonexistent')
+    const result = await getGeneratorOrgId('nonexistent')
     expect(result).toBeNull()
   })
 })

@@ -1,11 +1,11 @@
 import { and, eq } from 'drizzle-orm'
 
+import { generators, generatorUserAssignments } from '@/data/client/db-schema'
 import {
-  generators,
-  generatorUserAssignments,
-  organizationMembers,
-  organizations
-} from '@/data/client/db-schema'
+  getOrganizationAdminUserId,
+  getOrgMemberById,
+  getOrgMembershipById
+} from '@/data/client/queries'
 import { t } from '@/lib/i18n'
 import { db, powersync } from '@/lib/powersync/database'
 
@@ -83,12 +83,7 @@ export async function removeMember(
   adminUserId: string,
   memberId: string
 ): Promise<MutationResult> {
-  const [member] = await db
-    .select()
-    .from(organizationMembers)
-    .where(eq(organizationMembers.id, memberId))
-    .limit(1)
-
+  const member = await getOrgMembershipById(memberId)
   if (!member) return fail(t('errors.memberNotFound'))
 
   if (!(await isOrgAdmin(adminUserId, member.organizationId)))
@@ -118,28 +113,13 @@ export async function leaveOrganization(
 ): Promise<MutationResult> {
   if (await isOrgAdmin(userId, orgId)) return fail(t('errors.adminCannotLeave'))
 
-  const [member] = await db
-    .select({ id: organizationMembers.id })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, orgId)
-      )
-    )
-    .limit(1)
-
+  const member = await getOrgMemberById(userId, orgId)
   if (!member) return fail(t('errors.notMemberOfOrg'))
 
-  const [org] = await db
-    .select({ adminUserId: organizations.adminUserId })
-    .from(organizations)
-    .where(eq(organizations.id, orgId))
-    .limit(1)
+  const adminUserId = await getOrganizationAdminUserId(orgId)
+  if (!adminUserId) return fail(t('errors.organizationNotFound'))
 
-  if (!org) return fail(t('errors.organizationNotFound'))
-
-  await reassignAndRemoveMember(userId, orgId, org.adminUserId, member.id)
+  await reassignAndRemoveMember(userId, orgId, adminUserId, member.id)
 
   return ok
 }
