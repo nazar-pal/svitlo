@@ -63,12 +63,12 @@ import {
 } from '../organizations'
 
 beforeEach(() => {
-  resetDatabase()
+  resetDatabase(mockTestDb.sqlite)
   mockIdCounter = 0
   seedBaseScenario(mockTestDb.db)
 })
 
-afterAll(() => closeDatabase())
+afterAll(() => closeDatabase(mockTestDb.sqlite))
 
 // ── createOrganization ──────────────────────────────────────────────────────
 

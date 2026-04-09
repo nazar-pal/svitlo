@@ -28,12 +28,12 @@ import {
 } from '../helpers'
 
 beforeEach(() => {
-  resetDatabase()
+  resetDatabase(mockTestDb.sqlite)
   seedBaseScenario(mockTestDb.db)
   seedGenerator(mockTestDb.db)
 })
 
-afterAll(() => closeDatabase())
+afterAll(() => closeDatabase(mockTestDb.sqlite))
 
 // ── isOrgAdmin ──────────────────────────────────────────────────────────────
 

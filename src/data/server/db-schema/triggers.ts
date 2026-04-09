@@ -1,20 +1,29 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 // Triggers that cannot be expressed in Drizzle schema.
 // Used by test-server-db.ts to apply production-parity triggers to PGlite.
-// When modifying, also create a new SQL migration with the updated trigger.
+//
+// Source of truth is the SQL migration files in ../migrations/. Never
+// hand-edit trigger SQL here — edit (or add) the migration file. Any file
+// matching `*_custom_*trigger*.sql` in that directory is picked up
+// automatically, so a second custom trigger cannot silently skip PGlite
+// tests. The drift guard in triggers-test.ts pins this invariant.
+//
+// This file is only imported by test-server-db.ts (Node test env), so
+// `fs` + `__dirname` are safe.
 
-export const ORG_ADMIN_IMMUTABLE_TRIGGER = `
-  CREATE OR REPLACE FUNCTION validate_org_admin_immutable()
-  RETURNS TRIGGER AS $$
-  BEGIN
-    IF NEW.admin_user_id IS DISTINCT FROM OLD.admin_user_id THEN
-      RAISE EXCEPTION 'admin_user_id cannot be changed';
-    END IF;
-    RETURN NEW;
-  END;
-  $$ LANGUAGE plpgsql;
+const MIGRATIONS_DIR = join(__dirname, '../migrations')
+const CUSTOM_TRIGGER_PATTERN = /_custom_.*trigger.*\.sql$/
 
-  CREATE TRIGGER trg_validate_org_admin_immutable
-    BEFORE UPDATE ON "organizations"
-    FOR EACH ROW
-    EXECUTE FUNCTION validate_org_admin_immutable();
-`
+function loadCustomTriggerSql(): string {
+  const files = readdirSync(MIGRATIONS_DIR)
+    .filter(name => CUSTOM_TRIGGER_PATTERN.test(name))
+    .sort()
+
+  return files
+    .map(name => readFileSync(join(MIGRATIONS_DIR, name), 'utf8'))
+    .join('\n\n')
+}
+
+export const CUSTOM_TRIGGERS = loadCustomTriggerSql()

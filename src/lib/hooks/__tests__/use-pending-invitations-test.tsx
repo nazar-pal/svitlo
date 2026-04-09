@@ -1,3 +1,4 @@
+import type Database from 'better-sqlite3'
 import type { drizzle } from 'drizzle-orm/better-sqlite3'
 import { renderHook, waitFor } from '@testing-library/react-native'
 
@@ -13,6 +14,7 @@ import {
 
 let mockDb: unknown
 let mockDrizzleDb: ReturnType<typeof drizzle>
+let mockSqlite: Database.Database
 
 jest.mock('@powersync/react-native', () =>
   require('@/lib/hooks/__tests__/mock-use-query').createUseQueryMock()
@@ -38,15 +40,16 @@ beforeAll(async () => {
   const testDb = await createTestDatabase()
   mockDb = testDb.db
   mockDrizzleDb = testDb.db
+  mockSqlite = testDb.sqlite
 })
 
 beforeEach(() => {
   jest.resetAllMocks()
-  resetDatabase()
+  resetDatabase(mockSqlite)
 })
 
 afterAll(() => {
-  closeDatabase()
+  closeDatabase(mockSqlite)
 })
 
 it('returns [] when user has no invitations', async () => {

@@ -284,6 +284,31 @@ describe('handleOrganizations', () => {
   })
 })
 
+// ── trigger: validate_org_admin_immutable ──────────────────────────────────
+// Directly exercises the trigger by bypassing the handler whitelist. The
+// production handler strips admin_user_id from the update path, so handler
+// tests alone can never prove the trigger is installed.
+
+describe('trigger: validate_org_admin_immutable', () => {
+  it('rejects direct update of admin_user_id', async () => {
+    let caught: unknown
+    try {
+      await testDb.db
+        .update(organizations)
+        .set({ adminUserId: IDS.outsider })
+        .where(eq(organizations.id, IDS.org))
+    } catch (e) {
+      caught = e
+    }
+    // Drizzle wraps the PGlite error; the trigger's RAISE EXCEPTION message
+    // surfaces via the cause chain.
+    expect(caught).toBeDefined()
+    const causeMessage = (caught as { cause?: { message?: string } }).cause
+      ?.message
+    expect(causeMessage).toMatch(/admin_user_id cannot be changed/)
+  })
+})
+
 // ── handleInvitations ───────────────────────────────────────────────────────
 
 describe('handleInvitations', () => {

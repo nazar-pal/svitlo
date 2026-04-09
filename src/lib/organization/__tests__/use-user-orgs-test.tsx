@@ -1,3 +1,4 @@
+import type Database from 'better-sqlite3'
 import type { drizzle } from 'drizzle-orm/better-sqlite3'
 import { renderHook, waitFor } from '@testing-library/react-native'
 
@@ -10,6 +11,7 @@ import { IDS, seedBaseScenario } from '@/data/client/mutations/__tests__/seed'
 import { organizations } from '@/data/client/db-schema/organizations'
 
 let mockDb: ReturnType<typeof drizzle>
+let mockSqlite: Database.Database
 
 jest.mock('@powersync/react-native', () =>
   require('@/lib/hooks/__tests__/mock-use-query').createUseQueryMock()
@@ -34,15 +36,16 @@ const { useUserOrgs } = require('../use-user-orgs')
 beforeAll(async () => {
   const testDb = await createTestDatabase()
   mockDb = testDb.db
+  mockSqlite = testDb.sqlite
 })
 
 beforeEach(() => {
   jest.resetAllMocks()
-  resetDatabase()
+  resetDatabase(mockSqlite)
 })
 
 afterAll(() => {
-  closeDatabase()
+  closeDatabase(mockSqlite)
 })
 
 describe('useUserOrgs', () => {

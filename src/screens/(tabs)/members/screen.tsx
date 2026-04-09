@@ -29,6 +29,8 @@ import {
 } from 'heroui-native'
 import { Alert, ScrollView, View } from 'react-native'
 
+import { buildMemberList } from './lib/build-member-list'
+
 export default function MembersScreen() {
   const { selectedOrgId } = useSelectedOrg()
   const { t } = useTranslation()
@@ -88,51 +90,19 @@ export default function MembersScreen() {
     notifyWarning()
   }
 
-  const query = searchText.toLowerCase()
-
-  // Unified list: admin first, then members (deduplicated)
-  const allPeople: {
-    userId: string
-    memberId?: string
-    info: { name: string; email: string }
-    isAdmin: boolean
-    isYou: boolean
-  }[] = []
-
-  if (org?.adminUserId) {
-    allPeople.push({
-      userId: org.adminUserId,
-      info: getUserInfo(org.adminUserId),
-      isAdmin: true,
-      isYou: org.adminUserId === userId
-    })
-  }
-
-  for (const m of members) {
-    if (m.userId === org?.adminUserId) continue
-    allPeople.push({
-      userId: m.userId,
-      memberId: m.id,
-      info: getUserInfo(m.userId),
-      isAdmin: false,
-      isYou: m.userId === userId
-    })
-  }
-
-  const filteredPeople = query
-    ? allPeople.filter(
-        ({ info }) =>
-          info.name.toLowerCase().includes(query) ||
-          info.email.toLowerCase().includes(query)
-      )
-    : allPeople
-  const filteredInvitations = query
-    ? orgInvitations.filter(inv =>
-        inv.inviteeEmail.toLowerCase().includes(query)
-      )
-    : orgInvitations
-  const hasNoResults =
-    query && filteredPeople.length === 0 && filteredInvitations.length === 0
+  const {
+    people: allPeople,
+    filteredPeople,
+    filteredInvitations,
+    hasNoResults
+  } = buildMemberList({
+    adminUserId: org?.adminUserId,
+    members,
+    invitations: orgInvitations,
+    currentUserId: userId,
+    searchQuery: searchText,
+    getUserInfo
+  })
 
   if (!org) return null
 
@@ -183,7 +153,7 @@ export default function MembersScreen() {
               <View className="gap-2">
                 <SectionHeader
                   title={
-                    query
+                    searchText
                       ? t('members.members')
                       : t('members.membersCount', { count: allPeople.length })
                   }
@@ -193,7 +163,7 @@ export default function MembersScreen() {
                     <ListGroup.Item>
                       <ListGroup.ItemContent>
                         <ListGroup.ItemTitle className="text-muted">
-                          {query
+                          {searchText
                             ? t('members.noMatchingMembers')
                             : t('members.noMembersYet')}
                         </ListGroup.ItemTitle>

@@ -7,10 +7,8 @@ import { Text, View } from 'react-native'
 import type { SwipeableRowRef } from '@/components/swipeable-row'
 import Animated, { LinearTransition } from 'react-native-reanimated'
 
-import { formatDate, t, useTranslation } from '@/lib/i18n'
+import { formatDate, useTranslation } from '@/lib/i18n'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
-import type { GeneratorSession } from '@/data/client/db-schema/generators'
-import type { MaintenanceRecord } from '@/data/client/db-schema/maintenance'
 import {
   getAllUsers,
   getGeneratorSessions,
@@ -26,56 +24,9 @@ import { getUserName } from '@/lib/utils/get-user-name'
 import { formatDuration } from '@/lib/utils/time'
 import { SwipeableRow } from '@/components/swipeable-row'
 
+import { buildActivityItems } from './lib/build-generator-activity-items'
+
 const ItemSeparator = () => <Separator className="mx-4" />
-
-type ActivityListItem =
-  | {
-      type: 'session'
-      id: string
-      timestamp: string
-      session: GeneratorSession
-    }
-  | {
-      type: 'maintenance'
-      id: string
-      timestamp: string
-      record: MaintenanceRecord
-      templateName: string
-    }
-
-function buildActivityItems(
-  sessions: GeneratorSession[],
-  records: MaintenanceRecord[],
-  templates: { id: string; taskName: string }[],
-  filter: Filter
-): ActivityListItem[] {
-  const templateMap = new Map(templates.map(tmpl => [tmpl.id, tmpl.taskName]))
-
-  const items: ActivityListItem[] = []
-
-  if (filter !== 'maintenance')
-    for (const session of sessions)
-      items.push({
-        type: 'session',
-        id: session.id,
-        timestamp: session.startedAt,
-        session
-      })
-
-  if (filter !== 'sessions')
-    for (const record of records)
-      items.push({
-        type: 'maintenance',
-        id: record.id,
-        timestamp: record.performedAt,
-        record,
-        templateName:
-          templateMap.get(record.templateId) ?? t('activity.unknownTask')
-      })
-
-  items.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
-  return items
-}
 
 export default function ActivityScreen() {
   const { t } = useTranslation()

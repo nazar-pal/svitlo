@@ -5,7 +5,7 @@ import { PgTable } from 'drizzle-orm/pg-core'
 import { drizzle } from 'drizzle-orm/pglite'
 
 import * as schema from '@/data/server/db-schema'
-import { ORG_ADMIN_IMMUTABLE_TRIGGER } from '@/data/server/db-schema/triggers'
+import { CUSTOM_TRIGGERS } from '@/data/server/db-schema/triggers'
 
 let client: PGlite
 let drizzleDb: ReturnType<typeof drizzle<typeof schema>>
@@ -35,7 +35,7 @@ export async function closeServerDatabase() {
 // ── Triggers (cannot be expressed in Drizzle schema) ───────────────────────
 
 async function applyTriggers() {
-  await client.exec(ORG_ADMIN_IMMUTABLE_TRIGGER)
+  await client.exec(CUSTOM_TRIGGERS)
 }
 
 // ── DDL from Drizzle schema ─────────────────────────────────────────────────

@@ -11,33 +11,31 @@ import { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import * as clientSchema from '@/data/client/db-schema'
 import * as serverSchema from '@/data/server/db-schema'
 
-let sqlite: Database.Database
-let drizzleDb: ReturnType<typeof drizzle>
-
 // Auto-derived from schema exports. No manual sync needed.
 const CLIENT_TABLES = Object.values(clientSchema).filter(v =>
   is(v, SQLiteTable)
 )
 
 export async function createTestDatabase() {
-  sqlite = new Database(':memory:')
+  const sqlite = new Database(':memory:')
   await createTables(sqlite)
   applyServerConstraints(sqlite)
 
-  drizzleDb = drizzle(sqlite, { schema: clientSchema })
+  const db = drizzle(sqlite, { schema: clientSchema })
 
   return {
-    db: drizzleDb,
+    sqlite,
+    db,
     powersync: createPowerSyncShim(sqlite)
   }
 }
 
-export function resetDatabase() {
+export function resetDatabase(sqlite: Database.Database) {
   for (const table of CLIENT_TABLES)
     sqlite.exec(`DELETE FROM "${getTableName(table)}"`)
 }
 
-export function closeDatabase() {
+export function closeDatabase(sqlite: Database.Database) {
   sqlite.close()
 }
 
@@ -105,6 +103,21 @@ interface SnapshotTable {
   indexes?: Record<string, SnapshotIndex>
 }
 
+// Intentionally NOT applied: CHECK constraints.
+//
+// The server schema defines CHECK constraints on generators, organizations,
+// invitations, and maintenance_templates (see server migrations). We do not
+// mirror them into the client SQLite test DB because:
+//   1. SQLite CHECKs must be declared at CREATE TABLE time; we'd have to
+//      rebuild tables or emulate them with triggers.
+//   2. Every server CHECK is already directly exercised by PGlite handler
+//      integration tests in:
+//      src/data/server/api/routers/powersync/__tests__/handlers-integration-test.ts
+//   3. Client-side inputs are also validated by Zod schemas before ever
+//      reaching a mutation (`src/data/client/validation/`).
+//
+// If you add a new server CHECK, add a PGlite handler test that exercises it
+// rather than trying to mirror it here.
 function applyServerConstraints(db: Database.Database) {
   const snapshot = generateDrizzleJson(serverSchema)
   const clientTableNames = new Set<string>(

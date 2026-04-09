@@ -34,13 +34,13 @@ jest.mock('react-native', () => ({ Alert: { alert: jest.fn() } }))
 import { removeMember, leaveOrganization } from '../members'
 
 beforeEach(() => {
-  resetDatabase()
+  resetDatabase(mockTestDb.sqlite)
   mockIdCounter = 0
   seedBaseScenario(mockTestDb.db)
   seedGenerator(mockTestDb.db)
 })
 
-afterAll(() => closeDatabase())
+afterAll(() => closeDatabase(mockTestDb.sqlite))
 
 // ── removeMember ────────────────────────────────────────────────────────────
 

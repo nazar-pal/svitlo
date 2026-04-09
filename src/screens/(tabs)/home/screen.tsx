@@ -13,13 +13,8 @@ import { setUIReady } from '@/lib/app-ready'
 import { storage } from '@/lib/storage'
 import { EmptyState } from '@/components/empty-state'
 import { deleteGenerator } from '@/data/client/mutations/generators'
-import {
-  computeGeneratorStatus,
-  computeLifetimeHours
-} from '@/lib/generator/status'
 import { impactLight, notifyWarning } from '@/lib/haptics'
 import { useTranslation } from '@/lib/i18n'
-import { getUserName } from '@/lib/utils/get-user-name'
 import {
   Host,
   Button as SwiftButton,
@@ -32,6 +27,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { AnimatedHeaderTitle } from './components/animated-header-title'
 import { HeroCard, type HeroCardItem } from './components/hero-card'
 import { PageIndicator } from './components/page-indicator'
+import { buildHomeCarouselItems } from './lib/build-home-carousel-items'
 import { useHomeData } from './lib/use-home-data'
 
 export default function HomeScreen() {
@@ -166,19 +162,14 @@ export default function HomeScreen() {
       </View>
     )
 
-  const carouselItems: HeroCardItem[] = generators.map(g => {
-    const sessions = sessionsByGenerator.get(g.id) ?? []
-    const assignments = assignmentsByGenerator.get(g.id) ?? []
-    return {
-      generator: g,
-      statusInfo: computeGeneratorStatus(g, sessions),
-      nextMaintenance: nextMaintenanceByGenerator.get(g.id) ?? null,
-      isMyActiveSession: myActiveSession?.generatorId === g.id,
-      lifetimeHours: computeLifetimeHours(sessions),
-      assignedUserNames: admin
-        ? assignments.map(a => getUserName(users, a.userId))
-        : []
-    }
+  const carouselItems: HeroCardItem[] = buildHomeCarouselItems({
+    generators,
+    sessionsByGenerator,
+    assignmentsByGenerator,
+    nextMaintenanceByGenerator,
+    myActiveSession,
+    users,
+    admin
   })
 
   const loopedItems = looped

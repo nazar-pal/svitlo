@@ -27,6 +27,7 @@ import {
 } from '@/lib/maintenance/due'
 import { formatHours } from '@/lib/utils/time'
 
+import { formatAssignedNames } from '../lib/format-assigned-names'
 import { IdlePulse } from './idle-pulse'
 
 export interface HeroCardItem {
@@ -61,11 +62,6 @@ function maintenanceLabelColor(urgency: MaintenanceUrgency): string {
   if (urgency === 'overdue') return 'text-danger'
   if (urgency === 'due_soon') return 'text-warning'
   return 'text-muted'
-}
-
-function formatAssignedNames(names: string[], max = 2): string {
-  if (names.length <= max) return names.join(', ')
-  return `${names.slice(0, max).join(', ')} +${names.length - max}`
 }
 
 function StatusHeader({

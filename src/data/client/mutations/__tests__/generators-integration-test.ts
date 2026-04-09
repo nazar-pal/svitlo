@@ -38,13 +38,13 @@ import {
 } from '../generators'
 
 beforeEach(() => {
-  resetDatabase()
+  resetDatabase(mockTestDb.sqlite)
   mockIdCounter = 0
   seedBaseScenario(mockTestDb.db)
   seedGenerator(mockTestDb.db)
 })
 
-afterAll(() => closeDatabase())
+afterAll(() => closeDatabase(mockTestDb.sqlite))
 
 // ── updateGenerator ──────────────────���──────────────────────────────────────
 

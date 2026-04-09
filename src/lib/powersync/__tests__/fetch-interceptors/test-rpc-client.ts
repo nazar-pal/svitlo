@@ -3,10 +3,13 @@
  * Implements the oRPC wire format without importing @orpc/client
  * (which is ESM-only and incompatible with Jest 29's CJS runtime).
  *
- * Wire format:
+ * Wire format (verified against @orpc/client ^1.13.x, 2026-04):
  * - URL: POST {baseUrl}/{path}
- * - Request body: { json: <input> }
+ * - Request body:  { json: <input> }
  * - Response body: { json: <output> } or oRPC error JSON
+ *
+ * If @orpc/client is bumped to a new major version, re-verify this matches
+ * the current wire format before trusting these tests.
  */
 
 async function rpcCall(
