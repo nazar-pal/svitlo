@@ -6,7 +6,7 @@ import {
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 import { type DrawerContentComponentProps } from '@react-navigation/drawer'
 import { DrawerActions } from '@react-navigation/native'
-import { useNavigation, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import {
   Avatar,
@@ -47,9 +47,9 @@ function getInitials(name: string | null | undefined): string {
     .slice(0, 2)
 }
 
-export function AppDrawerContent(_props: DrawerContentComponentProps) {
+export function AppDrawerContent(props: DrawerContentComponentProps) {
   const router = useRouter()
-  const navigation = useNavigation()
+  const { navigation } = props
   const localUser = useLocalUser()
   const handleSignOut = useSignOut()
   const { sessionStatus } = useSessionStatus()
