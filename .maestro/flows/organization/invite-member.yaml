@@ -1,0 +1,46 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - organization
+  - team
+
+---
+# Invite Member E2E Test
+# Verifies: admin can send an invitation from the Members tab,
+# and the pending invitation appears in the list.
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+
+# Navigate to Members tab
+- tapOn: 'Members'
+- extendedWaitUntil:
+    visible:
+      id: 'members-screen'
+    timeout: 5000
+
+# Tap the invite button (person.badge.plus icon in header)
+- tapOn:
+    id: 'members-invite-button'
+
+# Enter an email address on the invite screen
+- extendedWaitUntil:
+    visible:
+      id: 'invite-email-input'
+    timeout: 5000
+- tapOn:
+    id: 'invite-email-input'
+- inputText: 'teammate@example.com'
+
+# Submit (paperplane icon)
+- tapOn:
+    id: 'header-submit'
+
+# Verify the invitation appears in the Pending Invitations section.
+# HeroUI's ListGroup.Item rolls its children into a single iOS accessibility
+# label like "get mail, teammate@example.com, Cancel", so we match with a
+# substring regex (assertVisible anchors the regex).
+- extendedWaitUntil:
+    visible: '.*teammate@example\.com.*'
+    timeout: 10000
+- assertVisible:
+    id: 'members-pending-invitations-header'

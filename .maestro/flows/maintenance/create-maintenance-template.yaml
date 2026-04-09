@@ -1,0 +1,23 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - maintenance
+
+---
+# Create Maintenance Template E2E Test
+# Verifies: user can create a maintenance template for a generator
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+- runFlow: ../../subflows/create-test-generator.yaml
+
+# Navigate to generator maintenance
+- tapOn:
+    id: 'home-actions-menu'
+- tapOn:
+    id: 'home-action-maintenance'
+- extendedWaitUntil:
+    visible:
+      id: 'gen-maintenance-empty'
+    timeout: 5000
+
+- runFlow: ../../subflows/create-test-template.yaml

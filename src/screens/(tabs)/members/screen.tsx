@@ -154,6 +154,7 @@ export default function MembersScreen() {
           headerRight: () =>
             isAdmin ? (
               <HeaderSubmitButton
+                testID="members-invite-button"
                 systemImage="person.badge.plus"
                 onPress={() =>
                   router.push(`/organization/${selectedOrgId}/invite`)
@@ -163,6 +164,7 @@ export default function MembersScreen() {
         }}
       />
       <ScrollView
+        testID="members-screen"
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"
         contentContainerClassName="px-5 pb-10"
@@ -261,7 +263,10 @@ export default function MembersScreen() {
               {/* Pending Org Invitations (Admin only) */}
               {isAdmin && filteredInvitations.length > 0 ? (
                 <View className="gap-2">
-                  <SectionHeader title={t('members.pendingInvitations')} />
+                  <SectionHeader
+                    testID="members-pending-invitations-header"
+                    title={t('members.pendingInvitations')}
+                  />
                   <ListGroup>
                     {filteredInvitations.map((inv, index) => (
                       <View key={inv.id}>

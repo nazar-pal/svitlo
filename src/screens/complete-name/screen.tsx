@@ -57,6 +57,7 @@ export default function CompleteNameScreen() {
           <TextField>
             <Label>{t('auth.name')}</Label>
             <Input
+              testID="complete-name-input"
               placeholder={t('auth.namePlaceholder')}
               value={name}
               onChangeText={setName}
@@ -71,6 +72,7 @@ export default function CompleteNameScreen() {
           <FormError message={error} />
 
           <Button
+            testID="complete-name-submit-button"
             variant="primary"
             isDisabled={isSubmitting}
             onPress={handleSubmit}

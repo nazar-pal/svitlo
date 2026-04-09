@@ -91,6 +91,7 @@ export default function MaintenanceScreen() {
             ? () => (
                 <Host matchContents>
                   <SwiftButton
+                    testID="gen-maintenance-new-task"
                     label={t('screens.newTask')}
                     systemImage="plus"
                     onPress={() =>
@@ -105,7 +106,11 @@ export default function MaintenanceScreen() {
       />
 
       {templates.length === 0 ? (
-        <Surface variant="secondary" className="items-center py-6">
+        <Surface
+          testID="gen-maintenance-empty"
+          variant="secondary"
+          className="items-center py-6"
+        >
           <Text className="text-muted text-sm">
             {t('maintenanceTemplate.noTemplates')}
           </Text>

@@ -198,6 +198,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
             <TextField isInvalid={!!fieldErrors.title}>
               <Label>{t('generator.title')}</Label>
               <Input
+                testID="gen-settings-title-input"
                 placeholder={t('generator.generatorTitle')}
                 {...field('title')}
               />
@@ -270,7 +271,12 @@ function SettingsForm({ generator }: { generator: Generator }) {
 
           <FormError message={error} />
 
-          <Button variant="danger" size="lg" onPress={handleDelete}>
+          <Button
+            testID="gen-settings-delete"
+            variant="danger"
+            size="lg"
+            onPress={handleDelete}
+          >
             {t('generator.deleteGenerator')}
           </Button>
         </View>

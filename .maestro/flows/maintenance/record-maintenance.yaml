@@ -1,0 +1,56 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - maintenance
+
+---
+# Record Maintenance E2E Test
+# Verifies: user can record maintenance for a template; the recordMaintenance
+# mutation succeeds (proven by the post-submit navigation back).
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+- runFlow: ../../subflows/create-test-generator.yaml
+
+# Navigate to generator maintenance
+- tapOn:
+    id: 'home-actions-menu'
+- tapOn:
+    id: 'home-action-maintenance'
+- extendedWaitUntil:
+    visible:
+      id: 'gen-maintenance-empty'
+    timeout: 5000
+
+# Create a template (sets output.templateName)
+- runFlow: ../../subflows/create-test-template.yaml
+
+# Tap the template row to view its details
+- tapOn:
+    text: '.*${output.templateName}.*'
+
+# Tap "Record Maintenance" on the details screen
+- extendedWaitUntil:
+    visible:
+      id: 'template-details-record'
+    timeout: 5000
+- tapOn:
+    id: 'template-details-record'
+
+# Add notes and submit
+- extendedWaitUntil:
+    visible:
+      id: 'record-maintenance-notes-input'
+    timeout: 5000
+- tapOn:
+    id: 'record-maintenance-notes-input'
+- inputText: 'Replaced part during E2E run'
+- tapOn:
+    id: 'header-submit'
+
+# Verify we navigated back off the record screen. router.back() only runs
+# when the createMaintenance mutation succeeds, so the notes input
+# disappearing IS the success signal — no extra check needed.
+- extendedWaitUntil:
+    notVisible:
+      id: 'record-maintenance-notes-input'
+    timeout: 5000

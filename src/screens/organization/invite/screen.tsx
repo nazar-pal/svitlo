@@ -72,6 +72,7 @@ export default function InviteMemberScreen() {
           <TextField isInvalid={!!error}>
             <Label>{t('organization.emailAddress')}</Label>
             <Input
+              testID="invite-email-input"
               placeholder={t('organization.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}

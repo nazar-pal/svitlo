@@ -1,0 +1,26 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - auth
+
+---
+# Sign-Out E2E Test
+# Verifies: signed-in user can sign out and returns to sign-in screen
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+
+# Open drawer and tap sign out
+- tapOn:
+    id: 'drawer-toggle'
+- extendedWaitUntil:
+    visible:
+      id: 'drawer-sign-out'
+    timeout: 5000
+- tapOn:
+    id: 'drawer-sign-out'
+
+# Verify we're back at sign-in screen
+- extendedWaitUntil:
+    visible:
+      id: 'sign-in-email-link'
+    timeout: 10000

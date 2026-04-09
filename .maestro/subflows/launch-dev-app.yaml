@@ -1,0 +1,33 @@
+appId: com.devnazar.svitlo.dev
+---
+# Reusable subflow: Launch development build with clean state.
+# clearState + clearKeychain wipe app data before launchApp starts it.
+
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+# Deep link to dev server, bypassing the launcher screen
+- openLink: svitlo://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+
+# Dismiss "Open in App?" system dialog if it appears
+- runFlow:
+    when:
+      visible: 'Open'
+    commands:
+      - tapOn: 'Open'
+
+# clearState always wipes UserDefaults, so the onboarding overlay always appears.
+# Wait for the JS bundle to load and the overlay to show, then dismiss it.
+- extendedWaitUntil:
+    visible: 'Continue'
+    timeout: 45000
+- tapOn: 'Continue'
+
+# Dismiss the Expo dev menu that sometimes opens after onboarding
+- runFlow:
+    when:
+      visible: 'Reload'
+    commands:
+      - tapOn:
+          point: '50%,30%'

@@ -63,6 +63,7 @@ export default function MaintenanceScreen() {
         <Stack.Screen options={{ headerShown: true, headerRight }} />
         <View className="bg-background flex-1 items-center justify-center px-5 pb-10">
           <EmptyState
+            testID="maintenance-empty"
             icon="wrench"
             title={t('maintenanceTab.noMaintenance')}
             description={t('maintenanceTab.noMaintenanceDesc')}
@@ -75,6 +76,7 @@ export default function MaintenanceScreen() {
     <>
       <Stack.Screen options={{ headerShown: true, headerRight }} />
       <ScrollView
+        testID="maintenance-screen"
         className="bg-background flex-1"
         contentInsetAdjustmentBehavior="automatic"
         contentContainerClassName="px-5 pb-10 pt-4"

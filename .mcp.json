@@ -8,6 +8,14 @@
         "@mastra/mcp-docs-server@latest"
       ],
       "env": {}
+    },
+    "maestro": {
+      "type": "stdio",
+      "command": "maestro",
+      "args": [
+        "mcp"
+      ],
+      "env": {}
     }
   }
 }

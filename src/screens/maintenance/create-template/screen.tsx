@@ -115,6 +115,7 @@ export default function CreateMaintenanceTemplateScreen() {
             <TextField isInvalid={!!fieldErrors.taskName}>
               <Label>{t('maintenanceTemplate.taskName')}</Label>
               <Input
+                testID="create-template-name-input"
                 placeholder={t('maintenanceTemplate.taskNamePlaceholder')}
                 {...field('taskName')}
                 autoFocus
@@ -159,6 +160,7 @@ export default function CreateMaintenanceTemplateScreen() {
               <TextField isInvalid={!!fieldErrors.triggerHoursInterval}>
                 <Label>{t('maintenanceTemplate.hoursInterval')}</Label>
                 <Input
+                  testID="create-template-hours-input"
                   placeholder={t(
                     'maintenanceTemplate.hoursIntervalPlaceholder'
                   )}
@@ -176,6 +178,7 @@ export default function CreateMaintenanceTemplateScreen() {
               <TextField isInvalid={!!fieldErrors.triggerCalendarDays}>
                 <Label>{t('maintenanceTemplate.calendarDays')}</Label>
                 <Input
+                  testID="create-template-days-input"
                   placeholder={t('maintenanceTemplate.calendarDaysPlaceholder')}
                   {...field('triggerCalendarDays')}
                   keyboardType="number-pad"

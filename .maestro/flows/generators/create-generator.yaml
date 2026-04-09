@@ -1,0 +1,11 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - generators
+
+---
+# Create Generator E2E Test (Manual Mode)
+# Verifies: fresh user can create a generator with manual maintenance setup.
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+- runFlow: ../../subflows/create-test-generator.yaml

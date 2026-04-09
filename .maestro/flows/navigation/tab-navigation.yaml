@@ -1,0 +1,66 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - navigation
+  - smoke
+
+---
+# Tab Navigation E2E Test
+# Verifies: all 4 tabs are reachable and render their expected content
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+
+# Tab labels are tapped by visible text because expo-router's NativeTabs
+# (unstable-native-tabs) does not currently propagate a testID to the native
+# UITabBarItem — there's no id selector available for individual tabs.
+# These taps assume the simulator is running in English. To run in another
+# locale, relaunch the device with `maestro start-device --device-locale xx_XX`.
+
+# Navigate to Maintenance tab
+- tapOn: 'Maintenance'
+- extendedWaitUntil:
+    visible:
+      id: 'maintenance-empty'
+    timeout: 10000
+
+# Navigate to Activity tab
+- tapOn: 'Activity'
+- extendedWaitUntil:
+    visible:
+      id: 'activity-empty'
+    timeout: 10000
+
+# Navigate back to Home tab before going to Members.
+# iOS 26 collapses the tab bar to a floating pill when the current screen
+# has a search bar (Members), which hides sibling tab labels — so we must
+# visit Members last in any bottom-tab test.
+- tapOn: 'Home'
+# Let the NativeTabs transition finish before the assertion. Without this
+# the home-screen testID check can race the iOS tab-switch animation.
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: 'home-empty'
+    timeout: 15000
+- assertVisible:
+    id: 'home-screen'
+
+# Finally, navigate to Members tab
+- tapOn: 'Members'
+- extendedWaitUntil:
+    visible:
+      id: 'members-screen'
+    timeout: 10000
+
+# Test drawer opens and closes
+- tapOn:
+    id: 'drawer-toggle'
+- extendedWaitUntil:
+    visible:
+      id: 'drawer-content'
+    timeout: 5000
+
+# Close drawer by tapping outside
+- tapOn:
+    point: '85%,50%'

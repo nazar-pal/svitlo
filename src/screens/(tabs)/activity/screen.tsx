@@ -229,6 +229,7 @@ export default function ActivityScreen() {
         }}
       />
       <Animated.FlatList
+        testID="activity-screen"
         ref={scrollRef}
         style={{ backgroundColor }}
         contentInsetAdjustmentBehavior="automatic"
@@ -243,6 +244,7 @@ export default function ActivityScreen() {
         ItemSeparatorComponent={ItemSeparator}
         ListEmptyComponent={
           <EmptyState
+            testID="activity-empty"
             icon="clock.arrow.circlepath"
             title={t('activity.noActivity')}
             description={t('activity.noActivityDesc')}

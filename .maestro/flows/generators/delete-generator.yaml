@@ -1,0 +1,35 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - generators
+
+---
+# Delete Generator E2E Test
+# Verifies: user can delete a generator from the settings screen
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+- runFlow: ../../subflows/create-test-generator.yaml
+
+# Open settings via actions menu
+- tapOn:
+    id: 'home-actions-menu'
+- tapOn:
+    id: 'home-action-settings'
+
+# Scroll to the delete button (also waits for the settings screen to render)
+- scrollUntilVisible:
+    element:
+      id: 'gen-settings-delete'
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: 'gen-settings-delete'
+
+# Confirm deletion in the alert
+- tapOn: 'Delete'
+
+# Verify we're back on home screen with empty state
+- extendedWaitUntil:
+    visible:
+      id: 'home-empty'
+    timeout: 10000

@@ -22,7 +22,7 @@ This is a mobile app built with Expo (always the latest SDK) and React Native us
 - **Sync:** PowerSync Sync Streams (NOT legacy Sync Rules)
 - **Data fetching in components:** Direct PowerSync hooks (`useQuery`, `useSuspenseQuery`, `useStatus`)
 - **Network mocking:** MSW (Mock Service Worker) — preferred approach
-- **E2E:** Maestro (planned, may not be set up yet)
+- **E2E:** Maestro — iOS simulator via dev build + Metro, flows under `.maestro/flows/`, subflows under `.maestro/subflows/`, config in `.maestro/config.yaml`, `bun run e2e*` scripts in `package.json`
 
 ## Step 1: Discover the current setup
 
@@ -298,7 +298,42 @@ Do NOT write automated tests against Sync Streams internals — there's no stabl
 3. Missing `db.close()` in `afterEach`
 4. Testing only happy-path online flows in a local-first app
 
-### 2.12 DRY: Eliminating duplication between production and test database setup
+### 2.12 End-to-end testing (Maestro)
+
+**Best practice:** Maestro flows should use id-based selectors (React Native `testID` → iOS `accessibilityIdentifier`) wherever possible, not visible text. Text-based selectors are a correctness hazard in any localized app.
+
+**Key facts to verify against the current Maestro docs — do NOT rely on memory, these details have shifted with recent iOS 26 support work:**
+
+- **Text selectors are regex by default.** `tapOn: 'Save'` is interpreted as a regex pattern. Plain English strings happen to be valid regex, but special chars (`.`, `$`, `[`) must be escaped.
+- **`id` selectors map to `accessibilityIdentifier` on iOS** (which is what React Native's `testID` becomes). `text` selectors map to `accessibilityLabel`, which is often the visible string and therefore localized.
+- **Maestro's official recommendation: use `id` for "icons, images, and localized apps"** — the exact stack this skill audits. Grep every `tapOn:` / `visible:` / `assertVisible:` in `.maestro/` for bare string arguments; each one is a potential i18n regression.
+- **Locale override is CLI-level, not in-flow.** `launchApp` does NOT accept a `language`, `locale`, or `appLanguage` field. Setting a device locale requires `maestro start-device --platform ios --device-locale en_US` BEFORE the test run. Don't suggest forcing locale inside YAML flows — it's not supported.
+- **`eraseText` without a count defaults to 50 characters**, not "clear entire field". `eraseText: 50` is identical to `eraseText` alone. Do not suggest removing the count as a "simplification" — it's a no-op.
+- **Verify NativeTabs / native-tab-bar testID propagation** against the current `expo-router` version before recommending `id` selectors for tab buttons. At the time this section was written, `expo-router/unstable-native-tabs` did not propagate `testID` to the native tab bar, so tab labels had to be tapped by text. This may change — always check `node_modules/expo-router/build/native-tabs/*.d.ts` for current prop support before flagging the existing flow as wrong.
+
+**What to look for in the codebase:**
+
+1. **Shared UI components that render localized text without a `testID` prop** — `EmptyState`, `SectionHeader`, custom Button/Card wrappers, dialog titles. These are the blast-radius amplifiers: a single testID prop wired through solves every flow that asserts on that component's text. Prefer adding a `testID` prop that also generates a `${testID}-action`-style id for any internal CTA button (so the empty state AND its "Try again" button are both targetable from one prop).
+
+2. **Screens with a `testID="xxx-screen"` on only one branch** — check whether the testID is present in the empty-state branch as well as the data branch. A flow that asserts `{ id: 'xxx-screen' }` after signing up a fresh user may hit the empty branch where the testID doesn't exist.
+
+3. **Flows tapping SwiftUI menus via `point: 'X%,Y%'`** — fragile across device form factors. These typically exist because `@expo/ui` `MenuView.swift` doesn't propagate `accessibilityIdentifier` from the JS `testID` prop. The upstream fix is a one-line patch to `MenuView.swift`; worth tracking rather than accepting indefinitely.
+
+4. **Flows dependent on the English onboarding overlay of `expo-dev-client`** — this is an external component with hardcoded English strings. Can't be fixed by adding a testID; locale pinning is the only workaround, and only at the `start-device` level.
+
+**Validate changes against the running suite.** After any component-level testID addition or flow edit:
+
+1. Use `mcp__maestro__check_flow_syntax` on every edited flow file
+2. Run the full suite (`bun run e2e`) on a connected iOS simulator with the dev build installed and Metro running on `localhost:8081`
+3. Do NOT rely on spot-checking one flow — testID changes can break unrelated flows that share a subflow
+
+**Docs (always re-verify — Maestro's docs change, especially for iOS 26 support):**
+- https://docs.maestro.dev/reference/selectors/core-selectors
+- https://docs.maestro.dev/maestro-flows/flow-control-and-logic/test-in-different-locales
+- https://docs.maestro.dev/reference/commands-available/tapon
+- https://docs.maestro.dev/reference/commands-available/launchapp
+
+### 2.13 DRY: Eliminating duplication between production and test database setup
 
 **This is a critical maintenance concern.** In a local-first app with two databases (client SQLite + server Postgres), there's a constant risk of production and test database setups drifting apart. When raw SQL or configuration is duplicated between production code and test utilities, changing one without updating the other creates silent test fidelity bugs — tests pass, but they're no longer testing what production actually does.
 
@@ -365,7 +400,7 @@ After auditing, produce a prioritized list of improvements ordered by impact:
 - Strengthen upload queue tests with failure scenarios (section 2.4)
 
 **Priority 4 (Nice to have):**
-- Set up Maestro E2E for critical user journeys — this covers real native UI behavior that mocked component tests can't
+- Audit Maestro flows for id-based selectors and i18n-safe assertions (section 2.12) — add `testID` props to shared components (`EmptyState`, `SectionHeader`, CTA buttons) so every flow can switch off visible English text
 - Consider a migration-specific test for critical schema changes (section 2.3)
 - Add full component render tests for the 2-3 most complex screens (only if Maestro doesn't already cover the same scenarios)
 

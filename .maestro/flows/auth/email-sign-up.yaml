@@ -1,0 +1,11 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - auth
+  - smoke
+
+---
+# Email Sign-Up E2E Test
+# Verifies: fresh user can sign up with email and lands on home screen
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml

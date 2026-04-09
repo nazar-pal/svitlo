@@ -1,0 +1,36 @@
+appId: com.devnazar.svitlo.dev
+---
+# Reusable subflow: Create a new organization from the drawer.
+# Auto-generates output.orgName if the caller hasn't set it.
+# Result: organization is created and selected, user is on home screen.
+
+- evalScript: ${output.orgName = output.orgName || 'Test Org ' + Date.now()}
+
+# Open drawer, then tap "Create Organization" (the drawer auto-closes on tap)
+- tapOn:
+    id: 'drawer-toggle'
+- tapOn:
+    id: 'drawer-create-org'
+
+# Fill in the name
+- extendedWaitUntil:
+    visible:
+      id: 'create-org-name-input'
+    timeout: 5000
+- tapOn:
+    id: 'create-org-name-input'
+- inputText: ${output.orgName}
+
+# Submit and wait for the dialog to close
+- tapOn:
+    id: 'create-org-submit'
+- extendedWaitUntil:
+    notVisible:
+      id: 'create-org-name-input'
+    timeout: 5000
+
+# Wait for home screen to be fully interactive again
+- extendedWaitUntil:
+    visible:
+      id: 'home-screen'
+    timeout: 10000

@@ -1,0 +1,42 @@
+appId: com.devnazar.svitlo.dev
+---
+# Reusable subflow: Create a generator in manual mode.
+# Auto-generates title/model if the caller hasn't set them.
+# Expects: user on home screen with no generators (empty state).
+# Result: generator is created, user is back on home screen.
+
+- evalScript: ${output.genTitle = output.genTitle || 'Test Generator'}
+- evalScript: ${output.genModel = output.genModel || 'Honda EU2200i'}
+
+# Tap the empty-state "Add Generator" CTA
+- tapOn:
+    id: 'home-empty-action'
+
+# Step 1: Basics
+- extendedWaitUntil:
+    visible:
+      id: 'create-gen-title-input'
+    timeout: 5000
+- tapOn:
+    id: 'create-gen-title-input'
+- inputText: ${output.genTitle}
+- tapOn:
+    id: 'create-gen-model-input'
+- inputText: ${output.genModel}
+- tapOn:
+    id: 'header-submit'
+
+# Step 2: Details — manual mode, default operating parameters (8h/4h/80%)
+- extendedWaitUntil:
+    visible:
+      id: 'create-gen-manual-mode'
+    timeout: 5000
+- tapOn:
+    id: 'create-gen-manual-mode'
+- tapOn:
+    id: 'header-submit'
+
+# Verify generator is visible on the home screen
+- extendedWaitUntil:
+    visible: ${output.genTitle}
+    timeout: 10000

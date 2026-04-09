@@ -243,6 +243,7 @@ export default function TemplateDetailsScreen() {
         {/* Record Maintenance Button */}
         {!isOneTimeDone ? (
           <Button
+            testID="template-details-record"
             size="lg"
             onPress={() =>
               router.push(

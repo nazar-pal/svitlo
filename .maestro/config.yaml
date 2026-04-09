@@ -1,0 +1,7 @@
+appId: com.devnazar.svitlo.dev
+
+flows:
+  - "flows/**"
+
+env:
+  E2E_TEST_PASSWORD: TestPass123!

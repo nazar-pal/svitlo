@@ -89,6 +89,7 @@ export default function RecordMaintenanceScreen() {
           <TextField>
             <Label>{t('maintenanceRecord.notes')}</Label>
             <Input
+              testID="record-maintenance-notes-input"
               placeholder={t('maintenanceRecord.notesPlaceholder')}
               value={notes}
               onChangeText={setNotes}

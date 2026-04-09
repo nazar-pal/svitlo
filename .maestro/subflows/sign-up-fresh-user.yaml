@@ -1,0 +1,50 @@
+appId: com.devnazar.svitlo.dev
+---
+# Reusable subflow: Sign up a fresh test user via email.
+# Auto-generates output.email and output.userName if the caller hasn't set them.
+# Expects: E2E_TEST_PASSWORD env var
+# Result: signed-in user on the home screen
+
+- evalScript: ${output.email = output.email || 'e2e-' + Date.now() + '@test.svitlo.app'}
+- evalScript: ${output.userName = output.userName || 'E2E Test User'}
+
+# Wait for sign-in screen
+- extendedWaitUntil:
+    visible:
+      id: 'sign-in-email-link'
+    timeout: 15000
+
+# Open email auth modal
+- tapOn:
+    id: 'sign-in-email-link'
+
+# Switch to sign-up mode (default is sign-in)
+- tapOn:
+    id: 'email-auth-toggle-mode'
+
+# Fill sign-up form using Enter to advance between fields.
+# IMPORTANT: Do NOT tap password fields directly — that triggers iOS
+# "Automatic Strong Password" autofill which blocks the input.
+# Instead, use pressKey: Enter to move focus via onSubmitEditing chains.
+- tapOn:
+    id: 'email-auth-name-input'
+- inputText: ${output.userName}
+- pressKey: Enter
+
+# Email field is now focused
+- inputText: ${output.email}
+- pressKey: Enter
+
+# Password field is now focused
+- inputText: ${E2E_TEST_PASSWORD}
+- pressKey: Enter
+
+# Confirm password field is now focused
+- inputText: ${E2E_TEST_PASSWORD}
+- pressKey: Enter
+
+# Sign-up includes name, so we skip complete-profile and land on home
+- extendedWaitUntil:
+    visible:
+      id: 'home-screen'
+    timeout: 20000

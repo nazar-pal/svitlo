@@ -1,8 +1,16 @@
 import { Text } from 'react-native'
 
-export function SectionHeader({ title }: { title: string }) {
+interface SectionHeaderProps {
+  title: string
+  testID?: string
+}
+
+export function SectionHeader({ title, testID }: SectionHeaderProps) {
   return (
-    <Text className="text-muted ml-4 text-xs font-semibold tracking-wide uppercase">
+    <Text
+      testID={testID}
+      className="text-muted ml-4 text-xs font-semibold tracking-wide uppercase"
+    >
       {title}
     </Text>
   )

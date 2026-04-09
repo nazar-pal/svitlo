@@ -2,6 +2,7 @@ import '@azure/core-asynciterator-polyfill'
 import * as SplashScreen from 'expo-splash-screen'
 import { setBackgroundColorAsync } from 'expo-system-ui'
 import '../global.css'
+import '@/lib/hide-dev-fab'
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon'
 import { UpdateChecker } from '@/components/update-checker'

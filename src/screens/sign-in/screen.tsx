@@ -47,7 +47,10 @@ export default function SignInScreen() {
             .
           </Text>
 
-          <Pressable onPress={() => router.push('/(auth)/email-auth')}>
+          <Pressable
+            testID="sign-in-email-link"
+            onPress={() => router.push('/(auth)/email-auth')}
+          >
             <Text className="text-muted text-center text-xs">
               {t('auth.useEmailInstead')}
             </Text>

@@ -1,0 +1,36 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - generators
+
+---
+# Edit Generator Settings E2E Test
+# Verifies: user can open generator settings, change the title, and save
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+- runFlow: ../../subflows/create-test-generator.yaml
+
+# Open the actions menu and tap Settings
+- tapOn:
+    id: 'home-actions-menu'
+- tapOn:
+    id: 'home-action-settings'
+
+# Clear and update the title
+- extendedWaitUntil:
+    visible:
+      id: 'gen-settings-title-input'
+    timeout: 5000
+- tapOn:
+    id: 'gen-settings-title-input'
+- eraseText: 50
+- inputText: 'Updated Name'
+
+# Save
+- tapOn:
+    id: 'header-submit'
+
+# Verify the updated title shows on home screen
+- extendedWaitUntil:
+    visible: 'Updated Name'
+    timeout: 10000

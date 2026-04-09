@@ -15,6 +15,7 @@ export function DrawerTriggerButton() {
 
   return (
     <Pressable
+      testID="drawer-toggle"
       onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
       hitSlop={8}
       accessibilityLabel={

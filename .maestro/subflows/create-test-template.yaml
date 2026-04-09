@@ -1,0 +1,40 @@
+appId: com.devnazar.svitlo.dev
+---
+# Reusable subflow: Create a maintenance template for the current generator.
+# Auto-generates template name/hours if the caller hasn't set them.
+# Expects: user on the generator maintenance list screen (empty state).
+
+- evalScript: ${output.templateName = output.templateName || 'Oil Change'}
+- evalScript: ${output.templateHours = output.templateHours || '100'}
+
+# Tap the "+" button in the header to open the new-template screen
+- tapOn:
+    id: 'gen-maintenance-new-task'
+
+# taskName input is autoFocus'd — type directly without tapping
+- extendedWaitUntil:
+    visible:
+      id: 'create-template-name-input'
+    timeout: 5000
+- inputText: ${output.templateName}
+
+# Dismiss keyboard by tapping a non-interactive label above the keyboard.
+# The hours input sits below the keyboard fold, so tapping it directly would
+# land on a keyboard key instead of the input.
+- tapOn: 'Trigger Type'
+
+# Default trigger type is "By Hours" — enter hours interval
+- tapOn:
+    id: 'create-template-hours-input'
+- inputText: ${output.templateHours}
+
+# Submit (header button sits above the keyboard so no dismiss needed)
+- tapOn:
+    id: 'header-submit'
+
+# Verify the template appears in the list.
+# HeroUI's ListGroup.Item rolls title + description into a single iOS
+# accessibility label, so we match a substring regex.
+- extendedWaitUntil:
+    visible: '.*${output.templateName}.*'
+    timeout: 10000

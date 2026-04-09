@@ -1,0 +1,52 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - organization
+
+---
+# Rename Organization E2E Test
+# Verifies: admin can rename an organization via the drawer menu
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+
+# Open drawer
+- tapOn:
+    id: 'drawer-toggle'
+- extendedWaitUntil:
+    visible:
+      id: 'drawer-org-Default'
+    timeout: 5000
+
+# Tap the ellipsis menu next to the Default org.
+# The SwiftMenu inside ListGroup.ItemSuffix is not exposed in the iOS
+# accessibility tree until it is opened, so testID-based selection doesn't
+# work here. The ellipsis sits at the right edge of the only org row visible
+# on a fresh sign-up, so we tap by point, then tap the menu item by text.
+- tapOn:
+    point: '73%,35%'
+- extendedWaitUntil:
+    visible: 'Rename'
+    timeout: 5000
+- tapOn: 'Rename'
+
+# Clear old name and type new one
+- extendedWaitUntil:
+    visible:
+      id: 'rename-org-name-input'
+    timeout: 5000
+- tapOn:
+    id: 'rename-org-name-input'
+- eraseText: 50
+- inputText: 'Renamed Org'
+
+# Submit
+- tapOn:
+    id: 'header-submit'
+
+# Verify the org name was updated in the drawer.
+# The drawer stays open across the push/pop navigation to the rename screen,
+# so we can assert the new name directly without re-opening the drawer.
+- extendedWaitUntil:
+    visible:
+      id: 'drawer-org-Renamed Org'
+    timeout: 5000

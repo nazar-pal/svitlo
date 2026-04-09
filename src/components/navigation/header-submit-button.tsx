@@ -8,18 +8,21 @@ interface HeaderSubmitButtonProps {
   systemImage?: SFSymbol
   onPress: () => void
   isDisabled?: boolean
+  testID?: string
 }
 
 export function HeaderSubmitButton({
   systemImage,
   onPress,
-  isDisabled
+  isDisabled,
+  testID = 'header-submit'
 }: HeaderSubmitButtonProps) {
   const { t } = useTranslation()
 
   return (
     <Host matchContents>
       <SwiftButton
+        testID={testID}
         label={t('common.submit')}
         systemImage={systemImage || 'checkmark'}
         onPress={onPress}

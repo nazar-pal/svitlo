@@ -82,6 +82,7 @@ export function CreateOrgDialog({ isOpen, onClose }: CreateOrgDialogProps) {
               <TextField isInvalid={!!error}>
                 <Label>{t('organization.organizationName')}</Label>
                 <Input
+                  testID="create-org-name-input"
                   placeholder={t('organization.namePlaceholder')}
                   value={name}
                   onChangeText={setName}
@@ -96,6 +97,7 @@ export function CreateOrgDialog({ isOpen, onClose }: CreateOrgDialogProps) {
                   {t('common.cancel')}
                 </Button>
                 <Button
+                  testID="create-org-submit"
                   size="sm"
                   isDisabled={isSubmitting}
                   onPress={handleCreate}

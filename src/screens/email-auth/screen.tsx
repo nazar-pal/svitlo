@@ -88,6 +88,7 @@ export default function EmailAuthScreen() {
             <TextField>
               <Label>{t('auth.name')}</Label>
               <Input
+                testID="email-auth-name-input"
                 placeholder={t('auth.namePlaceholder')}
                 value={name}
                 onChangeText={setName}
@@ -102,6 +103,7 @@ export default function EmailAuthScreen() {
           <TextField>
             <Label>{t('auth.email')}</Label>
             <Input
+              testID="email-auth-email-input"
               ref={emailRef}
               placeholder={t('auth.emailPlaceholder')}
               value={email}
@@ -118,6 +120,7 @@ export default function EmailAuthScreen() {
           <TextField>
             <Label>{t('auth.password')}</Label>
             <Input
+              testID="email-auth-password-input"
               ref={passwordRef}
               placeholder={
                 isSignUp ? t('auth.createPassword') : t('auth.enterPassword')
@@ -139,6 +142,7 @@ export default function EmailAuthScreen() {
             <TextField>
               <Label>{t('auth.confirmPassword')}</Label>
               <Input
+                testID="email-auth-confirm-password-input"
                 ref={confirmPasswordRef}
                 placeholder={t('auth.confirmPasswordPlaceholder')}
                 value={confirmPassword}
@@ -156,6 +160,7 @@ export default function EmailAuthScreen() {
         <FormError message={error} />
 
         <Button
+          testID="email-auth-submit-button"
           variant="primary"
           isDisabled={isSubmitting}
           onPress={handleSubmit}
@@ -169,7 +174,7 @@ export default function EmailAuthScreen() {
               : t('auth.signIn')}
         </Button>
 
-        <Pressable onPress={toggleMode}>
+        <Pressable testID="email-auth-toggle-mode" onPress={toggleMode}>
           <Text className="text-muted text-center text-sm">
             {isSignUp
               ? t('auth.alreadyHaveAccount')

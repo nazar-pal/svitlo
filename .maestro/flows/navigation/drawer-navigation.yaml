@@ -1,0 +1,30 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - navigation
+
+---
+# Drawer Navigation E2E Test
+# Verifies: drawer opens and shows user info, org list, and sign-out button
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+
+# Open drawer
+- tapOn:
+    id: 'drawer-toggle'
+
+# Verify drawer content
+- extendedWaitUntil:
+    visible:
+      id: 'drawer-content'
+    timeout: 5000
+
+# User name, default org, create-org, sign-out should all be visible.
+# output.userName is set by the sign-up-fresh-user subflow.
+- assertVisible: ${output.userName}
+- assertVisible:
+    id: 'drawer-org-Default'
+- assertVisible:
+    id: 'drawer-create-org'
+- assertVisible:
+    id: 'drawer-sign-out'

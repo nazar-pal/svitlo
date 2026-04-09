@@ -1,0 +1,8 @@
+appId: com.devnazar.svitlo.dev
+---
+# Reusable setup: launch a clean dev build and sign up a fresh user.
+# Leaves user signed-in on the home screen with a "Default" organization
+# (auto-created server-side by Better Auth's user.create.after hook).
+
+- runFlow: launch-dev-app.yaml
+- runFlow: sign-up-fresh-user.yaml

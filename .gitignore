@@ -49,3 +49,6 @@ app-example
 
 # test coverage
 coverage/
+
+# Maestro e2e test report
+report.xml

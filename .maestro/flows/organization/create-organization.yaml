@@ -1,0 +1,25 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - organization
+
+---
+# Create Organization E2E Test
+# Verifies: user can create a new organization on top of the auto-created
+# "Default" org and sees both in the drawer.
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+
+# Create a new organization with a specific name
+- evalScript: ${output.orgName = 'My Workshop'}
+- runFlow: ../../subflows/create-test-organization.yaml
+
+# Open drawer again to verify both orgs are in the list
+- tapOn:
+    id: 'drawer-toggle'
+- extendedWaitUntil:
+    visible:
+      id: 'drawer-org-My Workshop'
+    timeout: 5000
+- assertVisible:
+    id: 'drawer-org-Default'

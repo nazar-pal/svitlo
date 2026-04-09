@@ -1,0 +1,32 @@
+appId: com.devnazar.svitlo.dev
+---
+# Reusable subflow: Sign in an existing user via email
+# Expects: output.email and E2E_TEST_PASSWORD env var
+
+# Wait for sign-in screen
+- extendedWaitUntil:
+    visible:
+      id: 'sign-in-email-link'
+    timeout: 15000
+
+# Open email auth modal
+- tapOn:
+    id: 'sign-in-email-link'
+
+# Default mode is sign-in, so no toggle needed
+
+# Fill sign-in form
+- tapOn:
+    id: 'email-auth-email-input'
+- inputText: ${output.email}
+- pressKey: Enter
+
+# Password field is now focused
+- inputText: ${E2E_TEST_PASSWORD}
+- pressKey: Enter
+
+# Should land on home or complete-name screen
+- extendedWaitUntil:
+    visible:
+      id: 'home-screen'
+    timeout: 20000

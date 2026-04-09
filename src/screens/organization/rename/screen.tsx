@@ -73,6 +73,7 @@ export default function RenameOrganizationScreen() {
           <TextField isInvalid={!!error}>
             <Label>{t('organization.organizationName')}</Label>
             <Input
+              testID="rename-org-name-input"
               placeholder={t('organization.namePlaceholder')}
               value={displayName}
               onChangeText={setName}

@@ -1,0 +1,30 @@
+appId: com.devnazar.svitlo.dev
+
+tags:
+  - auth
+
+---
+# Email Sign-In E2E Test
+# Verifies: existing user can sign in, lands on home screen.
+# Strategy: sign up first, sign out, then sign back in.
+
+- runFlow: ../../subflows/setup-signed-in-user.yaml
+
+# Open drawer and sign out
+- tapOn:
+    id: 'drawer-toggle'
+- extendedWaitUntil:
+    visible:
+      id: 'drawer-sign-out'
+    timeout: 5000
+- tapOn:
+    id: 'drawer-sign-out'
+
+# Wait for sign-in screen to reappear
+- extendedWaitUntil:
+    visible:
+      id: 'sign-in-email-link'
+    timeout: 10000
+
+# Sign back in using the same credentials (output.email was set during sign-up)
+- runFlow: ../../subflows/sign-in-existing-user.yaml

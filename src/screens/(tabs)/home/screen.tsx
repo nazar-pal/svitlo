@@ -151,7 +151,10 @@ export default function HomeScreen() {
 
   if (userOrgs.length === 0)
     return (
-      <View className="bg-background flex-1 items-center justify-center px-5 pb-10">
+      <View
+        testID="home-screen"
+        className="bg-background flex-1 items-center justify-center px-5 pb-10"
+      >
         <Stack.Screen options={{ headerShown: false }} />
         <EmptyState
           icon="building.2"
@@ -211,16 +214,19 @@ export default function HomeScreen() {
               <Host matchContents>
                 {carouselItems.length > 0 ? (
                   <SwiftMenu
+                    testID="home-actions-menu"
                     label={t('common.actions')}
                     systemImage="ellipsis.circle"
                     modifiers={[labelStyle('iconOnly')]}
                   >
                     <SwiftButton
+                      testID="home-action-add"
                       label={t('home.addGenerator')}
                       systemImage="plus"
                       onPress={() => router.push('/generator/create')}
                     />
                     <SwiftButton
+                      testID="home-action-settings"
                       label={t('generator.settings')}
                       systemImage="gearshape"
                       onPress={() =>
@@ -230,6 +236,7 @@ export default function HomeScreen() {
                       }
                     />
                     <SwiftButton
+                      testID="home-action-maintenance"
                       label={t('tabs.maintenance')}
                       systemImage="wrench.and.screwdriver"
                       onPress={() =>
@@ -240,6 +247,7 @@ export default function HomeScreen() {
                     />
                     <SwiftDivider />
                     <SwiftButton
+                      testID="home-action-delete"
                       label={t('generator.deleteGenerator')}
                       systemImage="trash"
                       role="destructive"
@@ -275,6 +283,7 @@ export default function HomeScreen() {
                   </SwiftMenu>
                 ) : (
                   <SwiftButton
+                    testID="home-add-generator"
                     label={t('home.add')}
                     systemImage="plus"
                     modifiers={[labelStyle('iconOnly')]}
@@ -287,8 +296,12 @@ export default function HomeScreen() {
       />
 
       {generators.length === 0 ? (
-        <View className="bg-background flex-1 items-center justify-center px-5 pb-10">
+        <View
+          testID="home-screen"
+          className="bg-background flex-1 items-center justify-center px-5 pb-10"
+        >
           <EmptyState
+            testID="home-empty"
             icon="bolt.slash"
             title={t('home.noGenerators')}
             description={
@@ -303,7 +316,11 @@ export default function HomeScreen() {
           />
         </View>
       ) : (
-        <SafeAreaView edges={{ bottom: true }} className="bg-background flex-1">
+        <SafeAreaView
+          testID="home-screen"
+          edges={{ bottom: true }}
+          className="bg-background flex-1"
+        >
           <Animated.FlatList
             key={count}
             ref={flatListRef}

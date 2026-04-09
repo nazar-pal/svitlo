@@ -134,10 +134,20 @@ export function InvitationDialog({
                 )}
               </View>
               <View className="flex-row justify-end gap-3">
-                <Button variant="ghost" size="sm" onPress={handleDecline}>
+                <Button
+                  testID="invitation-decline"
+                  variant="ghost"
+                  size="sm"
+                  onPress={handleDecline}
+                >
                   {t('organization.decline')}
                 </Button>
-                <Button variant="primary" size="sm" onPress={handleAccept}>
+                <Button
+                  testID="invitation-accept"
+                  variant="primary"
+                  size="sm"
+                  onPress={handleAccept}
+                >
                   {t('organization.accept')}
                 </Button>
               </View>

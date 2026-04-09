@@ -81,7 +81,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
   }
 
   return (
-    <SafeAreaView className="bg-background flex-1">
+    <SafeAreaView testID="drawer-content" className="bg-background flex-1">
       {/* Header — Account */}
       <View className="items-center gap-2 py-8">
         <Avatar size="lg" color="accent" alt={userName}>
@@ -115,6 +115,8 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
               <View key={org.id}>
                 {index > 0 ? <Separator className="mx-4" /> : null}
                 <ListGroup.Item
+                  testID={`drawer-org-${org.name}`}
+                  accessibilityLabel={org.name}
                   className={
                     org.id === selectedOrgId ? 'bg-accent/10' : undefined
                   }
@@ -189,6 +191,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
             ))}
             <Separator className="mx-4" />
             <ListGroup.Item
+              testID="drawer-create-org"
               onPress={() => {
                 navigation.dispatch(DrawerActions.closeDrawer())
                 setIsCreateOrgOpen(true)
@@ -285,7 +288,11 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
             {t('common.signIn')}
           </Button>
         ) : null}
-        <Button variant="danger-soft" onPress={handleSignOut}>
+        <Button
+          testID="drawer-sign-out"
+          variant="danger-soft"
+          onPress={handleSignOut}
+        >
           {t('common.signOut')}
         </Button>
       </View>

@@ -20,7 +20,14 @@
     "test:watch": "NODE_OPTIONS='--experimental-vm-modules' jest --watch",
     "flt": "npm run format && npm run lint && npm run typecheck",
     "fltt": "npm run format && npm run lint && npm run typecheck && npm run test",
-    "ota:prod": "eas update --channel production --environment production --platform ios"
+    "ota:prod": "eas update --channel production --environment production --platform ios",
+    "e2e": "maestro test .maestro/",
+    "e2e:auth": "maestro test .maestro/flows/auth/",
+    "e2e:generators": "maestro test .maestro/flows/generators/",
+    "e2e:maintenance": "maestro test .maestro/flows/maintenance/",
+    "e2e:org": "maestro test .maestro/flows/organization/",
+    "e2e:nav": "maestro test .maestro/flows/navigation/",
+    "e2e:smoke": "maestro test --include-tags smoke .maestro/"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.59",

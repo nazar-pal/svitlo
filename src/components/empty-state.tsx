@@ -8,6 +8,7 @@ interface EmptyStateProps {
   description?: string
   actionLabel?: string
   onAction?: () => void
+  testID?: string
 }
 
 export function EmptyState({
@@ -15,12 +16,13 @@ export function EmptyState({
   title,
   description,
   actionLabel,
-  onAction
+  onAction,
+  testID
 }: EmptyStateProps) {
   const mutedColor = useThemeColor('muted')
 
   return (
-    <View className="items-center gap-4 py-12">
+    <View testID={testID} className="items-center gap-4 py-12">
       <SymbolView name={icon as any} size={48} tintColor={mutedColor} />
       <View className="items-center gap-2">
         <Text className="text-foreground text-center text-lg font-semibold">
@@ -33,7 +35,11 @@ export function EmptyState({
         ) : null}
       </View>
       {actionLabel && onAction ? (
-        <Button variant="primary" onPress={onAction}>
+        <Button
+          variant="primary"
+          onPress={onAction}
+          testID={testID ? `${testID}-action` : undefined}
+        >
           {actionLabel}
         </Button>
       ) : null}

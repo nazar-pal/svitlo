@@ -261,6 +261,7 @@ export default function CreateGeneratorScreen() {
               <TextField isInvalid={!!fieldErrors.title}>
                 <Label>{t('generator.title')}</Label>
                 <Input
+                  testID="create-gen-title-input"
                   placeholder={t('generator.titlePlaceholder')}
                   {...field('title')}
                   autoFocus
@@ -271,6 +272,7 @@ export default function CreateGeneratorScreen() {
               <TextField isInvalid={!!fieldErrors.model}>
                 <Label>{t('generator.model')}</Label>
                 <Input
+                  testID="create-gen-model-input"
                   placeholder={t('generator.modelPlaceholder')}
                   {...field('model')}
                 />
@@ -337,7 +339,10 @@ export default function CreateGeneratorScreen() {
                   </Card.Body>
                 </Card>
               </PressableFeedback>
-              <PressableFeedback onPress={handleManualMode}>
+              <PressableFeedback
+                testID="create-gen-manual-mode"
+                onPress={handleManualMode}
+              >
                 <Card>
                   <Card.Body>
                     <Card.Title>{t('generator.enterManually')}</Card.Title>
