@@ -14,8 +14,7 @@
       "command": "maestro",
       "args": [
         "mcp"
-      ],
-      "env": {}
+      ]
     }
   }
 }
