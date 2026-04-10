@@ -26,17 +26,13 @@ import {
   getGeneratorAssignments,
   getOrgMembers
 } from '@/data/client/queries'
-import {
-  flattenZodErrors,
-  updateGeneratorSchema
-} from '@/data/client/validation'
+import { updateGeneratorSchema } from '@/data/client/validation'
 import { alertOnError } from '@/lib/alerts'
 import { notifySuccess, notifyWarning } from '@/lib/haptics'
+import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useFormFields } from '@/lib/hooks/use-form-fields'
 import { useLocalUser } from '@/lib/powersync'
 import { getUserName } from '@/lib/utils/get-user-name'
-import { useState } from 'react'
 
 import { useTranslation } from '@/lib/i18n'
 import { AssignedMembersSection } from '@/components/assigned-members-section'
@@ -67,15 +63,27 @@ function SettingsForm({ generator }: { generator: Generator }) {
     getOrgMembers(generator.organizationId)
   )
 
-  const [error, setError] = useState('')
-
-  const { values, field, fieldErrors, setFieldErrors } = useFormFields({
-    title: generator.title,
-    model: generator.model,
-    description: generator.description ?? '',
-    maxConsecutiveRunHours: String(generator.maxConsecutiveRunHours),
-    requiredRestHours: String(generator.requiredRestHours),
-    runWarningThresholdPct: String(generator.runWarningThresholdPct)
+  const { submit, formError, bind } = useForm({
+    initial: {
+      title: generator.title,
+      model: generator.model,
+      description: generator.description ?? '',
+      maxConsecutiveRunHours: String(generator.maxConsecutiveRunHours),
+      requiredRestHours: String(generator.requiredRestHours),
+      runWarningThresholdPct: String(generator.runWarningThresholdPct)
+    },
+    shortCircuit: state => !state.isDirty,
+    build: values =>
+      validateWithZod(updateGeneratorSchema, {
+        title: values.title,
+        model: values.model,
+        description: values.description || null,
+        maxConsecutiveRunHours: Number(values.maxConsecutiveRunHours),
+        requiredRestHours: Number(values.requiredRestHours),
+        runWarningThresholdPct: Number(values.runWarningThresholdPct)
+      }),
+    mutate: input => updateGenerator(userId, generatorId, input),
+    onSuccess: () => router.back()
   })
 
   const assignedUserIds = new Set(assignments.map(a => a.userId))
@@ -84,49 +92,6 @@ function SettingsForm({ generator }: { generator: Generator }) {
   )
 
   const resolveUserName = (uid: string) => getUserName(users, uid)
-
-  async function handleSave() {
-    const unchanged =
-      values.title === generator.title &&
-      values.model === generator.model &&
-      values.description === (generator.description ?? '') &&
-      values.maxConsecutiveRunHours ===
-        String(generator.maxConsecutiveRunHours) &&
-      values.requiredRestHours === String(generator.requiredRestHours) &&
-      values.runWarningThresholdPct === String(generator.runWarningThresholdPct)
-
-    if (unchanged) {
-      router.back()
-      return
-    }
-
-    setError('')
-    setFieldErrors({})
-
-    const input = {
-      title: values.title,
-      model: values.model,
-      description: values.description || null,
-      maxConsecutiveRunHours: Number(values.maxConsecutiveRunHours),
-      requiredRestHours: Number(values.requiredRestHours),
-      runWarningThresholdPct: Number(values.runWarningThresholdPct)
-    }
-
-    const parsed = updateGeneratorSchema.safeParse(input)
-    if (!parsed.success) {
-      setFieldErrors(flattenZodErrors(parsed.error))
-      return
-    }
-
-    const result = await updateGenerator(userId, generatorId, parsed.data)
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-
-    notifySuccess()
-    router.back()
-  }
 
   function handleDelete() {
     Alert.alert(
@@ -177,12 +142,19 @@ function SettingsForm({ generator }: { generator: Generator }) {
     ])
   }
 
+  const titleBinding = bind.text('title')
+  const modelBinding = bind.text('model')
+  const descriptionBinding = bind.text('description')
+  const maxRunBinding = bind.text('maxConsecutiveRunHours')
+  const restBinding = bind.text('requiredRestHours')
+  const warnBinding = bind.text('runWarningThresholdPct')
+
   return (
     <>
       <Stack.Screen
         options={{
           title: t('generator.settings'),
-          headerRight: () => <HeaderSubmitButton onPress={handleSave} />
+          headerRight: () => <HeaderSubmitButton onPress={submit} />
         }}
       />
       <KeyboardAwareScrollView
@@ -195,30 +167,33 @@ function SettingsForm({ generator }: { generator: Generator }) {
       >
         <View className="mx-auto w-full max-w-150 gap-7">
           <View className="gap-5">
-            <TextField isInvalid={!!fieldErrors.title}>
+            <TextField isInvalid={titleBinding.isInvalid}>
               <Label>{t('generator.title')}</Label>
               <Input
                 testID="gen-settings-title-input"
                 placeholder={t('generator.generatorTitle')}
-                {...field('title')}
+                value={titleBinding.value}
+                onChangeText={titleBinding.onChangeText}
               />
-              <FieldError>{fieldErrors.title}</FieldError>
+              <FieldError>{titleBinding.errorMessage}</FieldError>
             </TextField>
 
-            <TextField isInvalid={!!fieldErrors.model}>
+            <TextField isInvalid={modelBinding.isInvalid}>
               <Label>{t('generator.model')}</Label>
               <Input
                 placeholder={t('generator.generatorModel')}
-                {...field('model')}
+                value={modelBinding.value}
+                onChangeText={modelBinding.onChangeText}
               />
-              <FieldError>{fieldErrors.model}</FieldError>
+              <FieldError>{modelBinding.errorMessage}</FieldError>
             </TextField>
 
             <TextField>
               <Label>{t('generator.description')}</Label>
               <Input
                 placeholder={t('generator.descriptionPlaceholder')}
-                {...field('description')}
+                value={descriptionBinding.value}
+                onChangeText={descriptionBinding.onChangeText}
                 multiline
               />
               <Description>{t('common.optional')}</Description>
@@ -226,38 +201,41 @@ function SettingsForm({ generator }: { generator: Generator }) {
 
             <View className="flex-row gap-3">
               <View className="flex-1">
-                <TextField isInvalid={!!fieldErrors.maxConsecutiveRunHours}>
+                <TextField isInvalid={maxRunBinding.isInvalid}>
                   <Label>{t('generator.maxRunHours')}</Label>
                   <Input
                     placeholder="8"
-                    {...field('maxConsecutiveRunHours')}
+                    value={maxRunBinding.value}
+                    onChangeText={maxRunBinding.onChangeText}
                     keyboardType="decimal-pad"
                   />
-                  <FieldError>{fieldErrors.maxConsecutiveRunHours}</FieldError>
+                  <FieldError>{maxRunBinding.errorMessage}</FieldError>
                 </TextField>
               </View>
               <View className="flex-1">
-                <TextField isInvalid={!!fieldErrors.requiredRestHours}>
+                <TextField isInvalid={restBinding.isInvalid}>
                   <Label>{t('generator.restHours')}</Label>
                   <Input
                     placeholder="4"
-                    {...field('requiredRestHours')}
+                    value={restBinding.value}
+                    onChangeText={restBinding.onChangeText}
                     keyboardType="decimal-pad"
                   />
-                  <FieldError>{fieldErrors.requiredRestHours}</FieldError>
+                  <FieldError>{restBinding.errorMessage}</FieldError>
                 </TextField>
               </View>
             </View>
 
-            <TextField isInvalid={!!fieldErrors.runWarningThresholdPct}>
+            <TextField isInvalid={warnBinding.isInvalid}>
               <Label>{t('generator.warningThresholdPct')}</Label>
               <Input
                 placeholder="80"
-                {...field('runWarningThresholdPct')}
+                value={warnBinding.value}
+                onChangeText={warnBinding.onChangeText}
                 keyboardType="number-pad"
               />
               <Description>{t('generator.warningThresholdDesc')}</Description>
-              <FieldError>{fieldErrors.runWarningThresholdPct}</FieldError>
+              <FieldError>{warnBinding.errorMessage}</FieldError>
             </TextField>
           </View>
 
@@ -269,7 +247,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
             onUnassign={handleUnassign}
           />
 
-          <FormError message={error} />
+          <FormError message={formError} />
 
           <Button
             testID="gen-settings-delete"

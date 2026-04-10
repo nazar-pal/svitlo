@@ -1,61 +1,46 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { FieldError, Input, Label, TextField } from 'heroui-native'
-import { useState } from 'react'
 import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
+import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { renameOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
 import { updateOrganizationSchema } from '@/data/client/validation'
-import { notifySuccess } from '@/lib/haptics'
+import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function RenameOrganizationScreen() {
-  const { t } = useTranslation()
   const { id: orgId } = useLocalSearchParams<{ id: string }>()
-  const router = useRouter()
   const localUser = useLocalUser()
+  if (!localUser || !orgId) return null
+  return <RenameForm userId={localUser.id} orgId={orgId} />
+}
 
-  const { data: orgs } = useDrizzleQuery(getOrganization(orgId!))
+function RenameForm({ userId, orgId }: { userId: string; orgId: string }) {
+  const { t } = useTranslation()
+  const router = useRouter()
+  const { data: orgs } = useDrizzleQuery(getOrganization(orgId))
   const currentName = orgs[0]?.name ?? ''
 
-  const [name, setName] = useState<string | null>(null)
-  const [error, setError] = useState('')
+  const { submit, formError, bind } = useForm({
+    initial: { name: currentName },
+    shortCircuit: state => !state.isDirty,
+    build: values => validateWithZod(updateOrganizationSchema, values),
+    mutate: input => renameOrganization(userId, orgId, input),
+    onSuccess: () => router.back()
+  })
 
-  const displayName = name ?? currentName
-
-  async function handleRename() {
-    if (!localUser || !orgId) return
-    // Dismiss without mutation when nothing changed
-    if (displayName === currentName) return router.back()
-    setError('')
-
-    const parsed = updateOrganizationSchema.safeParse({ name: displayName })
-    if (!parsed.success) {
-      setError(parsed.error.issues[0].message)
-      return
-    }
-
-    const result = await renameOrganization(localUser.id, orgId, {
-      name: displayName
-    })
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-
-    notifySuccess()
-    router.back()
-  }
+  const nameBinding = bind.text('name')
 
   return (
     <>
       <Stack.Screen
         options={{
-          headerRight: () => <HeaderSubmitButton onPress={handleRename} />
+          headerRight: () => <HeaderSubmitButton onPress={submit} />
         }}
       />
       <KeyboardAwareScrollView
@@ -70,17 +55,19 @@ export default function RenameOrganizationScreen() {
             {t('organization.renameDesc')}
           </Text>
 
-          <TextField isInvalid={!!error}>
+          <TextField isInvalid={nameBinding.isInvalid}>
             <Label>{t('organization.organizationName')}</Label>
             <Input
               testID="rename-org-name-input"
               placeholder={t('organization.namePlaceholder')}
-              value={displayName}
-              onChangeText={setName}
+              value={nameBinding.value}
+              onChangeText={nameBinding.onChangeText}
               autoFocus
             />
-            <FieldError>{error}</FieldError>
+            <FieldError>{nameBinding.errorMessage}</FieldError>
           </TextField>
+
+          <FormError message={formError} />
         </View>
       </KeyboardAwareScrollView>
     </>

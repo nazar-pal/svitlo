@@ -10,19 +10,23 @@ import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
 import { selection } from '@/lib/haptics'
+import {
+  TRIGGER_TYPES,
+  type TriggerType,
+  isTriggerType,
+  showsCalendar,
+  showsHours
+} from '@/lib/maintenance/trigger-type'
 
 export interface EditableItem {
   taskName: string
   description: string
-  triggerType: 'hours' | 'calendar' | 'whichever_first'
+  triggerType: TriggerType
   triggerHoursInterval: number | null
   triggerCalendarDays: number | null
   isOneTime: boolean
   selected: boolean
 }
-
-const TRIGGER_TYPES = ['hours', 'calendar', 'whichever_first'] as const
-type TriggerType = (typeof TRIGGER_TYPES)[number]
 
 export function SuggestionCard({
   item,
@@ -39,10 +43,8 @@ export function SuggestionCard({
     calendar: t('maintenanceTemplate.calendar'),
     whichever_first: t('maintenanceTemplate.first')
   }
-  const showHours =
-    item.triggerType === 'hours' || item.triggerType === 'whichever_first'
-  const showCalendar =
-    item.triggerType === 'calendar' || item.triggerType === 'whichever_first'
+  const showHours = showsHours(item.triggerType)
+  const showCalendar = showsCalendar(item.triggerType)
 
   return (
     <View className={`py-3 ${!item.selected ? 'opacity-40' : ''}`}>
@@ -90,7 +92,7 @@ export function SuggestionCard({
               value={item.triggerType}
               onValueChange={v => {
                 selection()
-                onUpdate({ triggerType: v as TriggerType })
+                if (isTriggerType(v)) onUpdate({ triggerType: v })
               }}
             >
               <Tabs.List>

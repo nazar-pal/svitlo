@@ -1,9 +1,10 @@
 import { z } from 'zod'
 
 import { t } from '@/lib/i18n'
+import { TRIGGER_TYPES } from '@/lib/maintenance/trigger-type'
 import { zNonEmptyString, zPositiveInt, zPositiveReal } from './helpers'
 
-const triggerTypeEnum = z.enum(['hours', 'calendar', 'whichever_first'])
+const triggerTypeEnum = z.enum(TRIGGER_TYPES)
 
 function refineTriggerFields(
   data: {

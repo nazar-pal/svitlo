@@ -1,5 +1,6 @@
 import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
+import type { TriggerType } from '@/lib/maintenance/trigger-type'
 import { textId, textTimestamp } from './utils'
 
 export const maintenanceTemplates = sqliteTable('maintenance_templates', {
@@ -7,7 +8,7 @@ export const maintenanceTemplates = sqliteTable('maintenance_templates', {
   generatorId: text('generator_id').notNull(),
   taskName: text('task_name').notNull(),
   description: text('description'),
-  triggerType: text('trigger_type').notNull(), // 'hours' | 'calendar' | 'whichever_first'
+  triggerType: text('trigger_type').$type<TriggerType>().notNull(),
   triggerHoursInterval: real('trigger_hours_interval'),
   triggerCalendarDays: integer('trigger_calendar_days'),
   isOneTime: integer('is_one_time').notNull(),

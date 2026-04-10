@@ -358,7 +358,8 @@ export const en = {
     atLeastOneField: 'At least one field must be provided',
     mustNotBeEmpty: 'Must not be empty',
     mustBePositive: 'Must be greater than 0',
-    mustBePositiveInt: 'Must be a positive integer'
+    mustBePositiveInt: 'Must be a positive integer',
+    endBeforeStart: 'End time must be after start time'
   },
 
   due: {

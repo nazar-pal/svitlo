@@ -386,7 +386,8 @@ export const uk = {
     atLeastOneField: 'Необхідно вказати хоча б одне поле',
     mustNotBeEmpty: 'Не може бути порожнім',
     mustBePositive: 'Має бути більше 0',
-    mustBePositiveInt: 'Має бути додатнім цілим числом'
+    mustBePositiveInt: 'Має бути додатнім цілим числом',
+    endBeforeStart: 'Час завершення має бути пізніше часу початку'
   },
 
   due: {

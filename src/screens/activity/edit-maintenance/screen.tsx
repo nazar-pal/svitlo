@@ -1,7 +1,6 @@
 import { DatePicker, Host } from '@expo/ui/swift-ui'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Card, TextArea } from 'heroui-native'
-import { useState } from 'react'
 import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
@@ -9,69 +8,67 @@ import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { updateMaintenanceRecord } from '@/data/client/mutations'
+import type { MaintenanceRecord } from '@/data/client/db-schema/maintenance'
 import {
   getGenerator,
   getMaintenanceRecord,
   getMaintenanceTemplate
 } from '@/data/client/queries'
-import { notifySuccess } from '@/lib/haptics'
+import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function EditMaintenanceScreen() {
-  const { t } = useTranslation()
   const { recordId } = useLocalSearchParams<{ recordId: string }>()
-  const router = useRouter()
   const localUser = useLocalUser()
-
   const { data: recordData } = useDrizzleQuery(
     recordId ? getMaintenanceRecord(recordId) : undefined
   )
   const record = recordData[0]
+  if (!localUser || !record) return null
+  return <EditForm userId={localUser.id} record={record} />
+}
+
+interface EditFormProps {
+  userId: string
+  record: MaintenanceRecord
+}
+
+function EditForm({ userId, record }: EditFormProps) {
+  const { t } = useTranslation()
+  const router = useRouter()
 
   const { data: generatorData } = useDrizzleQuery(
-    record ? getGenerator(record.generatorId) : undefined
+    getGenerator(record.generatorId)
   )
   const generator = generatorData[0]
 
   const { data: templateData } = useDrizzleQuery(
-    record ? getMaintenanceTemplate(record.templateId) : undefined
+    getMaintenanceTemplate(record.templateId)
   )
   const template = templateData[0]
 
-  const [performedAt, setPerformedAt] = useState<Date | null>(null)
-  const [notes, setNotes] = useState<string | null>(null)
-  const [error, setError] = useState('')
-
-  const effectivePerformedAt =
-    performedAt ?? (record ? new Date(record.performedAt) : new Date())
-  const effectiveNotes = notes ?? record?.notes ?? ''
-
-  async function handleSubmit() {
-    if (!localUser || !recordId) return
-    setError('')
-
-    const result = await updateMaintenanceRecord(localUser.id, recordId, {
-      performedAt: effectivePerformedAt.toISOString(),
-      notes: effectiveNotes || null
-    })
-
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-
-    notifySuccess()
-    router.back()
-  }
-
-  if (!record) return null
+  const { form, submit, formError } = useForm({
+    initial: {
+      performedAt: new Date(record.performedAt),
+      notes: record.notes ?? ''
+    },
+    build: values => ({
+      ok: true,
+      data: {
+        performedAt: values.performedAt.toISOString(),
+        notes: values.notes || null
+      }
+    }),
+    mutate: input => updateMaintenanceRecord(userId, record.id, input),
+    onSuccess: () => router.back()
+  })
 
   return (
     <>
       <Stack.Screen
         options={{
-          headerRight: () => <HeaderSubmitButton onPress={handleSubmit} />
+          headerRight: () => <HeaderSubmitButton onPress={submit} />
         }}
       />
       <KeyboardAwareScrollView
@@ -95,8 +92,8 @@ export default function EditMaintenanceScreen() {
             </Text>
             <Host matchContents>
               <DatePicker
-                selection={effectivePerformedAt}
-                onDateChange={setPerformedAt}
+                selection={form.values.performedAt}
+                onDateChange={v => form.set('performedAt', v)}
                 displayedComponents={['date', 'hourAndMinute']}
                 range={{ end: new Date() }}
               />
@@ -108,13 +105,13 @@ export default function EditMaintenanceScreen() {
               {t('edit.notes')}
             </Text>
             <TextArea
-              value={effectiveNotes}
-              onChangeText={setNotes}
+              value={form.values.notes}
+              onChangeText={v => form.set('notes', v)}
               placeholder={t('edit.optionalNotes')}
             />
           </View>
 
-          <FormError message={error} />
+          <FormError message={formError} />
         </View>
       </KeyboardAwareScrollView>
     </>

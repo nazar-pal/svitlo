@@ -7,7 +7,6 @@ import {
   Tabs,
   TextField
 } from 'heroui-native'
-import { useState } from 'react'
 import { Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
@@ -18,109 +17,92 @@ import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { updateMaintenanceTemplate } from '@/data/client/mutations'
 import type { MaintenanceTemplate } from '@/data/client/db-schema/maintenance'
 import { getMaintenanceTemplate } from '@/data/client/queries'
-import {
-  flattenZodErrors,
-  updateMaintenanceTemplateSchema
-} from '@/data/client/validation'
-import { notifySuccess, selection } from '@/lib/haptics'
+import { updateMaintenanceTemplateSchema } from '@/data/client/validation'
+import { selection } from '@/lib/haptics'
+import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useFormFields } from '@/lib/hooks/use-form-fields'
+import {
+  TRIGGER_TYPES,
+  isTriggerType,
+  parseOptionalNumber,
+  showsCalendar,
+  showsHours,
+  useTriggerLabels
+} from '@/lib/maintenance/trigger-type'
 import { useLocalUser } from '@/lib/powersync'
-
-const TRIGGER_TYPES = ['hours', 'calendar', 'whichever_first'] as const
-type TriggerType = (typeof TRIGGER_TYPES)[number]
 
 export default function EditMaintenanceTemplateScreen() {
   const { templateId } = useLocalSearchParams<{
     id: string
     templateId: string
   }>()
+  const localUser = useLocalUser()
 
   const { data: templateData } = useDrizzleQuery(
     templateId ? getMaintenanceTemplate(templateId) : undefined
   )
   const template = templateData[0]
 
-  if (!template) return null
+  if (!localUser || !template) return null
 
-  return <EditForm template={template} />
+  return <EditForm userId={localUser.id} template={template} />
 }
 
-function EditForm({ template }: { template: MaintenanceTemplate }) {
+interface EditFormProps {
+  userId: string
+  template: MaintenanceTemplate
+}
+
+function EditForm({ userId, template }: EditFormProps) {
   const { t } = useTranslation()
   const router = useRouter()
-  const localUser = useLocalUser()
+  const triggerLabels = useTriggerLabels()
 
-  const triggerLabels: Record<TriggerType, string> = {
-    hours: t('maintenanceTemplate.byHours'),
-    calendar: t('maintenanceTemplate.byCalendar'),
-    whichever_first: t('maintenanceTemplate.whicheverFirst')
-  }
-
-  const { values, field, set, fieldErrors, setFieldErrors } = useFormFields({
-    taskName: template.taskName,
-    description: template.description ?? '',
-    triggerType: template.triggerType,
-    triggerHoursInterval: template.triggerHoursInterval
-      ? String(template.triggerHoursInterval)
-      : '',
-    triggerCalendarDays: template.triggerCalendarDays
-      ? String(template.triggerCalendarDays)
-      : ''
+  const { form, submit, formError, bind } = useForm({
+    initial: {
+      taskName: template.taskName,
+      description: template.description ?? '',
+      triggerType: template.triggerType,
+      triggerHoursInterval: template.triggerHoursInterval
+        ? String(template.triggerHoursInterval)
+        : '',
+      triggerCalendarDays: template.triggerCalendarDays
+        ? String(template.triggerCalendarDays)
+        : ''
+    },
+    build: values =>
+      validateWithZod(updateMaintenanceTemplateSchema, {
+        taskName: values.taskName,
+        description: values.description || null,
+        triggerType: values.triggerType,
+        triggerHoursInterval: showsHours(values.triggerType)
+          ? (parseOptionalNumber(values.triggerHoursInterval, parseFloat) ??
+            null)
+          : null,
+        triggerCalendarDays: showsCalendar(values.triggerType)
+          ? (parseOptionalNumber(values.triggerCalendarDays, s =>
+              parseInt(s, 10)
+            ) ?? null)
+          : null
+      }),
+    mutate: input => updateMaintenanceTemplate(userId, template.id, input),
+    onSuccess: () => router.back()
   })
-  const [error, setError] = useState('')
-  const triggerType = values.triggerType as TriggerType
-  const showHours = triggerType === 'hours' || triggerType === 'whichever_first'
-  const showCalendar =
-    triggerType === 'calendar' || triggerType === 'whichever_first'
 
-  async function handleSave() {
-    if (!localUser) return
-    setError('')
-    setFieldErrors({})
+  const triggerType = form.values.triggerType
+  const showHours = showsHours(triggerType)
+  const showCalendar = showsCalendar(triggerType)
 
-    const toNum = (v: string, parse: (s: string) => number) => {
-      const n = parse(v)
-      return Number.isFinite(n) ? n : undefined
-    }
-
-    const input = {
-      taskName: values.taskName,
-      description: values.description || null,
-      triggerType,
-      triggerHoursInterval: showHours
-        ? (toNum(values.triggerHoursInterval, parseFloat) ?? null)
-        : null,
-      triggerCalendarDays: showCalendar
-        ? (toNum(values.triggerCalendarDays, s => parseInt(s, 10)) ?? null)
-        : null
-    }
-
-    const parsed = updateMaintenanceTemplateSchema.safeParse(input)
-    if (!parsed.success) {
-      setFieldErrors(flattenZodErrors(parsed.error))
-      return
-    }
-
-    const result = await updateMaintenanceTemplate(
-      localUser.id,
-      template.id,
-      parsed.data
-    )
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-
-    notifySuccess()
-    router.back()
-  }
+  const taskNameBinding = bind.text('taskName')
+  const descriptionBinding = bind.text('description')
+  const hoursBinding = bind.text('triggerHoursInterval')
+  const daysBinding = bind.text('triggerCalendarDays')
 
   return (
     <>
       <Stack.Screen
         options={{
-          headerRight: () => <HeaderSubmitButton onPress={handleSave} />
+          headerRight: () => <HeaderSubmitButton onPress={submit} />
         }}
       />
       <KeyboardAwareScrollView
@@ -133,20 +115,22 @@ function EditForm({ template }: { template: MaintenanceTemplate }) {
       >
         <View className="mx-auto w-full max-w-150 gap-7">
           <View className="gap-5">
-            <TextField isInvalid={!!fieldErrors.taskName}>
+            <TextField isInvalid={taskNameBinding.isInvalid}>
               <Label>{t('maintenanceTemplate.taskName')}</Label>
               <Input
                 placeholder={t('maintenanceTemplate.taskNamePlaceholder')}
-                {...field('taskName')}
+                value={taskNameBinding.value}
+                onChangeText={taskNameBinding.onChangeText}
               />
-              <FieldError>{fieldErrors.taskName}</FieldError>
+              <FieldError>{taskNameBinding.errorMessage}</FieldError>
             </TextField>
 
             <TextField>
               <Label>{t('generator.description')}</Label>
               <Input
                 placeholder={t('maintenanceTemplate.instructionsPlaceholder')}
-                {...field('description')}
+                value={descriptionBinding.value}
+                onChangeText={descriptionBinding.onChangeText}
                 multiline
               />
               <Description>{t('common.optional')}</Description>
@@ -157,10 +141,10 @@ function EditForm({ template }: { template: MaintenanceTemplate }) {
                 {t('maintenanceTemplate.triggerType')}
               </Text>
               <Tabs
-                value={values.triggerType}
+                value={form.values.triggerType}
                 onValueChange={v => {
                   selection()
-                  set('triggerType', v)
+                  if (isTriggerType(v)) form.set('triggerType', v)
                 }}
               >
                 <Tabs.List>
@@ -175,39 +159,41 @@ function EditForm({ template }: { template: MaintenanceTemplate }) {
             </View>
 
             {showHours ? (
-              <TextField isInvalid={!!fieldErrors.triggerHoursInterval}>
+              <TextField isInvalid={hoursBinding.isInvalid}>
                 <Label>{t('maintenanceTemplate.hoursInterval')}</Label>
                 <Input
                   placeholder={t(
                     'maintenanceTemplate.hoursIntervalPlaceholder'
                   )}
-                  {...field('triggerHoursInterval')}
+                  value={hoursBinding.value}
+                  onChangeText={hoursBinding.onChangeText}
                   keyboardType="decimal-pad"
                 />
                 <Description>
                   {t('maintenanceTemplate.hoursIntervalDesc')}
                 </Description>
-                <FieldError>{fieldErrors.triggerHoursInterval}</FieldError>
+                <FieldError>{hoursBinding.errorMessage}</FieldError>
               </TextField>
             ) : null}
 
             {showCalendar ? (
-              <TextField isInvalid={!!fieldErrors.triggerCalendarDays}>
+              <TextField isInvalid={daysBinding.isInvalid}>
                 <Label>{t('maintenanceTemplate.calendarDays')}</Label>
                 <Input
                   placeholder={t('maintenanceTemplate.calendarDaysPlaceholder')}
-                  {...field('triggerCalendarDays')}
+                  value={daysBinding.value}
+                  onChangeText={daysBinding.onChangeText}
                   keyboardType="number-pad"
                 />
                 <Description>
                   {t('maintenanceTemplate.calendarDaysDesc')}
                 </Description>
-                <FieldError>{fieldErrors.triggerCalendarDays}</FieldError>
+                <FieldError>{daysBinding.errorMessage}</FieldError>
               </TextField>
             ) : null}
           </View>
 
-          <FormError message={error} />
+          <FormError message={formError} />
         </View>
       </KeyboardAwareScrollView>
       <KeyboardToolbar />

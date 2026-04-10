@@ -25,13 +25,9 @@ import { HeaderSubmitButton } from '@/components/navigation/header-submit-button
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
-import {
-  flattenZodErrors,
-  insertGeneratorSchema
-} from '@/data/client/validation'
+import { insertGeneratorSchema } from '@/data/client/validation'
 import { rpcClient } from '@/data/client/rpc-client'
-import { notifySuccess } from '@/lib/haptics'
-import { useFormFields } from '@/lib/hooks/use-form-fields'
+import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -46,31 +42,66 @@ export default function CreateGeneratorScreen() {
   const [step, setStep] = useState<Step>('basics')
   const [mode, setMode] = useState<Mode>(null)
 
-  const { values, field, set, fieldErrors, setFieldErrors } = useFormFields({
-    title: '',
-    model: '',
-    description: '',
-    maxConsecutiveRunHours: '8',
-    requiredRestHours: '4',
-    runWarningThresholdPct: '80'
-  })
-
   const [maintenanceItems, setMaintenanceItems] = useState<EditableItem[]>([])
   const [isLoadingAI, setIsLoadingAI] = useState(false)
   const [aiSources, setAiSources] = useState<string[]>([])
   const [aiModelInfo, setAiModelInfo] = useState('')
   const [aiIsGeneric, setAiIsGeneric] = useState(false)
 
-  const [error, setError] = useState('')
   const cancelledRef = useRef(false)
 
+  const { form, submit, formError, bind } = useForm({
+    initial: {
+      title: '',
+      model: '',
+      description: '',
+      maxConsecutiveRunHours: '8',
+      requiredRestHours: '4',
+      runWarningThresholdPct: '80'
+    },
+    build: values => {
+      if (!localUser || !selectedOrgId) return null
+      const validated = validateWithZod(insertGeneratorSchema, {
+        organizationId: selectedOrgId,
+        title: values.title,
+        model: values.model,
+        description: values.description || undefined,
+        maxConsecutiveRunHours: Number(values.maxConsecutiveRunHours),
+        requiredRestHours: Number(values.requiredRestHours),
+        runWarningThresholdPct: Number(values.runWarningThresholdPct)
+      })
+      if (!validated.ok) return validated
+      return {
+        ok: true,
+        data: { userId: localUser.id, generatorInput: validated.data }
+      }
+    },
+    mutate: ({ userId, generatorInput }) => {
+      const maintenanceInputs = maintenanceItems
+        .filter(i => i.selected && i.taskName.trim())
+        .map(item => ({
+          taskName: item.taskName,
+          description: item.description || undefined,
+          triggerType: item.triggerType,
+          triggerHoursInterval: item.triggerHoursInterval ?? undefined,
+          triggerCalendarDays: item.triggerCalendarDays ?? undefined,
+          isOneTime: item.isOneTime
+        }))
+      return createGeneratorWithMaintenance(
+        userId,
+        generatorInput,
+        maintenanceInputs
+      )
+    },
+    onSuccess: () => router.back()
+  })
+
   function handleNext() {
-    setFieldErrors({})
     const errors: Record<string, string> = {}
-    if (!values.title.trim()) errors.title = t('generator.titleRequired')
-    if (!values.model.trim()) errors.model = t('generator.modelRequired')
+    if (!form.values.title.trim()) errors.title = t('generator.titleRequired')
+    if (!form.values.model.trim()) errors.model = t('generator.modelRequired')
     if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors)
+      form.setFieldErrors(errors)
       return
     }
     setStep('details')
@@ -93,8 +124,8 @@ export default function CreateGeneratorScreen() {
 
     const result = await Promise.race([
       rpcClient.ai.suggestMaintenancePlan({
-        generatorModel: values.model,
-        description: values.description || undefined,
+        generatorModel: form.values.model,
+        description: form.values.description || undefined,
         locale
       }),
       new Promise<never>((_, reject) => {
@@ -126,9 +157,12 @@ export default function CreateGeneratorScreen() {
 
     function applyResult() {
       if (suggestion.maxConsecutiveRunHours != null)
-        set('maxConsecutiveRunHours', String(suggestion.maxConsecutiveRunHours))
+        form.set(
+          'maxConsecutiveRunHours',
+          String(suggestion.maxConsecutiveRunHours)
+        )
       if (suggestion.requiredRestHours != null)
-        set('requiredRestHours', String(suggestion.requiredRestHours))
+        form.set('requiredRestHours', String(suggestion.requiredRestHours))
 
       setAiSources(suggestion.sources)
       setAiModelInfo(suggestion.modelInfo)
@@ -183,52 +217,12 @@ export default function CreateGeneratorScreen() {
     )
   }
 
-  async function handleCreate() {
-    if (!localUser || !selectedOrgId) return
-    setError('')
-    setFieldErrors({})
-
-    const input = {
-      organizationId: selectedOrgId,
-      title: values.title,
-      model: values.model,
-      description: values.description || undefined,
-      maxConsecutiveRunHours: Number(values.maxConsecutiveRunHours),
-      requiredRestHours: Number(values.requiredRestHours),
-      runWarningThresholdPct: Number(values.runWarningThresholdPct)
-    }
-
-    const parsed = insertGeneratorSchema.safeParse(input)
-    if (!parsed.success) {
-      setFieldErrors(flattenZodErrors(parsed.error))
-      return
-    }
-
-    const selectedItems = maintenanceItems.filter(
-      i => i.selected && i.taskName.trim()
-    )
-    const maintenanceInputs = selectedItems.map(item => ({
-      taskName: item.taskName,
-      description: item.description || undefined,
-      triggerType: item.triggerType,
-      triggerHoursInterval: item.triggerHoursInterval ?? undefined,
-      triggerCalendarDays: item.triggerCalendarDays ?? undefined,
-      isOneTime: item.isOneTime
-    }))
-
-    const result = await createGeneratorWithMaintenance(
-      localUser.id,
-      parsed.data,
-      maintenanceInputs
-    )
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-
-    notifySuccess()
-    router.back()
-  }
+  const titleBinding = bind.text('title')
+  const modelBinding = bind.text('model')
+  const descriptionBinding = bind.text('description')
+  const maxRunBinding = bind.text('maxConsecutiveRunHours')
+  const restBinding = bind.text('requiredRestHours')
+  const warnBinding = bind.text('runWarningThresholdPct')
 
   if (step === 'basics')
     return (
@@ -258,32 +252,35 @@ export default function CreateGeneratorScreen() {
             </Text>
 
             <View className="gap-5">
-              <TextField isInvalid={!!fieldErrors.title}>
+              <TextField isInvalid={titleBinding.isInvalid}>
                 <Label>{t('generator.title')}</Label>
                 <Input
                   testID="create-gen-title-input"
                   placeholder={t('generator.titlePlaceholder')}
-                  {...field('title')}
+                  value={titleBinding.value}
+                  onChangeText={titleBinding.onChangeText}
                   autoFocus
                 />
-                <FieldError>{fieldErrors.title}</FieldError>
+                <FieldError>{titleBinding.errorMessage}</FieldError>
               </TextField>
 
-              <TextField isInvalid={!!fieldErrors.model}>
+              <TextField isInvalid={modelBinding.isInvalid}>
                 <Label>{t('generator.model')}</Label>
                 <Input
                   testID="create-gen-model-input"
                   placeholder={t('generator.modelPlaceholder')}
-                  {...field('model')}
+                  value={modelBinding.value}
+                  onChangeText={modelBinding.onChangeText}
                 />
-                <FieldError>{fieldErrors.model}</FieldError>
+                <FieldError>{modelBinding.errorMessage}</FieldError>
               </TextField>
 
               <TextField>
                 <Label>{t('generator.description')}</Label>
                 <Input
                   placeholder={t('generator.descriptionPlaceholder')}
-                  {...field('description')}
+                  value={descriptionBinding.value}
+                  onChangeText={descriptionBinding.onChangeText}
                   multiline
                 />
                 <Description>{t('common.optional')}</Description>
@@ -311,7 +308,7 @@ export default function CreateGeneratorScreen() {
               />
             </Host>
           ),
-          headerRight: () => <HeaderSubmitButton onPress={handleCreate} />
+          headerRight: () => <HeaderSubmitButton onPress={submit} />
         }}
       />
       <KeyboardAwareScrollView
@@ -324,7 +321,7 @@ export default function CreateGeneratorScreen() {
       >
         <View className="mx-auto w-full max-w-150 gap-7">
           <Text className="text-muted text-3.75 leading-5.5">
-            {t('generator.configureDesc', { model: values.model })}
+            {t('generator.configureDesc', { model: form.values.model })}
           </Text>
 
           {mode === null ? (
@@ -357,7 +354,7 @@ export default function CreateGeneratorScreen() {
 
           {isLoadingAI ? (
             <AiLoader
-              label={t('generator.researching', { model: values.model })}
+              label={t('generator.researching', { model: form.values.model })}
               onCancel={handleCancelAI}
             />
           ) : null}
@@ -367,42 +364,43 @@ export default function CreateGeneratorScreen() {
               <View className="gap-5">
                 <View className="flex-row gap-3">
                   <View className="flex-1">
-                    <TextField isInvalid={!!fieldErrors.maxConsecutiveRunHours}>
+                    <TextField isInvalid={maxRunBinding.isInvalid}>
                       <Label>{t('generator.maxRunHours')}</Label>
                       <Input
                         placeholder="8"
-                        {...field('maxConsecutiveRunHours')}
+                        value={maxRunBinding.value}
+                        onChangeText={maxRunBinding.onChangeText}
                         keyboardType="decimal-pad"
                       />
-                      <FieldError>
-                        {fieldErrors.maxConsecutiveRunHours}
-                      </FieldError>
+                      <FieldError>{maxRunBinding.errorMessage}</FieldError>
                     </TextField>
                   </View>
                   <View className="flex-1">
-                    <TextField isInvalid={!!fieldErrors.requiredRestHours}>
+                    <TextField isInvalid={restBinding.isInvalid}>
                       <Label>{t('generator.restHours')}</Label>
                       <Input
                         placeholder="4"
-                        {...field('requiredRestHours')}
+                        value={restBinding.value}
+                        onChangeText={restBinding.onChangeText}
                         keyboardType="decimal-pad"
                       />
-                      <FieldError>{fieldErrors.requiredRestHours}</FieldError>
+                      <FieldError>{restBinding.errorMessage}</FieldError>
                     </TextField>
                   </View>
                 </View>
 
-                <TextField isInvalid={!!fieldErrors.runWarningThresholdPct}>
+                <TextField isInvalid={warnBinding.isInvalid}>
                   <Label>{t('generator.warningThresholdPct')}</Label>
                   <Input
                     placeholder="80"
-                    {...field('runWarningThresholdPct')}
+                    value={warnBinding.value}
+                    onChangeText={warnBinding.onChangeText}
                     keyboardType="number-pad"
                   />
                   <Description>
                     {t('generator.warningThresholdDesc')}
                   </Description>
-                  <FieldError>{fieldErrors.runWarningThresholdPct}</FieldError>
+                  <FieldError>{warnBinding.errorMessage}</FieldError>
                 </TextField>
               </View>
 
@@ -444,7 +442,7 @@ export default function CreateGeneratorScreen() {
 
               <AiSourcesList sources={aiSources} />
 
-              <FormError message={error} />
+              <FormError message={formError} />
             </>
           ) : null}
         </View>
