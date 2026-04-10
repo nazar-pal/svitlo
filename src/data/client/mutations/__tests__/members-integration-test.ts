@@ -119,9 +119,16 @@ describe('removeMember', () => {
     expect(result.ok).toBe(false)
   })
 
-  it('fails when non-admin tries to remove', async () => {
+  it('rejects non-admin and leaves the membership intact', async () => {
     const result = await removeMember(IDS.memberUser, IDS.membership)
     expect(result.ok).toBe(false)
+
+    const [row] = mockTestDb.db
+      .select()
+      .from(organizationMembers)
+      .where(eq(organizationMembers.id, IDS.membership))
+      .all()
+    expect(row).toBeDefined()
   })
 })
 

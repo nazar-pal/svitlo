@@ -103,16 +103,6 @@ describe('createMaintenanceTemplate', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('fails when non-admin tries to create', async () => {
-    const result = await createMaintenanceTemplate(IDS.memberUser, {
-      generatorId: IDS.generator,
-      taskName: 'Test',
-      triggerType: 'hours',
-      triggerHoursInterval: 100
-    })
-    expect(result.ok).toBe(false)
-  })
-
   it('fails with hours type but missing triggerHoursInterval', async () => {
     const result = await createMaintenanceTemplate(IDS.adminUser, {
       generatorId: IDS.generator,
@@ -130,6 +120,23 @@ describe('createMaintenanceTemplate', () => {
       triggerHoursInterval: 100
     })
     expect(result.ok).toBe(false)
+  })
+
+  it('rejects non-admin and creates no template', async () => {
+    const result = await createMaintenanceTemplate(IDS.memberUser, {
+      generatorId: IDS.generator,
+      taskName: 'Nope',
+      triggerType: 'hours',
+      triggerHoursInterval: 100
+    })
+    expect(result.ok).toBe(false)
+
+    const rows = mockTestDb.db
+      .select()
+      .from(maintenanceTemplates)
+      .where(eq(maintenanceTemplates.generatorId, IDS.generator))
+      .all()
+    expect(rows).toHaveLength(0)
   })
 })
 
@@ -154,15 +161,6 @@ describe('updateMaintenanceTemplate', () => {
       .where(eq(maintenanceTemplates.id, IDS.template))
       .all()
     expect(template.taskName).toBe('Updated Task')
-  })
-
-  it('fails when non-admin tries to update', async () => {
-    const result = await updateMaintenanceTemplate(
-      IDS.memberUser,
-      IDS.template,
-      { taskName: 'Hacked' }
-    )
-    expect(result.ok).toBe(false)
   })
 
   it('fails for nonexistent template', async () => {
@@ -207,6 +205,22 @@ describe('updateMaintenanceTemplate', () => {
     )
     expect(result.ok).toBe(false)
   })
+
+  it('rejects non-admin and leaves the template intact', async () => {
+    const result = await updateMaintenanceTemplate(
+      IDS.memberUser,
+      IDS.template,
+      { taskName: 'Hacked' }
+    )
+    expect(result.ok).toBe(false)
+
+    const [template] = mockTestDb.db
+      .select()
+      .from(maintenanceTemplates)
+      .where(eq(maintenanceTemplates.id, IDS.template))
+      .all()
+    expect(template.taskName).not.toBe('Hacked')
+  })
 })
 
 // ── deleteMaintenanceTemplate ───────────────────────────────────────────────
@@ -228,9 +242,16 @@ describe('deleteMaintenanceTemplate', () => {
     expect(row).toBeUndefined()
   })
 
-  it('fails when non-admin tries to delete', async () => {
+  it('rejects non-admin and leaves the template intact', async () => {
     const result = await deleteMaintenanceTemplate(IDS.memberUser, IDS.template)
     expect(result.ok).toBe(false)
+
+    const [row] = mockTestDb.db
+      .select()
+      .from(maintenanceTemplates)
+      .where(eq(maintenanceTemplates.id, IDS.template))
+      .all()
+    expect(row).toBeDefined()
   })
 
   it('fails for nonexistent template', async () => {
@@ -287,14 +308,6 @@ describe('recordMaintenance', () => {
     expect(record.performedAt).toBe('2026-01-15T12:00:00Z')
   })
 
-  it('fails when outsider tries to record', async () => {
-    const result = await recordMaintenance(IDS.outsiderUser, {
-      templateId: IDS.template,
-      generatorId: IDS.generator
-    })
-    expect(result.ok).toBe(false)
-  })
-
   it('fails when template does not exist', async () => {
     const result = await recordMaintenance(IDS.adminUser, {
       templateId: 'nonexistent',
@@ -337,6 +350,21 @@ describe('recordMaintenance', () => {
     })
     expect(result.ok).toBe(false)
   })
+
+  it('rejects outsider and creates no record', async () => {
+    const result = await recordMaintenance(IDS.outsiderUser, {
+      templateId: IDS.template,
+      generatorId: IDS.generator
+    })
+    expect(result.ok).toBe(false)
+
+    const rows = mockTestDb.db
+      .select()
+      .from(maintenanceRecords)
+      .where(eq(maintenanceRecords.generatorId, IDS.generator))
+      .all()
+    expect(rows).toHaveLength(0)
+  })
 })
 
 // ── deleteMaintenanceRecord ─────────────────────────────────────────────────
@@ -365,9 +393,16 @@ describe('deleteMaintenanceRecord', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('fails when outsider tries to delete', async () => {
+  it('rejects outsider and leaves the record intact', async () => {
     const result = await deleteMaintenanceRecord(IDS.outsiderUser, IDS.record)
     expect(result.ok).toBe(false)
+
+    const [row] = mockTestDb.db
+      .select()
+      .from(maintenanceRecords)
+      .where(eq(maintenanceRecords.id, IDS.record))
+      .all()
+    expect(row).toBeDefined()
   })
 
   it('fails for nonexistent record', async () => {
@@ -409,14 +444,6 @@ describe('updateMaintenanceRecord', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('fails when outsider tries to update', async () => {
-    const result = await updateMaintenanceRecord(IDS.outsiderUser, IDS.record, {
-      performedAt: '2026-01-10T08:00:00Z',
-      notes: null
-    })
-    expect(result.ok).toBe(false)
-  })
-
   it('fails for nonexistent record', async () => {
     const result = await updateMaintenanceRecord(IDS.adminUser, 'nonexistent', {
       performedAt: '2026-01-10T08:00:00Z',
@@ -431,5 +458,20 @@ describe('updateMaintenanceRecord', () => {
       notes: null
     })
     expect(result.ok).toBe(false)
+  })
+
+  it('rejects outsider and leaves the record intact', async () => {
+    const result = await updateMaintenanceRecord(IDS.outsiderUser, IDS.record, {
+      performedAt: '2026-01-10T08:00:00Z',
+      notes: 'Hacked'
+    })
+    expect(result.ok).toBe(false)
+
+    const [record] = mockTestDb.db
+      .select()
+      .from(maintenanceRecords)
+      .where(eq(maintenanceRecords.id, IDS.record))
+      .all()
+    expect(record.notes).not.toBe('Hacked')
   })
 })

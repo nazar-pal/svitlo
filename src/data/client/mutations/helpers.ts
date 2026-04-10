@@ -15,8 +15,7 @@ export const nowISO = () => new Date().toISOString()
 
 // ── Authorization ────────────────────────────────────────────────────────────
 // Thin wrappers that fetch from the local PowerSync DB and apply the shared
-// pure policy. Each call site stays target-appropriate (no `db` arg) while
-// the rule itself lives in src/data/shared/authz/policy.ts.
+// pure policy. The rule itself lives in src/data/shared/authz/policy.ts.
 
 export async function isOrgAdmin(
   userId: string,
@@ -39,8 +38,9 @@ export async function canAccessGenerator(
 ): Promise<boolean> {
   const orgId = await getGeneratorOrgId(generatorId)
   if (!orgId) return false
-  const adminUserId = await getOrganizationAdminUserId(orgId)
-  if (policy.isOrgAdmin(userId, adminUserId)) return true
-  const assignment = await getAssignmentForUserAndGenerator(userId, generatorId)
+  const [adminUserId, assignment] = await Promise.all([
+    getOrganizationAdminUserId(orgId),
+    getAssignmentForUserAndGenerator(userId, generatorId)
+  ])
   return policy.canAccessGenerator(userId, adminUserId, assignment !== null)
 }

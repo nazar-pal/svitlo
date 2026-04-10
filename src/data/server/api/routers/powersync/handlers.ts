@@ -43,12 +43,30 @@ async function getOrgAdminUserId(db: Db, orgId: string) {
   return row?.adminUserId ?? null
 }
 
-async function getGeneratorOrgId(db: Db, generatorId: string) {
-  const row = await db.query.generators.findFirst({
-    where: eq(generators.id, generatorId),
-    columns: { organizationId: true }
-  })
-  return row?.organizationId ?? null
+// Single round trip: joins generators → organizations and probes the
+// assignment table with an EXISTS subquery so generator-level authz
+// questions cost one SQL statement.
+async function getGeneratorAuthzFacts(
+  db: Db,
+  userId: string,
+  generatorId: string
+) {
+  const [row] = await db
+    .select({
+      orgAdminUserId: organizations.adminUserId,
+      hasAssignment: sql<boolean>`
+        EXISTS (
+          SELECT 1 FROM ${generatorUserAssignments}
+          WHERE ${generatorUserAssignments.generatorId} = ${generators.id}
+            AND ${generatorUserAssignments.userId} = ${userId}
+        )
+      `
+    })
+    .from(generators)
+    .leftJoin(organizations, eq(generators.organizationId, organizations.id))
+    .where(eq(generators.id, generatorId))
+    .limit(1)
+  return row ?? null
 }
 
 async function isOrgAdmin(db: Db, userId: string, orgId: string) {
@@ -60,23 +78,18 @@ async function isGeneratorOrgAdmin(
   userId: string,
   generatorId: string
 ) {
-  const orgId = await getGeneratorOrgId(db, generatorId)
-  return orgId ? isOrgAdmin(db, userId, orgId) : false
+  const facts = await getGeneratorAuthzFacts(db, userId, generatorId)
+  return facts ? policy.isOrgAdmin(userId, facts.orgAdminUserId) : false
 }
 
 async function canAccessGenerator(db: Db, userId: string, generatorId: string) {
-  const orgId = await getGeneratorOrgId(db, generatorId)
-  if (!orgId) return false
-  const adminUserId = await getOrgAdminUserId(db, orgId)
-  if (policy.isOrgAdmin(userId, adminUserId)) return true
-  const assignment = await db.query.generatorUserAssignments.findFirst({
-    where: and(
-      eq(generatorUserAssignments.generatorId, generatorId),
-      eq(generatorUserAssignments.userId, userId)
-    ),
-    columns: { id: true }
-  })
-  return policy.canAccessGenerator(userId, adminUserId, !!assignment)
+  const facts = await getGeneratorAuthzFacts(db, userId, generatorId)
+  if (!facts) return false
+  return policy.canAccessGenerator(
+    userId,
+    facts.orgAdminUserId,
+    facts.hasAssignment === true
+  )
 }
 
 /**
@@ -187,6 +200,7 @@ export async function handleOrganizationMembers(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, userEmail, op, id, data } = ctx
+
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof organizationMembers>>(data)
     const orgId = values.organizationId as string
@@ -259,6 +273,7 @@ export async function handleInvitations(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, userEmail, op, id, data } = ctx
+
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof invitations>>(data)
     const orgId = values.organizationId as string
@@ -301,6 +316,7 @@ export async function handleGenerators(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof generators>>(data)
     const orgId = values.organizationId as string
@@ -339,6 +355,7 @@ export async function handleGeneratorUserAssignments(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+
   if (op === 'insert') {
     const values =
       transformSyncData<Insert<typeof generatorUserAssignments>>(data)
@@ -376,6 +393,7 @@ export async function handleGeneratorSessions(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof generatorSessions>>(data)
     const generatorId = values.generatorId as string
@@ -442,6 +460,7 @@ export async function handleMaintenanceTemplates(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof maintenanceTemplates>>(data)
     const generatorId = values.generatorId as string
@@ -497,6 +516,7 @@ export async function handleMaintenanceRecords(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof maintenanceRecords>>(data)
     const generatorId = values.generatorId as string

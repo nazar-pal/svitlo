@@ -73,13 +73,20 @@ describe('assignUserToGenerator', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('fails when non-admin tries to assign', async () => {
+  it('rejects non-admin and leaves assignments unchanged', async () => {
     const result = await assignUserToGenerator(
       IDS.memberUser,
       IDS.generator,
       IDS.memberUser
     )
     expect(result.ok).toBe(false)
+
+    const rows = mockTestDb.db
+      .select()
+      .from(generatorUserAssignments)
+      .where(eq(generatorUserAssignments.generatorId, IDS.generator))
+      .all()
+    expect(rows).toHaveLength(0)
   })
 
   it('fails when target user is not an org member', async () => {
@@ -136,16 +143,6 @@ describe('unassignUserFromGenerator', () => {
     expect(row).toBeUndefined()
   })
 
-  it('fails when non-admin tries to unassign', async () => {
-    seedAssignment(mockTestDb.db)
-    const result = await unassignUserFromGenerator(
-      IDS.memberUser,
-      IDS.generator,
-      IDS.memberUser
-    )
-    expect(result.ok).toBe(false)
-  })
-
   it('fails when user is not assigned', async () => {
     const result = await unassignUserFromGenerator(
       IDS.adminUser,
@@ -162,5 +159,27 @@ describe('unassignUserFromGenerator', () => {
       IDS.memberUser
     )
     expect(result.ok).toBe(false)
+  })
+
+  it('rejects non-admin and leaves the assignment intact', async () => {
+    seedAssignment(mockTestDb.db)
+    const result = await unassignUserFromGenerator(
+      IDS.memberUser,
+      IDS.generator,
+      IDS.memberUser
+    )
+    expect(result.ok).toBe(false)
+
+    const [row] = mockTestDb.db
+      .select()
+      .from(generatorUserAssignments)
+      .where(
+        and(
+          eq(generatorUserAssignments.generatorId, IDS.generator),
+          eq(generatorUserAssignments.userId, IDS.memberUser)
+        )
+      )
+      .all()
+    expect(row).toBeDefined()
   })
 })

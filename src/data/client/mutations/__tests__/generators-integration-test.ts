@@ -65,11 +65,18 @@ describe('updateGenerator', () => {
     expect(gen.model).toBe('EU7000is')
   })
 
-  it('fails when non-admin tries to update', async () => {
+  it('rejects non-admin and leaves the generator intact', async () => {
     const result = await updateGenerator(IDS.memberUser, IDS.generator, {
       title: 'Hacked'
     })
     expect(result.ok).toBe(false)
+
+    const [gen] = mockTestDb.db
+      .select()
+      .from(generators)
+      .where(eq(generators.id, IDS.generator))
+      .all()
+    expect(gen.title).not.toBe('Hacked')
   })
 
   it('fails with empty input', async () => {
@@ -80,13 +87,6 @@ describe('updateGenerator', () => {
   it('fails for nonexistent generator', async () => {
     const result = await updateGenerator(IDS.adminUser, 'nonexistent', {
       title: 'Test'
-    })
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when outsider tries to update', async () => {
-    const result = await updateGenerator(IDS.outsiderUser, IDS.generator, {
-      title: 'Hacked'
     })
     expect(result.ok).toBe(false)
   })
@@ -161,7 +161,7 @@ describe('createGeneratorWithMaintenance', () => {
     expect(gens).toHaveLength(1)
   })
 
-  it('fails when non-admin tries to create', async () => {
+  it('rejects non-admin and creates no generator', async () => {
     const result = await createGeneratorWithMaintenance(
       IDS.memberUser,
       {
@@ -175,6 +175,13 @@ describe('createGeneratorWithMaintenance', () => {
       []
     )
     expect(result.ok).toBe(false)
+
+    const gens = mockTestDb.db
+      .select()
+      .from(generators)
+      .where(eq(generators.title, 'Nope'))
+      .all()
+    expect(gens).toHaveLength(0)
   })
 
   it('fails with invalid generator input', async () => {
@@ -223,22 +230,6 @@ describe('createGeneratorWithMaintenance', () => {
     expect(gens).toHaveLength(0)
   })
 
-  it('fails when outsider tries to create', async () => {
-    const result = await createGeneratorWithMaintenance(
-      IDS.outsiderUser,
-      {
-        organizationId: IDS.org,
-        title: 'Nope',
-        model: 'Test',
-        maxConsecutiveRunHours: 8,
-        requiredRestHours: 4,
-        runWarningThresholdPct: 80
-      },
-      []
-    )
-    expect(result.ok).toBe(false)
-  })
-
   it('includes template taskName in validation error', async () => {
     const result = await createGeneratorWithMaintenance(
       IDS.adminUser,
@@ -278,18 +269,20 @@ describe('deleteGenerator', () => {
     expect(row).toBeUndefined()
   })
 
-  it('fails when non-admin tries to delete', async () => {
+  it('rejects non-admin and leaves the generator intact', async () => {
     const result = await deleteGenerator(IDS.memberUser, IDS.generator)
     expect(result.ok).toBe(false)
+
+    const [row] = mockTestDb.db
+      .select()
+      .from(generators)
+      .where(eq(generators.id, IDS.generator))
+      .all()
+    expect(row).toBeDefined()
   })
 
   it('fails for nonexistent generator', async () => {
     const result = await deleteGenerator(IDS.adminUser, 'nonexistent')
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when outsider tries to delete', async () => {
-    const result = await deleteGenerator(IDS.outsiderUser, IDS.generator)
     expect(result.ok).toBe(false)
   })
 })

@@ -192,18 +192,6 @@ describe('handleOrganizations', () => {
     expect(row!.adminUserId).toBe(IDS.admin) // forced to caller, not outsider
   })
 
-  it('update denied for non-admin', async () => {
-    const result = await handleOrganizations(
-      makeCtx({
-        op: 'update',
-        id: IDS.org,
-        userId: IDS.member,
-        data: { name: 'Hacked' }
-      })
-    )
-    expect(result.ok).toBe(false)
-  })
-
   it('update succeeds for admin with name', async () => {
     const result = await handleOrganizations(
       makeCtx({ op: 'update', id: IDS.org, data: { name: 'New Name' } })
@@ -247,6 +235,23 @@ describe('handleOrganizations', () => {
     expect(row!.adminUserId).toBe(IDS.admin)
   })
 
+  it('rejects non-admin update and leaves the org intact', async () => {
+    const result = await handleOrganizations(
+      makeCtx({
+        op: 'update',
+        id: IDS.org,
+        userId: IDS.member,
+        data: { name: 'Hacked' }
+      })
+    )
+    expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.organizations.findFirst({
+      where: eq(organizations.id, IDS.org)
+    })
+    expect(row!.name).not.toBe('Hacked')
+  })
+
   // PG CHECK constraint
   it('insert: PG rejects empty name via CHECK constraint', async () => {
     const result = handleOrganizations(
@@ -258,11 +263,16 @@ describe('handleOrganizations', () => {
     await expect(result).rejects.toThrow()
   })
 
-  it('delete denied for non-admin', async () => {
+  it('rejects non-admin delete and leaves the org intact', async () => {
     const result = await handleOrganizations(
       makeCtx({ op: 'delete', id: IDS.org, userId: IDS.member })
     )
     expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.organizations.findFirst({
+      where: eq(organizations.id, IDS.org)
+    })
+    expect(row).toBeDefined()
   })
 
   it('delete succeeds for admin and cascades', async () => {
@@ -489,15 +499,22 @@ describe('handleOrganizationMembers', () => {
     expect(result.ok).toBe(false)
   })
 
-  it('insert: non-admin, non-self denied', async () => {
+  it('rejects non-admin non-self insert and creates no membership', async () => {
+    const newId = crypto.randomUUID()
     const result = await handleOrganizationMembers(
       makeCtx({
         op: 'insert',
-        userId: IDS.outsider,
-        data: { organization_id: IDS.org, user_id: IDS.member }
+        id: newId,
+        userId: IDS.member,
+        data: { organization_id: IDS.org, user_id: IDS.outsider }
       })
     )
     expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.id, newId)
+    })
+    expect(row).toBeUndefined()
   })
 
   it('delete: admin removes member (transfers assignments)', async () => {
@@ -561,11 +578,16 @@ describe('handleOrganizationMembers', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('delete: outsider denied', async () => {
+  it('rejects outsider delete and leaves the membership intact', async () => {
     const result = await handleOrganizationMembers(
       makeCtx({ op: 'delete', id: IDS.membership, userId: IDS.outsider })
     )
     expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.id, IDS.membership)
+    })
+    expect(row).toBeDefined()
   })
 
   it('invalid op (update) denied', async () => {
@@ -600,24 +622,6 @@ describe('handleGenerators', () => {
     expect(row!.title).toBe('New Gen')
   })
 
-  it('insert: non-admin denied', async () => {
-    const result = await handleGenerators(
-      makeCtx({
-        op: 'insert',
-        userId: IDS.member,
-        data: {
-          organization_id: IDS.org,
-          title: 'Nope',
-          model: 'X',
-          max_consecutive_run_hours: '8',
-          required_rest_hours: '4',
-          run_warning_threshold_pct: '80'
-        }
-      })
-    )
-    expect(result.ok).toBe(false)
-  })
-
   it('update: admin updates', async () => {
     const result = await handleGenerators(
       makeCtx({
@@ -633,7 +637,39 @@ describe('handleGenerators', () => {
     expect(row!.title).toBe('Updated Gen')
   })
 
-  it('update: non-admin denied', async () => {
+  it('update: no-ops with empty data', async () => {
+    const result = await handleGenerators(
+      makeCtx({ op: 'update', id: IDS.generator, data: {} })
+    )
+    expect(result.ok).toBe(true)
+  })
+
+  it('rejects non-admin insert and creates no generator', async () => {
+    const newId = crypto.randomUUID()
+    const result = await handleGenerators(
+      makeCtx({
+        op: 'insert',
+        id: newId,
+        userId: IDS.member,
+        data: {
+          organization_id: IDS.org,
+          title: 'Nope',
+          model: 'Honda',
+          max_consecutive_run_hours: '8',
+          required_rest_hours: '4',
+          run_warning_threshold_pct: '80'
+        }
+      })
+    )
+    expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.generators.findFirst({
+      where: eq(generators.id, newId)
+    })
+    expect(row).toBeUndefined()
+  })
+
+  it('rejects non-admin update and leaves the generator intact', async () => {
     const result = await handleGenerators(
       makeCtx({
         op: 'update',
@@ -643,13 +679,11 @@ describe('handleGenerators', () => {
       })
     )
     expect(result.ok).toBe(false)
-  })
 
-  it('update: no-ops with empty data', async () => {
-    const result = await handleGenerators(
-      makeCtx({ op: 'update', id: IDS.generator, data: {} })
-    )
-    expect(result.ok).toBe(true)
+    const row = await testDb.db.query.generators.findFirst({
+      where: eq(generators.id, IDS.generator)
+    })
+    expect(row!.title).not.toBe('Hacked')
   })
 
   it('delete: admin deletes', async () => {
@@ -663,11 +697,16 @@ describe('handleGenerators', () => {
     expect(row).toBeUndefined()
   })
 
-  it('delete: non-admin denied', async () => {
+  it('rejects non-admin delete and leaves the generator intact', async () => {
     const result = await handleGenerators(
       makeCtx({ op: 'delete', id: IDS.generator, userId: IDS.member })
     )
     expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.generators.findFirst({
+      where: eq(generators.id, IDS.generator)
+    })
+    expect(row).toBeDefined()
   })
 
   // PG CHECK constraints
@@ -804,17 +843,6 @@ describe('handleGeneratorUserAssignments', () => {
     expect(row).toBeDefined()
   })
 
-  it('insert: non-admin denied', async () => {
-    const result = await handleGeneratorUserAssignments(
-      makeCtx({
-        op: 'insert',
-        userId: IDS.member,
-        data: { generator_id: IDS.generator, user_id: IDS.outsider }
-      })
-    )
-    expect(result.ok).toBe(false)
-  })
-
   it('insert: duplicate assignment is idempotent (onConflictDoNothing)', async () => {
     await seedAssignment(testDb.db)
     const result = await handleGeneratorUserAssignments(
@@ -825,6 +853,24 @@ describe('handleGeneratorUserAssignments', () => {
       })
     )
     expect(result.ok).toBe(true)
+  })
+
+  it('rejects non-admin insert and creates no assignment', async () => {
+    const newId = crypto.randomUUID()
+    const result = await handleGeneratorUserAssignments(
+      makeCtx({
+        op: 'insert',
+        id: newId,
+        userId: IDS.member,
+        data: { generator_id: IDS.generator, user_id: IDS.member }
+      })
+    )
+    expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.generatorUserAssignments.findFirst({
+      where: eq(generatorUserAssignments.id, newId)
+    })
+    expect(row).toBeUndefined()
   })
 
   it('delete: admin removes', async () => {
@@ -839,12 +885,17 @@ describe('handleGeneratorUserAssignments', () => {
     expect(row).toBeUndefined()
   })
 
-  it('delete: non-admin denied', async () => {
+  it('rejects non-admin delete and leaves the assignment intact', async () => {
     await seedAssignment(testDb.db)
     const result = await handleGeneratorUserAssignments(
       makeCtx({ op: 'delete', id: IDS.assignment, userId: IDS.member })
     )
     expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.generatorUserAssignments.findFirst({
+      where: eq(generatorUserAssignments.id, IDS.assignment)
+    })
+    expect(row).toBeDefined()
   })
 
   it('delete: already deleted returns ok', async () => {
@@ -900,7 +951,7 @@ describe('handleGeneratorSessions', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('insert: no access denied', async () => {
+  it('rejects outsider insert and creates no session', async () => {
     const result = await handleGeneratorSessions(
       makeCtx({
         op: 'insert',
@@ -909,6 +960,12 @@ describe('handleGeneratorSessions', () => {
       })
     )
     expect(result.ok).toBe(false)
+
+    const rows = await testDb.db
+      .select()
+      .from(generatorSessions)
+      .where(eq(generatorSessions.generatorId, IDS.generator))
+    expect(rows).toHaveLength(0)
   })
 
   it('update: session found, has access', async () => {
@@ -933,19 +990,6 @@ describe('handleGeneratorSessions', () => {
   it('update: session not found', async () => {
     const result = await handleGeneratorSessions(
       makeCtx({ op: 'update', id: crypto.randomUUID() })
-    )
-    expect(result.ok).toBe(false)
-  })
-
-  it('update: no access denied', async () => {
-    await seedSession(testDb.db)
-    const result = await handleGeneratorSessions(
-      makeCtx({
-        op: 'update',
-        id: IDS.session,
-        userId: IDS.outsider,
-        data: { stopped_at: '2026-01-15T14:00:00Z' }
-      })
     )
     expect(result.ok).toBe(false)
   })
@@ -1000,6 +1044,37 @@ describe('handleGeneratorSessions', () => {
     expect(row!.stoppedAt).toBeNull()
   })
 
+  it('rejects outsider update and leaves the session intact', async () => {
+    await seedSession(testDb.db)
+    const result = await handleGeneratorSessions(
+      makeCtx({
+        op: 'update',
+        id: IDS.session,
+        userId: IDS.outsider,
+        data: { stopped_at: '2026-01-15T14:00:00Z' }
+      })
+    )
+    expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.generatorSessions.findFirst({
+      where: eq(generatorSessions.id, IDS.session)
+    })
+    expect(row!.stoppedAt).toBeNull()
+  })
+
+  it('rejects outsider delete and leaves the session intact', async () => {
+    await seedSession(testDb.db)
+    const result = await handleGeneratorSessions(
+      makeCtx({ op: 'delete', id: IDS.session, userId: IDS.outsider })
+    )
+    expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.generatorSessions.findFirst({
+      where: eq(generatorSessions.id, IDS.session)
+    })
+    expect(row).toBeDefined()
+  })
+
   it("delete: admin can delete anyone's session", async () => {
     await seedSession(testDb.db, IDS.member)
     const result = await handleGeneratorSessions(
@@ -1022,14 +1097,6 @@ describe('handleGeneratorSessions', () => {
     await seedAssignment(testDb.db)
     const result = await handleGeneratorSessions(
       makeCtx({ op: 'delete', id: IDS.session, userId: IDS.member })
-    )
-    expect(result.ok).toBe(false)
-  })
-
-  it('delete: no access denied', async () => {
-    await seedSession(testDb.db)
-    const result = await handleGeneratorSessions(
-      makeCtx({ op: 'delete', id: IDS.session, userId: IDS.outsider })
     )
     expect(result.ok).toBe(false)
   })
@@ -1086,23 +1153,6 @@ describe('handleMaintenanceTemplates', () => {
     expect(row!.taskName).toBe('Oil change')
   })
 
-  it('insert: non-admin denied', async () => {
-    const result = await handleMaintenanceTemplates(
-      makeCtx({
-        op: 'insert',
-        userId: IDS.member,
-        data: {
-          generator_id: IDS.generator,
-          task_name: 'Nope',
-          trigger_type: 'hours',
-          trigger_hours_interval: '100',
-          is_one_time: 0
-        }
-      })
-    )
-    expect(result.ok).toBe(false)
-  })
-
   it('update: admin updates', async () => {
     await seedTemplate(testDb.db)
     const result = await handleMaintenanceTemplates(
@@ -1119,6 +1169,43 @@ describe('handleMaintenanceTemplates', () => {
     expect(row!.taskName).toBe('Updated Oil')
   })
 
+  it('rejects non-admin insert and creates no template', async () => {
+    const newId = crypto.randomUUID()
+    const result = await handleMaintenanceTemplates(
+      makeCtx({
+        op: 'insert',
+        id: newId,
+        userId: IDS.member,
+        data: {
+          generator_id: IDS.generator,
+          task_name: 'Nope',
+          trigger_type: 'hours',
+          trigger_hours_interval: '100',
+          is_one_time: 0
+        }
+      })
+    )
+    expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.maintenanceTemplates.findFirst({
+      where: eq(maintenanceTemplates.id, newId)
+    })
+    expect(row).toBeUndefined()
+  })
+
+  it('rejects non-admin delete and leaves the template intact', async () => {
+    await seedTemplate(testDb.db)
+    const result = await handleMaintenanceTemplates(
+      makeCtx({ op: 'delete', id: IDS.template, userId: IDS.member })
+    )
+    expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.maintenanceTemplates.findFirst({
+      where: eq(maintenanceTemplates.id, IDS.template)
+    })
+    expect(row).toBeDefined()
+  })
+
   it('update: template not found', async () => {
     const result = await handleMaintenanceTemplates(
       makeCtx({ op: 'update', id: crypto.randomUUID() })
@@ -1126,7 +1213,7 @@ describe('handleMaintenanceTemplates', () => {
     expect(result.ok).toBe(false)
   })
 
-  it('update: non-admin denied', async () => {
+  it('rejects non-admin update and leaves the template intact', async () => {
     await seedTemplate(testDb.db)
     const result = await handleMaintenanceTemplates(
       makeCtx({
@@ -1137,6 +1224,11 @@ describe('handleMaintenanceTemplates', () => {
       })
     )
     expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.maintenanceTemplates.findFirst({
+      where: eq(maintenanceTemplates.id, IDS.template)
+    })
+    expect(row!.taskName).not.toBe('Hacked')
   })
 
   it('update: no-ops with empty data', async () => {
@@ -1309,7 +1401,7 @@ describe('handleMaintenanceRecords', () => {
     expect(row!.performedByUserId).toBe(IDS.admin) // forced to caller
   })
 
-  it('insert: no access denied', async () => {
+  it('rejects outsider insert and creates no record', async () => {
     const result = await handleMaintenanceRecords(
       makeCtx({
         op: 'insert',
@@ -1321,6 +1413,12 @@ describe('handleMaintenanceRecords', () => {
       })
     )
     expect(result.ok).toBe(false)
+
+    const rows = await testDb.db
+      .select()
+      .from(maintenanceRecords)
+      .where(eq(maintenanceRecords.generatorId, IDS.generator))
+    expect(rows).toHaveLength(0)
   })
 
   it('update: record found, has access', async () => {
@@ -1338,19 +1436,6 @@ describe('handleMaintenanceRecords', () => {
   it('update: record not found', async () => {
     const result = await handleMaintenanceRecords(
       makeCtx({ op: 'update', id: crypto.randomUUID() })
-    )
-    expect(result.ok).toBe(false)
-  })
-
-  it('update: no access denied', async () => {
-    await seedRecord(testDb.db)
-    const result = await handleMaintenanceRecords(
-      makeCtx({
-        op: 'update',
-        id: IDS.record,
-        userId: IDS.outsider,
-        data: { notes: 'hacked' }
-      })
     )
     expect(result.ok).toBe(false)
   })
@@ -1405,6 +1490,37 @@ describe('handleMaintenanceRecords', () => {
     expect(row!.notes).toBe('123')
   })
 
+  it('rejects outsider update and leaves the record intact', async () => {
+    await seedRecord(testDb.db)
+    const result = await handleMaintenanceRecords(
+      makeCtx({
+        op: 'update',
+        id: IDS.record,
+        userId: IDS.outsider,
+        data: { notes: 'Hacked' }
+      })
+    )
+    expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(row!.notes).not.toBe('Hacked')
+  })
+
+  it('rejects outsider delete and leaves the record intact', async () => {
+    await seedRecord(testDb.db)
+    const result = await handleMaintenanceRecords(
+      makeCtx({ op: 'delete', id: IDS.record, userId: IDS.outsider })
+    )
+    expect(result.ok).toBe(false)
+
+    const row = await testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(row).toBeDefined()
+  })
+
   it("delete: admin can delete anyone's record", async () => {
     await seedRecord(testDb.db, IDS.member)
     const result = await handleMaintenanceRecords(
@@ -1427,14 +1543,6 @@ describe('handleMaintenanceRecords', () => {
     await seedAssignment(testDb.db)
     const result = await handleMaintenanceRecords(
       makeCtx({ op: 'delete', id: IDS.record, userId: IDS.member })
-    )
-    expect(result.ok).toBe(false)
-  })
-
-  it('delete: no access denied', async () => {
-    await seedRecord(testDb.db)
-    const result = await handleMaintenanceRecords(
-      makeCtx({ op: 'delete', id: IDS.record, userId: IDS.outsider })
     )
     expect(result.ok).toBe(false)
   })

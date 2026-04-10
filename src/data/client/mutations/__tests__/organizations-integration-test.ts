@@ -117,14 +117,6 @@ describe('createInvitation', () => {
     expect(rows).toHaveLength(1)
   })
 
-  it('fails when non-admin tries to invite', async () => {
-    const result = await createInvitation(IDS.memberUser, {
-      organizationId: IDS.org,
-      inviteeEmail: 'new@test.com'
-    })
-    expect(result.ok).toBe(false)
-  })
-
   it('fails with duplicate invitation', async () => {
     seedInvitation(mockTestDb.db, 'dup@test.com')
     const result = await createInvitation(IDS.adminUser, {
@@ -140,6 +132,21 @@ describe('createInvitation', () => {
       inviteeEmail: 'not-an-email'
     })
     expect(result.ok).toBe(false)
+  })
+
+  it('rejects non-admin and creates no invitation', async () => {
+    const result = await createInvitation(IDS.memberUser, {
+      organizationId: IDS.org,
+      inviteeEmail: 'nope@test.com'
+    })
+    expect(result.ok).toBe(false)
+
+    const rows = mockTestDb.db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.organizationId, IDS.org))
+      .all()
+    expect(rows).toHaveLength(0)
   })
 })
 
@@ -256,15 +263,22 @@ describe('cancelInvitation', () => {
     expect(inv).toBeUndefined()
   })
 
-  it('fails when non-admin tries to cancel', async () => {
-    seedInvitation(mockTestDb.db)
-    const result = await cancelInvitation(IDS.memberUser, IDS.invitation)
-    expect(result.ok).toBe(false)
-  })
-
   it('fails when invitation does not exist', async () => {
     const result = await cancelInvitation(IDS.adminUser, 'nonexistent')
     expect(result.ok).toBe(false)
+  })
+
+  it('rejects non-admin and leaves the invitation intact', async () => {
+    seedInvitation(mockTestDb.db)
+    const result = await cancelInvitation(IDS.memberUser, IDS.invitation)
+    expect(result.ok).toBe(false)
+
+    const [inv] = mockTestDb.db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, IDS.invitation))
+      .all()
+    expect(inv).toBeDefined()
   })
 })
 
@@ -285,18 +299,25 @@ describe('renameOrganization', () => {
     expect(org.name).toBe('Renamed Org')
   })
 
-  it('fails when non-admin tries to rename', async () => {
-    const result = await renameOrganization(IDS.memberUser, IDS.org, {
-      name: 'Hacked'
-    })
-    expect(result.ok).toBe(false)
-  })
-
   it('fails with empty name', async () => {
     const result = await renameOrganization(IDS.adminUser, IDS.org, {
       name: ''
     })
     expect(result.ok).toBe(false)
+  })
+
+  it('rejects non-admin and leaves the organization intact', async () => {
+    const result = await renameOrganization(IDS.memberUser, IDS.org, {
+      name: 'Hacked'
+    })
+    expect(result.ok).toBe(false)
+
+    const [org] = mockTestDb.db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, IDS.org))
+      .all()
+    expect(org.name).not.toBe('Hacked')
   })
 })
 
@@ -380,9 +401,16 @@ describe('deleteOrganization', () => {
     ).toHaveLength(0)
   })
 
-  it('fails when non-admin tries to delete', async () => {
+  it('rejects non-admin and leaves the organization intact', async () => {
     const result = await deleteOrganization(IDS.memberUser, IDS.org)
     expect(result.ok).toBe(false)
+
+    const [org] = mockTestDb.db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, IDS.org))
+      .all()
+    expect(org).toBeDefined()
   })
 
   it('fails for nonexistent org', async () => {
