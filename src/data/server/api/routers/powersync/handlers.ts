@@ -13,7 +13,12 @@ import {
 } from '@/data/server/db-schema'
 import type { db } from '@/data/server'
 import { createServerAuthz } from '@/data/server/authz'
+import { createServerGeneratorChecks } from '@/data/server/generators'
 import { createServerSessionChecks } from '@/data/server/sessions'
+import {
+  insertGeneratorSchema,
+  updateGeneratorSchema
+} from '@/data/client/validation'
 
 import { transformSyncData } from './transform'
 
@@ -269,35 +274,60 @@ export async function handleGenerators(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-  const authz = createServerAuthz(db)
+  const checks = createServerGeneratorChecks(db)
 
   if (op === 'insert') {
-    const values = transformSyncData<Insert<typeof generators>>(data)
-    const orgId = values.organizationId as string
-    if (!(await authz.isOrgAdmin(userId, orgId)))
-      return fail('Only admin can create generators')
+    // Transform the snake_case wire shape into camelCase + proper types,
+    // then Zod-validate. The schema acts as a field whitelist — any unknown
+    // key a compromised client sends gets stripped here instead of reaching
+    // Drizzle.
+    const transformed = transformSyncData<Insert<typeof generators>>(data)
+    const parsed = insertGeneratorSchema.safeParse(transformed)
+    if (!parsed.success)
+      return fail(`Invalid generator insert: ${parsed.error.message}`)
+
+    const result = await checks.createGenerator(
+      userId,
+      parsed.data.organizationId
+    )
+    if (!result.ok) return fail(result.code)
 
     await db
       .insert(generators)
-      .values({ ...values, id })
+      .values({ ...parsed.data, id })
       .onConflictDoNothing()
     return ok
   }
 
   if (op === 'update') {
-    if (!(await authz.isGeneratorOrgAdmin(userId, id)))
-      return fail('Only admin can update generators')
+    // Same shape as insert: transform then Zod-whitelist the partial payload.
+    const transformed =
+      transformSyncData<Partial<Insert<typeof generators>>>(data)
+    const parsed = updateGeneratorSchema.safeParse(transformed)
+    if (!parsed.success)
+      return fail(`Invalid generator update: ${parsed.error.message}`)
 
-    const fields = transformSyncData<Partial<Insert<typeof generators>>>(data)
-    if (Object.keys(fields).length > 0)
-      await db.update(generators).set(fields).where(eq(generators.id, id))
+    const result = await checks.updateGenerator(userId, id)
+    if (!result.ok) return fail(result.code)
+
+    if (Object.keys(parsed.data).length > 0)
+      await db.update(generators).set(parsed.data).where(eq(generators.id, id))
 
     return ok
   }
 
   if (op === 'delete') {
-    if (!(await authz.isGeneratorOrgAdmin(userId, id)))
-      return fail('Only admin can delete generators')
+    const result = await checks.deleteGenerator(userId, id)
+    if (!result.ok) {
+      // Lost-ack replay: PowerSync may resend a delete whose ack was lost on
+      // the wire. If the row is already gone, the shared policy returns
+      // `GENERATOR_NOT_FOUND` — translate that into a server-side success so
+      // the sync queue advances past the already-applied delete instead of
+      // logging a spurious rejection. Mirrors `handleGeneratorSessions`'
+      // `SESSION_NOT_FOUND → ok` principle.
+      if (result.code === 'GENERATOR_NOT_FOUND') return ok
+      return fail(result.code)
+    }
     await db.delete(generators).where(eq(generators.id, id))
     return ok
   }

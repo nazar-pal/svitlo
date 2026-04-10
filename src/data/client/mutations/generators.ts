@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { isGeneratorOrgAdmin, isOrgAdmin } from '@/data/client/authz'
+import { generatorLifecycleChecks } from '@/data/client/generators'
 import { generators } from '@/data/client/db-schema'
 import {
   insertGeneratorSchema,
@@ -23,8 +23,11 @@ export async function updateGenerator(
   const parsed = updateGeneratorSchema.safeParse(input)
   if (!parsed.success) return failFromZod(parsed.error)
 
-  if (!(await isGeneratorOrgAdmin(userId, generatorId)))
-    return fail('ONLY_ADMIN_CAN_UPDATE_GENERATORS')
+  const check = await generatorLifecycleChecks.updateGenerator(
+    userId,
+    generatorId
+  )
+  if (!check.ok) return fail(check.code)
 
   await db
     .update(generators)
@@ -42,8 +45,11 @@ export async function createGeneratorWithMaintenance(
   const parsed = insertGeneratorSchema.safeParse(input)
   if (!parsed.success) return failFromZod(parsed.error)
 
-  if (!(await isOrgAdmin(userId, parsed.data.organizationId)))
-    return fail('ONLY_ADMIN_CAN_CREATE_GENERATORS')
+  const check = await generatorLifecycleChecks.createGenerator(
+    userId,
+    parsed.data.organizationId
+  )
+  if (!check.ok) return fail(check.code)
 
   const generatorId = newId()
   const now = nowISO()
@@ -104,8 +110,11 @@ export async function deleteGenerator(
   userId: string,
   generatorId: string
 ): Promise<MutationResult> {
-  if (!(await isGeneratorOrgAdmin(userId, generatorId)))
-    return fail('ONLY_ADMIN_CAN_DELETE_GENERATORS')
+  const check = await generatorLifecycleChecks.deleteGenerator(
+    userId,
+    generatorId
+  )
+  if (!check.ok) return fail(check.code)
 
   await db.delete(generators).where(eq(generators.id, generatorId))
 

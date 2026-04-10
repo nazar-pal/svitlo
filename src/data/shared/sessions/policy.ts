@@ -2,22 +2,15 @@
 // policy. Both client (PowerSync SQLite) and server (Postgres) reuse these
 // so the rules live in exactly one place.
 
-import type { ParamFreeMutationErrorCode } from '@/data/shared/errors'
+import {
+  policyFail as fail,
+  policyOk as ok,
+  type PolicyResult
+} from '@/data/shared/policy-result'
 
 import type { SessionRef } from './facts'
 
-// Policy only emits param-free codes. Using the narrower type lets callers
-// pass `result.code` straight to `fail()` without extra narrowing at the
-// call site — the `fail()` overload for param-free codes fires directly.
-export type PolicyResult =
-  | { ok: true }
-  | { ok: false; code: ParamFreeMutationErrorCode }
-
-const ok: PolicyResult = { ok: true }
-const fail = (code: ParamFreeMutationErrorCode): PolicyResult => ({
-  ok: false,
-  code
-})
+export type { PolicyResult }
 
 export const startSessionPolicy = (facts: {
   generatorExists: boolean

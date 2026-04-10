@@ -597,6 +597,11 @@ describe('handleOrganizationMembers', () => {
 })
 
 // ── handleGenerators ────────────────────────────────────────────────────────
+// Authz branches (admin vs. non-admin) and field-level validation are covered
+// by `src/data/shared/generators/__tests__/policy-test.ts` and the shared
+// `checks-test.ts`. The tests below focus on what's unique to the server
+// handler: SQL-write verification, the Zod whitelist regression, and the
+// replay-handling edge case for delete.
 
 describe('handleGenerators', () => {
   it('insert: admin creates', async () => {
@@ -637,53 +642,31 @@ describe('handleGenerators', () => {
     expect(row!.title).toBe('Updated Gen')
   })
 
-  it('update: no-ops with empty data', async () => {
-    const result = await handleGenerators(
-      makeCtx({ op: 'update', id: IDS.generator, data: {} })
-    )
-    expect(result.ok).toBe(true)
-  })
-
-  it('rejects non-admin insert and creates no generator', async () => {
-    const newId = crypto.randomUUID()
-    const result = await handleGenerators(
-      makeCtx({
-        op: 'insert',
-        id: newId,
-        userId: IDS.member,
-        data: {
-          organization_id: IDS.org,
-          title: 'Nope',
-          model: 'Honda',
-          max_consecutive_run_hours: '8',
-          required_rest_hours: '4',
-          run_warning_threshold_pct: '80'
-        }
-      })
-    )
-    expect(result.ok).toBe(false)
-
-    const row = await testDb.db.query.generators.findFirst({
-      where: eq(generators.id, newId)
-    })
-    expect(row).toBeUndefined()
-  })
-
-  it('rejects non-admin update and leaves the generator intact', async () => {
+  // Regression guard for the Zod whitelist: a compromised client that
+  // sends a known column outside the update schema (here: `organization_id`
+  // and `created_at`) must not be able to mutate that column. The schema
+  // strips unknown keys, so only `title` should land in Postgres.
+  it('update: ignores fields outside the schema whitelist', async () => {
     const result = await handleGenerators(
       makeCtx({
         op: 'update',
         id: IDS.generator,
-        userId: IDS.member,
-        data: { title: 'Hacked' }
+        data: {
+          title: 'Whitelisted',
+          // Not in updateGeneratorSchema — Zod should strip.
+          organization_id: 'attacker-org',
+          created_at: '1970-01-01T00:00:00.000Z'
+        }
       })
     )
-    expect(result.ok).toBe(false)
+    expect(result.ok).toBe(true)
 
     const row = await testDb.db.query.generators.findFirst({
       where: eq(generators.id, IDS.generator)
     })
-    expect(row!.title).not.toBe('Hacked')
+    expect(row!.title).toBe('Whitelisted')
+    // Unauthorized fields must stay at their seeded values.
+    expect(row!.organizationId).toBe(IDS.org)
   })
 
   it('delete: admin deletes', async () => {
@@ -697,102 +680,14 @@ describe('handleGenerators', () => {
     expect(row).toBeUndefined()
   })
 
-  it('rejects non-admin delete and leaves the generator intact', async () => {
+  // PowerSync replay: if the ack for a successful delete was lost, the
+  // retry hits a missing row. The server must translate that into success
+  // so the sync queue advances instead of logging a spurious rejection.
+  it('delete: replay of already-deleted row returns ok', async () => {
     const result = await handleGenerators(
-      makeCtx({ op: 'delete', id: IDS.generator, userId: IDS.member })
+      makeCtx({ op: 'delete', id: crypto.randomUUID() })
     )
-    expect(result.ok).toBe(false)
-
-    const row = await testDb.db.query.generators.findFirst({
-      where: eq(generators.id, IDS.generator)
-    })
-    expect(row).toBeDefined()
-  })
-
-  // PG CHECK constraints
-  it('insert: PG rejects empty title via CHECK constraint', async () => {
-    const result = handleGenerators(
-      makeCtx({
-        op: 'insert',
-        data: {
-          organization_id: IDS.org,
-          title: '  ',
-          model: 'Honda',
-          max_consecutive_run_hours: '8',
-          required_rest_hours: '4',
-          run_warning_threshold_pct: '80'
-        }
-      })
-    )
-    await expect(result).rejects.toThrow()
-  })
-
-  it('insert: PG rejects non-positive max_consecutive_run_hours via CHECK constraint', async () => {
-    const result = handleGenerators(
-      makeCtx({
-        op: 'insert',
-        data: {
-          organization_id: IDS.org,
-          title: 'Gen',
-          model: 'Honda',
-          max_consecutive_run_hours: '0',
-          required_rest_hours: '4',
-          run_warning_threshold_pct: '80'
-        }
-      })
-    )
-    await expect(result).rejects.toThrow()
-  })
-
-  it('insert: PG rejects non-positive required_rest_hours via CHECK constraint', async () => {
-    const result = handleGenerators(
-      makeCtx({
-        op: 'insert',
-        data: {
-          organization_id: IDS.org,
-          title: 'Gen',
-          model: 'Honda',
-          max_consecutive_run_hours: '8',
-          required_rest_hours: '0',
-          run_warning_threshold_pct: '80'
-        }
-      })
-    )
-    await expect(result).rejects.toThrow()
-  })
-
-  it('insert: PG rejects warning threshold of 0 via CHECK constraint', async () => {
-    const result = handleGenerators(
-      makeCtx({
-        op: 'insert',
-        data: {
-          organization_id: IDS.org,
-          title: 'Gen',
-          model: 'Honda',
-          max_consecutive_run_hours: '8',
-          required_rest_hours: '4',
-          run_warning_threshold_pct: '0'
-        }
-      })
-    )
-    await expect(result).rejects.toThrow()
-  })
-
-  it('insert: PG rejects warning threshold outside 1-100 via CHECK constraint', async () => {
-    const result = handleGenerators(
-      makeCtx({
-        op: 'insert',
-        data: {
-          organization_id: IDS.org,
-          title: 'Gen',
-          model: 'Honda',
-          max_consecutive_run_hours: '8',
-          required_rest_hours: '4',
-          run_warning_threshold_pct: '101'
-        }
-      })
-    )
-    await expect(result).rejects.toThrow()
+    expect(result.ok).toBe(true)
   })
 
   it('delete: cascades to sessions, templates, and assignments', async () => {
