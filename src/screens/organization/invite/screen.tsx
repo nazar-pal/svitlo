@@ -1,49 +1,39 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Description, FieldError, Input, Label, TextField } from 'heroui-native'
-import { useState } from 'react'
 import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
+import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createInvitation } from '@/data/client/mutations'
-import { notifySuccess } from '@/lib/haptics'
 import { insertInvitationSchema } from '@/data/client/validation'
+import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function InviteMemberScreen() {
-  const { t } = useTranslation()
   const { id: orgId } = useLocalSearchParams<{ id: string }>()
-  const router = useRouter()
   const localUser = useLocalUser()
+  if (!localUser || !orgId) return null
+  return <InviteForm userId={localUser.id} orgId={orgId} />
+}
 
-  const [email, setEmail] = useState('')
-  const [error, setError] = useState('')
+function InviteForm({ userId, orgId }: { userId: string; orgId: string }) {
+  const { t } = useTranslation()
+  const router = useRouter()
 
-  async function handleInvite() {
-    if (!localUser || !orgId) return
-    setError('')
+  const { submit, formError, isSubmitting, bind } = useForm({
+    initial: { inviteeEmail: '' },
+    build: values =>
+      validateWithZod(insertInvitationSchema, {
+        organizationId: orgId,
+        inviteeEmail: values.inviteeEmail.trim().toLowerCase()
+      }),
+    mutate: input => createInvitation(userId, input),
+    onSuccess: () => router.back()
+  })
 
-    const input = {
-      organizationId: orgId,
-      inviteeEmail: email.trim().toLowerCase()
-    }
-
-    const parsed = insertInvitationSchema.safeParse(input)
-    if (!parsed.success) {
-      setError(parsed.error.issues[0].message)
-      return
-    }
-
-    const result = await createInvitation(localUser.id, input)
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-
-    notifySuccess()
-    router.back()
-  }
+  const emailBinding = bind.text('inviteeEmail')
 
   return (
     <>
@@ -52,7 +42,8 @@ export default function InviteMemberScreen() {
           headerRight: () => (
             <HeaderSubmitButton
               systemImage="paperplane.fill"
-              onPress={handleInvite}
+              onPress={submit}
+              isDisabled={isSubmitting}
             />
           )
         }}
@@ -69,20 +60,22 @@ export default function InviteMemberScreen() {
             {t('organization.inviteDesc')}
           </Text>
 
-          <TextField isInvalid={!!error}>
+          <TextField isInvalid={emailBinding.isInvalid}>
             <Label>{t('organization.emailAddress')}</Label>
             <Input
               testID="invite-email-input"
               placeholder={t('organization.emailPlaceholder')}
-              value={email}
-              onChangeText={setEmail}
+              value={emailBinding.value}
+              onChangeText={emailBinding.onChangeText}
               keyboardType="email-address"
               autoCapitalize="none"
               autoFocus
             />
             <Description>{t('organization.inviteHint')}</Description>
-            <FieldError>{error}</FieldError>
+            <FieldError>{emailBinding.errorMessage}</FieldError>
           </TextField>
+
+          <FormError message={formError} />
         </View>
       </KeyboardAwareScrollView>
     </>

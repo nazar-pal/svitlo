@@ -1,39 +1,31 @@
-import { Button, Input, Label, TextField } from 'heroui-native'
-import { useState } from 'react'
+import { Button, FieldError, Input, Label, TextField } from 'heroui-native'
 import { Text, View } from 'react-native'
 
 import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { completeNameSchema } from '@/data/client/validation'
 import { authClient } from '@/lib/auth/auth-client'
+import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useTranslation } from '@/lib/i18n'
 
 export default function CompleteNameScreen() {
   const { t } = useTranslation()
-  const [name, setName] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState('')
 
-  async function handleSubmit() {
-    if (isSubmitting) return
-    setIsSubmitting(true)
-    setError('')
-
-    const parsed = completeNameSchema.safeParse({ name })
-    if (!parsed.success) {
-      setError(parsed.error.issues[0].message)
-      setIsSubmitting(false)
-      return
+  const { submit, formError, isSubmitting, bind } = useForm({
+    initial: { name: '' },
+    build: values => validateWithZod(completeNameSchema, values),
+    mutate: async input => {
+      const result = await authClient.updateUser({ name: input.name })
+      if (result.error)
+        return {
+          ok: false,
+          error: result.error.message ?? t('auth.somethingWentWrong')
+        }
+      return { ok: true }
     }
+  })
 
-    const result = await authClient.updateUser({ name: parsed.data.name })
-
-    if (result.error) {
-      setError(result.error.message ?? t('auth.somethingWentWrong'))
-      setIsSubmitting(false)
-      return
-    }
-  }
+  const nameBinding = bind.text('name')
 
   return (
     <KeyboardAwareScrollView
@@ -54,28 +46,29 @@ export default function CompleteNameScreen() {
         </View>
 
         <View className="gap-4">
-          <TextField>
+          <TextField isInvalid={nameBinding.isInvalid}>
             <Label>{t('auth.name')}</Label>
             <Input
               testID="complete-name-input"
               placeholder={t('auth.namePlaceholder')}
-              value={name}
-              onChangeText={setName}
+              value={nameBinding.value}
+              onChangeText={nameBinding.onChangeText}
               autoCapitalize="words"
               autoFocus
               textContentType="name"
               returnKeyType="done"
-              onSubmitEditing={handleSubmit}
+              onSubmitEditing={submit}
             />
+            <FieldError>{nameBinding.errorMessage}</FieldError>
           </TextField>
 
-          <FormError message={error} />
+          <FormError message={formError} />
 
           <Button
             testID="complete-name-submit-button"
             variant="primary"
             isDisabled={isSubmitting}
-            onPress={handleSubmit}
+            onPress={submit}
           >
             {t('common.continue')}
           </Button>

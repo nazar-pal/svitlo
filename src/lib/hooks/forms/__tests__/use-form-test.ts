@@ -120,6 +120,25 @@ describe('useForm', () => {
       expect(result.current.form.fieldErrors).toEqual({})
     })
 
+    it('clears formError on demand via clearFormError', async () => {
+      const mutate = jest.fn().mockResolvedValue(fail('boom'))
+      const { result } = renderHook(() =>
+        useForm({
+          initial: { name: 'Alice' },
+          build: values => ({ ok: true, data: values }),
+          mutate
+        })
+      )
+
+      await act(async () => {
+        await result.current.submit()
+      })
+      expect(result.current.formError).toBe('boom')
+
+      act(() => result.current.clearFormError())
+      expect(result.current.formError).toBe('')
+    })
+
     it('clears stale formError before re-running build', async () => {
       const mutate = jest
         .fn()

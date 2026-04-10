@@ -1,5 +1,12 @@
 import { useRouter } from 'expo-router'
-import { Button, Description, Input, Label, TextField } from 'heroui-native'
+import {
+  Button,
+  Description,
+  FieldError,
+  Input,
+  Label,
+  TextField
+} from 'heroui-native'
 import { useRef, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 
@@ -7,18 +14,24 @@ import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { signInSchema, signUpSchema } from '@/data/client/validation'
 import { authClient } from '@/lib/auth/auth-client'
+import { type BuildResult, useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useTranslation } from '@/lib/i18n'
+
+type AuthValues = {
+  name: string
+  email: string
+  password: string
+  confirmPassword: string
+}
+
+type AuthInput =
+  | { kind: 'sign-in'; email: string; password: string }
+  | { kind: 'sign-up'; name: string; email: string; password: string }
 
 export default function EmailAuthScreen() {
   const router = useRouter()
   const { t } = useTranslation()
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState('')
 
   const emailRef = useRef<TextInput>(null)
   const passwordRef = useRef<TextInput>(null)
@@ -26,48 +39,68 @@ export default function EmailAuthScreen() {
 
   const isSignUp = mode === 'sign-up'
 
-  async function handleSubmit() {
-    if (isSubmitting) return
-    setIsSubmitting(true)
-    setError('')
-
-    const schema = isSignUp ? signUpSchema : signInSchema
-    const input = isSignUp
-      ? { name, email, password, confirmPassword }
-      : { email, password }
-    const parsed = schema.safeParse(input)
-    if (!parsed.success) {
-      setError(parsed.error.issues[0].message)
-      setIsSubmitting(false)
-      return
-    }
-
-    const result = isSignUp
-      ? await authClient.signUp.email({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          password
+  const { form, submit, formError, clearFormError, isSubmitting, bind } =
+    useForm<AuthValues, AuthInput>({
+      initial: { name: '', email: '', password: '', confirmPassword: '' },
+      build: (values): BuildResult<AuthInput> => {
+        if (isSignUp) {
+          const parsed = validateWithZod(signUpSchema, values)
+          if (!parsed.ok) return parsed
+          return {
+            ok: true,
+            data: {
+              kind: 'sign-up',
+              name: parsed.data.name.trim(),
+              email: parsed.data.email.trim().toLowerCase(),
+              password: parsed.data.password
+            }
+          }
+        }
+        const parsed = validateWithZod(signInSchema, {
+          email: values.email,
+          password: values.password
         })
-      : await authClient.signIn.email({
-          email: email.trim().toLowerCase(),
-          password
-        })
+        if (!parsed.ok) return parsed
+        return {
+          ok: true,
+          data: {
+            kind: 'sign-in',
+            email: parsed.data.email.trim().toLowerCase(),
+            password: parsed.data.password
+          }
+        }
+      },
+      mutate: async input => {
+        const res =
+          input.kind === 'sign-up'
+            ? await authClient.signUp.email({
+                name: input.name,
+                email: input.email,
+                password: input.password
+              })
+            : await authClient.signIn.email({
+                email: input.email,
+                password: input.password
+              })
+        if (res.error)
+          return {
+            ok: false,
+            error: res.error.message ?? t('auth.somethingWentWrong')
+          }
+        return { ok: true }
+      },
+      onSuccess: () => router.back()
+    })
 
-    if (result.error) {
-      setError(result.error.message ?? t('auth.somethingWentWrong'))
-      setIsSubmitting(false)
-      return
-    }
-
-    setIsSubmitting(false)
-    router.back()
-  }
+  const nameBinding = bind.text('name')
+  const emailBinding = bind.text('email')
+  const passwordBinding = bind.text('password')
+  const confirmPasswordBinding = bind.text('confirmPassword')
 
   function toggleMode() {
+    form.patch({ password: '', confirmPassword: '' })
+    clearFormError()
     setMode(isSignUp ? 'sign-in' : 'sign-up')
-    setPassword('')
-    setConfirmPassword('')
-    setError('')
   }
 
   return (
@@ -85,29 +118,30 @@ export default function EmailAuthScreen() {
 
         <View className="gap-4">
           {isSignUp && (
-            <TextField>
+            <TextField isInvalid={nameBinding.isInvalid}>
               <Label>{t('auth.name')}</Label>
               <Input
                 testID="email-auth-name-input"
                 placeholder={t('auth.namePlaceholder')}
-                value={name}
-                onChangeText={setName}
+                value={nameBinding.value}
+                onChangeText={nameBinding.onChangeText}
                 autoCapitalize="words"
                 textContentType="name"
                 returnKeyType="next"
                 onSubmitEditing={() => emailRef.current?.focus()}
               />
+              <FieldError>{nameBinding.errorMessage}</FieldError>
             </TextField>
           )}
 
-          <TextField>
+          <TextField isInvalid={emailBinding.isInvalid}>
             <Label>{t('auth.email')}</Label>
             <Input
               testID="email-auth-email-input"
               ref={emailRef}
               placeholder={t('auth.emailPlaceholder')}
-              value={email}
-              onChangeText={setEmail}
+              value={emailBinding.value}
+              onChangeText={emailBinding.onChangeText}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -115,9 +149,10 @@ export default function EmailAuthScreen() {
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
             />
+            <FieldError>{emailBinding.errorMessage}</FieldError>
           </TextField>
 
-          <TextField>
+          <TextField isInvalid={passwordBinding.isInvalid}>
             <Label>{t('auth.password')}</Label>
             <Input
               testID="email-auth-password-input"
@@ -125,45 +160,47 @@ export default function EmailAuthScreen() {
               placeholder={
                 isSignUp ? t('auth.createPassword') : t('auth.enterPassword')
               }
-              value={password}
-              onChangeText={setPassword}
+              value={passwordBinding.value}
+              onChangeText={passwordBinding.onChangeText}
               secureTextEntry
               autoCapitalize="none"
               textContentType={isSignUp ? 'newPassword' : 'password'}
               returnKeyType={isSignUp ? 'next' : 'done'}
               onSubmitEditing={() =>
-                isSignUp ? confirmPasswordRef.current?.focus() : handleSubmit()
+                isSignUp ? confirmPasswordRef.current?.focus() : submit()
               }
             />
             {isSignUp && <Description>{t('auth.passwordHint')}</Description>}
+            <FieldError>{passwordBinding.errorMessage}</FieldError>
           </TextField>
 
           {isSignUp && (
-            <TextField>
+            <TextField isInvalid={confirmPasswordBinding.isInvalid}>
               <Label>{t('auth.confirmPassword')}</Label>
               <Input
                 testID="email-auth-confirm-password-input"
                 ref={confirmPasswordRef}
                 placeholder={t('auth.confirmPasswordPlaceholder')}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                value={confirmPasswordBinding.value}
+                onChangeText={confirmPasswordBinding.onChangeText}
                 secureTextEntry
                 autoCapitalize="none"
                 textContentType="newPassword"
                 returnKeyType="done"
-                onSubmitEditing={handleSubmit}
+                onSubmitEditing={submit}
               />
+              <FieldError>{confirmPasswordBinding.errorMessage}</FieldError>
             </TextField>
           )}
         </View>
 
-        <FormError message={error} />
+        <FormError message={formError} />
 
         <Button
           testID="email-auth-submit-button"
           variant="primary"
           isDisabled={isSubmitting}
-          onPress={handleSubmit}
+          onPress={submit}
         >
           {isSubmitting
             ? isSignUp

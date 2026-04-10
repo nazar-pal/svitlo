@@ -6,15 +6,15 @@ import {
   Label,
   TextField
 } from 'heroui-native'
-import { useState } from 'react'
 import { View } from 'react-native'
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 
 import { BlurDialogOverlay } from '@/components/blur-dialog-overlay'
+import { FormError } from '@/components/form-error'
 
 import { createOrganization } from '@/data/client/mutations'
 import { insertOrganizationSchema } from '@/data/client/validation'
-import { notifySuccess } from '@/lib/haptics'
+import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useTranslation } from '@/lib/i18n'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -24,91 +24,90 @@ interface CreateOrgDialogProps {
 }
 
 export function CreateOrgDialog({ isOpen, onClose }: CreateOrgDialogProps) {
-  const { t } = useTranslation()
   const localUser = useLocalUser()
-  const [name, setName] = useState('')
-  const [error, setError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  function close() {
-    setName('')
-    setError('')
-    onClose()
-  }
-
-  async function handleCreate() {
-    if (!localUser || isSubmitting) return
-    setIsSubmitting(true)
-    setError('')
-
-    const parsed = insertOrganizationSchema.safeParse({ name })
-    if (!parsed.success) {
-      setError(parsed.error.issues[0].message)
-      setIsSubmitting(false)
-      return
-    }
-
-    const result = await createOrganization(localUser.id, { name })
-    if (!result.ok) {
-      setError(result.error)
-      setIsSubmitting(false)
-      return
-    }
-
-    notifySuccess()
-    close()
-  }
 
   return (
     <Dialog
       isOpen={isOpen}
       onOpenChange={open => {
-        if (!open) close()
+        if (!open) onClose()
       }}
     >
       <Dialog.Portal>
         <BlurDialogOverlay />
-        <KeyboardAvoidingView behavior="padding">
-          <Dialog.Content>
-            <Dialog.Close variant="ghost" className="self-end" />
-            <View className="gap-5">
-              <View className="gap-1.5">
-                <Dialog.Title>{t('screens.newOrganization')}</Dialog.Title>
-                <Dialog.Description>
-                  {t('organization.createDesc')}
-                </Dialog.Description>
-              </View>
-
-              <TextField isInvalid={!!error}>
-                <Label>{t('organization.organizationName')}</Label>
-                <Input
-                  testID="create-org-name-input"
-                  placeholder={t('organization.namePlaceholder')}
-                  value={name}
-                  onChangeText={setName}
-                  autoFocus
-                  variant="secondary"
-                />
-                {error ? <FieldError>{error}</FieldError> : null}
-              </TextField>
-
-              <View className="flex-row justify-end gap-3">
-                <Button variant="ghost" size="sm" onPress={close}>
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  testID="create-org-submit"
-                  size="sm"
-                  isDisabled={isSubmitting}
-                  onPress={handleCreate}
-                >
-                  {t('common.create')}
-                </Button>
-              </View>
-            </View>
-          </Dialog.Content>
-        </KeyboardAvoidingView>
+        {localUser ? (
+          <DialogBody userId={localUser.id} onClose={onClose} />
+        ) : null}
       </Dialog.Portal>
     </Dialog>
+  )
+}
+
+function DialogBody({
+  userId,
+  onClose
+}: {
+  userId: string
+  onClose: () => void
+}) {
+  const { t } = useTranslation()
+
+  const { submit, formError, isSubmitting, bind, form } = useForm({
+    initial: { name: '' },
+    build: values => validateWithZod(insertOrganizationSchema, values),
+    mutate: input => createOrganization(userId, input),
+    onSuccess: () => close()
+  })
+
+  function close() {
+    form.reset()
+    onClose()
+  }
+
+  const nameBinding = bind.text('name')
+
+  return (
+    <KeyboardAvoidingView behavior="padding">
+      <Dialog.Content>
+        <Dialog.Close variant="ghost" className="self-end" />
+        <View className="gap-5">
+          <View className="gap-1.5">
+            <Dialog.Title>{t('screens.newOrganization')}</Dialog.Title>
+            <Dialog.Description>
+              {t('organization.createDesc')}
+            </Dialog.Description>
+          </View>
+
+          <TextField isInvalid={nameBinding.isInvalid}>
+            <Label>{t('organization.organizationName')}</Label>
+            <Input
+              testID="create-org-name-input"
+              placeholder={t('organization.namePlaceholder')}
+              value={nameBinding.value}
+              onChangeText={nameBinding.onChangeText}
+              autoFocus
+              variant="secondary"
+            />
+            <FieldError>{nameBinding.errorMessage}</FieldError>
+          </TextField>
+
+          <FormError message={formError} />
+
+          <View className="flex-row justify-end gap-3">
+            <Button variant="ghost" size="sm" onPress={close}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              testID="create-org-submit"
+              size="sm"
+              isDisabled={isSubmitting}
+              onPress={submit}
+            >
+              {t('common.create')}
+            </Button>
+          </View>
+        </View>
+      </Dialog.Content>
+    </KeyboardAvoidingView>
   )
 }

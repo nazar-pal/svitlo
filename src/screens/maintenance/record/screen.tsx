@@ -1,6 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Card, Description, Input, Label, TextField } from 'heroui-native'
-import { useState } from 'react'
 import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
@@ -9,58 +8,67 @@ import { HeaderSubmitButton } from '@/components/navigation/header-submit-button
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { recordMaintenance } from '@/data/client/mutations'
 import { getGenerator, getMaintenanceTemplate } from '@/data/client/queries'
-import { notifySuccess } from '@/lib/haptics'
+import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function RecordMaintenanceScreen() {
-  const { t } = useTranslation()
   const { id: generatorId, templateId } = useLocalSearchParams<{
     id: string
     templateId: string
   }>()
-  const router = useRouter()
   const localUser = useLocalUser()
+  if (!localUser || !templateId || !generatorId) return null
+  return (
+    <RecordForm
+      userId={localUser.id}
+      templateId={templateId}
+      generatorId={generatorId}
+    />
+  )
+}
 
-  const [notes, setNotes] = useState('')
-  const [error, setError] = useState('')
+interface RecordFormProps {
+  userId: string
+  templateId: string
+  generatorId: string
+}
 
-  // Template info
+function RecordForm({ userId, templateId, generatorId }: RecordFormProps) {
+  const { t } = useTranslation()
+  const router = useRouter()
+
   const { data: templateData } = useDrizzleQuery(
-    templateId ? getMaintenanceTemplate(templateId) : undefined
+    getMaintenanceTemplate(templateId)
   )
   const template = templateData[0]
 
-  // Generator info
-  const { data: generatorData } = useDrizzleQuery(
-    generatorId ? getGenerator(generatorId) : undefined
-  )
+  const { data: generatorData } = useDrizzleQuery(getGenerator(generatorId))
   const generator = generatorData[0]
 
-  async function handleRecord() {
-    if (!localUser || !templateId || !generatorId) return
-    setError('')
+  const { submit, formError, isSubmitting, bind } = useForm({
+    initial: { notes: '' },
+    build: values => ({
+      ok: true,
+      data: {
+        templateId,
+        generatorId,
+        notes: values.notes || undefined
+      }
+    }),
+    mutate: input => recordMaintenance(userId, input),
+    onSuccess: () => router.back()
+  })
 
-    const result = await recordMaintenance(localUser.id, {
-      templateId,
-      generatorId,
-      notes: notes || undefined
-    })
-
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-
-    notifySuccess()
-    router.back()
-  }
+  const notesBinding = bind.text('notes')
 
   return (
     <>
       <Stack.Screen
         options={{
-          headerRight: () => <HeaderSubmitButton onPress={handleRecord} />
+          headerRight: () => (
+            <HeaderSubmitButton onPress={submit} isDisabled={isSubmitting} />
+          )
         }}
       />
       <KeyboardAwareScrollView
@@ -91,14 +99,14 @@ export default function RecordMaintenanceScreen() {
             <Input
               testID="record-maintenance-notes-input"
               placeholder={t('maintenanceRecord.notesPlaceholder')}
-              value={notes}
-              onChangeText={setNotes}
+              value={notesBinding.value}
+              onChangeText={notesBinding.onChangeText}
               multiline
             />
             <Description>{t('common.optional')}</Description>
           </TextField>
 
-          <FormError message={error} />
+          <FormError message={formError} />
         </View>
       </KeyboardAwareScrollView>
     </>

@@ -44,6 +44,7 @@ interface UseFormReturn<TValues extends Record<string, unknown>> {
   form: FormState<TValues>
   submit: () => Promise<void>
   formError: string
+  clearFormError: () => void
   isSubmitting: boolean
   bind: FormBindings<TValues>
 }
@@ -96,5 +97,9 @@ export function useForm<TValues extends Record<string, unknown>, TInput>(
     value: name => bindValue(form, name)
   }
 
-  return { form, submit, formError, isSubmitting, bind }
+  function clearFormError() {
+    setFormError('')
+  }
+
+  return { form, submit, formError, clearFormError, isSubmitting, bind }
 }

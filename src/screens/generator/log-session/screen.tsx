@@ -9,52 +9,66 @@ import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { logManualSession } from '@/data/client/mutations'
 import { getGenerator } from '@/data/client/queries'
-import { notifySuccess } from '@/lib/haptics'
+import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function LogSessionScreen() {
-  const { t } = useTranslation()
   const { id: generatorId } = useLocalSearchParams<{ id: string }>()
-  const router = useRouter()
   const localUser = useLocalUser()
+  if (!localUser || !generatorId) return null
+  return <LogSessionForm userId={localUser.id} generatorId={generatorId} />
+}
 
-  const now = new Date()
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+function LogSessionForm({
+  userId,
+  generatorId
+}: {
+  userId: string
+  generatorId: string
+}) {
+  const { t } = useTranslation()
+  const router = useRouter()
 
-  const [startedAt, setStartedAt] = useState(oneHourAgo)
-  const [stoppedAt, setStoppedAt] = useState(now)
-  const [error, setError] = useState('')
-
-  const { data: generatorData } = useDrizzleQuery(
-    generatorId ? getGenerator(generatorId) : undefined
-  )
+  const { data: generatorData } = useDrizzleQuery(getGenerator(generatorId))
   const generator = generatorData[0]
 
-  async function handleSubmit() {
-    if (!localUser || !generatorId) return
-    setError('')
-
-    const result = await logManualSession(localUser.id, {
-      generatorId,
-      startedAt: startedAt.toISOString(),
-      stoppedAt: stoppedAt.toISOString()
-    })
-
-    if (!result.ok) {
-      setError(result.error)
-      return
+  const [initialRange] = useState(() => {
+    const now = new Date()
+    return {
+      startedAt: new Date(now.getTime() - 60 * 60 * 1000),
+      stoppedAt: now
     }
+  })
 
-    notifySuccess()
-    router.back()
-  }
+  const { submit, formError, isSubmitting, bind } = useForm({
+    initial: initialRange,
+    build: values => {
+      if (values.stoppedAt.getTime() <= values.startedAt.getTime())
+        return { ok: false, formError: t('validation.endBeforeStart') }
+      return {
+        ok: true,
+        data: {
+          generatorId,
+          startedAt: values.startedAt.toISOString(),
+          stoppedAt: values.stoppedAt.toISOString()
+        }
+      }
+    },
+    mutate: input => logManualSession(userId, input),
+    onSuccess: () => router.back()
+  })
+
+  const startedAtBinding = bind.value('startedAt')
+  const stoppedAtBinding = bind.value('stoppedAt')
 
   return (
     <>
       <Stack.Screen
         options={{
-          headerRight: () => <HeaderSubmitButton onPress={handleSubmit} />
+          headerRight: () => (
+            <HeaderSubmitButton onPress={submit} isDisabled={isSubmitting} />
+          )
         }}
       />
       <ScrollView
@@ -80,10 +94,10 @@ export default function LogSessionScreen() {
             </Text>
             <Host matchContents>
               <DatePicker
-                selection={startedAt}
-                onDateChange={setStartedAt}
+                selection={startedAtBinding.value}
+                onDateChange={startedAtBinding.onChange}
                 displayedComponents={['date', 'hourAndMinute']}
-                range={{ end: new Date() }}
+                range={{ end: stoppedAtBinding.value }}
               />
             </Host>
           </View>
@@ -94,15 +108,15 @@ export default function LogSessionScreen() {
             </Text>
             <Host matchContents>
               <DatePicker
-                selection={stoppedAt}
-                onDateChange={setStoppedAt}
+                selection={stoppedAtBinding.value}
+                onDateChange={stoppedAtBinding.onChange}
                 displayedComponents={['date', 'hourAndMinute']}
-                range={{ end: new Date() }}
+                range={{ start: startedAtBinding.value, end: new Date() }}
               />
             </Host>
           </View>
 
-          <FormError message={error} />
+          <FormError message={formError} />
         </View>
       </ScrollView>
     </>
