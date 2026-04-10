@@ -114,12 +114,18 @@ export async function seedInvitation(db: Db, email = 'invitee@test.com') {
   })
 }
 
-export async function seedSession(db: Db, startedBy: string = IDS.admin) {
+export async function seedSession(
+  db: Db,
+  startedBy: string = IDS.admin,
+  options: { stoppedAt?: Date } = {}
+) {
   await db.insert(generatorSessions).values({
     id: IDS.session,
     generatorId: IDS.generator,
     startedByUserId: startedBy,
-    startedAt: T
+    startedAt: T,
+    stoppedAt: options.stoppedAt ?? null,
+    stoppedByUserId: options.stoppedAt ? startedBy : null
   })
 }
 

@@ -1075,16 +1075,20 @@ describe('handleGeneratorSessions', () => {
     expect(row).toBeDefined()
   })
 
-  it("delete: admin can delete anyone's session", async () => {
-    await seedSession(testDb.db, IDS.member)
+  it("delete: admin can delete anyone's stopped session", async () => {
+    await seedSession(testDb.db, IDS.member, {
+      stoppedAt: new Date('2026-01-15T13:00:00Z')
+    })
     const result = await handleGeneratorSessions(
       makeCtx({ op: 'delete', id: IDS.session })
     )
     expect(result.ok).toBe(true)
   })
 
-  it('delete: non-admin can delete own session', async () => {
-    await seedSession(testDb.db, IDS.member)
+  it('delete: non-admin can delete own stopped session', async () => {
+    await seedSession(testDb.db, IDS.member, {
+      stoppedAt: new Date('2026-01-15T13:00:00Z')
+    })
     await seedAssignment(testDb.db)
     const result = await handleGeneratorSessions(
       makeCtx({ op: 'delete', id: IDS.session, userId: IDS.member })
@@ -1092,13 +1096,29 @@ describe('handleGeneratorSessions', () => {
     expect(result.ok).toBe(true)
   })
 
-  it("delete: non-admin cannot delete other's session", async () => {
-    await seedSession(testDb.db, IDS.admin)
+  it("delete: non-admin cannot delete other's stopped session", async () => {
+    await seedSession(testDb.db, IDS.admin, {
+      stoppedAt: new Date('2026-01-15T13:00:00Z')
+    })
     await seedAssignment(testDb.db)
     const result = await handleGeneratorSessions(
       makeCtx({ op: 'delete', id: IDS.session, userId: IDS.member })
     )
     expect(result.ok).toBe(false)
+  })
+
+  it('delete: rejects active session with CANNOT_DELETE_ACTIVE_SESSION', async () => {
+    await seedSession(testDb.db)
+    const result = await handleGeneratorSessions(
+      makeCtx({ op: 'delete', id: IDS.session })
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error).toBe('CANNOT_DELETE_ACTIVE_SESSION')
+
+    const row = await testDb.db.query.generatorSessions.findFirst({
+      where: eq(generatorSessions.id, IDS.session)
+    })
+    expect(row).toBeDefined()
   })
 
   it('delete: already deleted returns ok', async () => {
@@ -1108,7 +1128,7 @@ describe('handleGeneratorSessions', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('insert: second active session for same generator is idempotent (onConflictDoNothing)', async () => {
+  it('insert: second active session for same generator is rejected with GENERATOR_ALREADY_ACTIVE', async () => {
     await seedSession(testDb.db)
     const secondId = crypto.randomUUID()
     const result = await handleGeneratorSessions(
@@ -1118,13 +1138,127 @@ describe('handleGeneratorSessions', () => {
         data: { generator_id: IDS.generator }
       })
     )
-    expect(result.ok).toBe(true)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error).toBe('GENERATOR_ALREADY_ACTIVE')
+
     const rows = await testDb.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.generatorId, IDS.generator))
     expect(rows).toHaveLength(1)
     expect(rows[0].id).toBe(IDS.session)
+  })
+
+  it('insert: lost-ack replay of the same id by the same user returns ok', async () => {
+    // PowerSync resends the same CRUD entry when a client never saw the
+    // original upload ack. The replay must be treated as already-applied,
+    // not recorded as a spurious GENERATOR_ALREADY_ACTIVE rejection.
+    await seedSession(testDb.db)
+    const result = await handleGeneratorSessions(
+      makeCtx({
+        op: 'insert',
+        id: IDS.session,
+        data: { generator_id: IDS.generator }
+      })
+    )
+    expect(result.ok).toBe(true)
+
+    // The original row is untouched — no duplicate inserted.
+    const rows = await testDb.db
+      .select()
+      .from(generatorSessions)
+      .where(eq(generatorSessions.generatorId, IDS.generator))
+    expect(rows).toHaveLength(1)
+    expect(rows[0].id).toBe(IDS.session)
+  })
+
+  it('update: rejects stopping an already-stopped session with SESSION_ALREADY_STOPPED', async () => {
+    await seedSession(testDb.db, IDS.admin, {
+      stoppedAt: new Date('2026-01-15T13:00:00Z')
+    })
+    const result = await handleGeneratorSessions(
+      makeCtx({
+        op: 'update',
+        id: IDS.session,
+        data: { stopped_at: '2026-01-15T14:00:00Z' }
+      })
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error).toBe('SESSION_ALREADY_STOPPED')
+  })
+
+  it('update: rejects editing an active session with CANNOT_EDIT_ACTIVE_SESSION', async () => {
+    await seedSession(testDb.db)
+    const result = await handleGeneratorSessions(
+      makeCtx({
+        op: 'update',
+        id: IDS.session,
+        data: {
+          started_at: '2026-01-15T10:00:00Z',
+          stopped_at: '2026-01-15T11:00:00Z'
+        }
+      })
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error).toBe('CANNOT_EDIT_ACTIVE_SESSION')
+  })
+
+  it('update: rejects editing a stopped session with START_BEFORE_END', async () => {
+    await seedSession(testDb.db, IDS.admin, {
+      stoppedAt: new Date('2026-01-15T13:00:00Z')
+    })
+    const result = await handleGeneratorSessions(
+      makeCtx({
+        op: 'update',
+        id: IDS.session,
+        data: {
+          started_at: '2026-01-15T11:00:00Z',
+          stopped_at: '2026-01-15T11:00:00Z'
+        }
+      })
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error).toBe('START_BEFORE_END')
+  })
+
+  it('update: rejects editing a stopped session with END_TIME_IN_FUTURE', async () => {
+    await seedSession(testDb.db, IDS.admin, {
+      stoppedAt: new Date('2026-01-15T13:00:00Z')
+    })
+    const result = await handleGeneratorSessions(
+      makeCtx({
+        op: 'update',
+        id: IDS.session,
+        data: {
+          started_at: '2026-01-15T10:00:00Z',
+          stopped_at: '2099-01-15T11:00:00Z'
+        }
+      })
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error).toBe('END_TIME_IN_FUTURE')
+  })
+
+  it('update: accepts editing a stopped session with valid times', async () => {
+    await seedSession(testDb.db, IDS.admin, {
+      stoppedAt: new Date('2026-01-15T13:00:00Z')
+    })
+    const result = await handleGeneratorSessions(
+      makeCtx({
+        op: 'update',
+        id: IDS.session,
+        data: {
+          started_at: '2026-01-15T09:00:00Z',
+          stopped_at: '2026-01-15T11:00:00Z'
+        }
+      })
+    )
+    expect(result.ok).toBe(true)
+    const row = await testDb.db.query.generatorSessions.findFirst({
+      where: eq(generatorSessions.id, IDS.session)
+    })
+    expect(row!.startedAt.toISOString()).toBe('2026-01-15T09:00:00.000Z')
+    expect(row!.stoppedAt!.toISOString()).toBe('2026-01-15T11:00:00.000Z')
   })
 })
 

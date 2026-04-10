@@ -7,7 +7,6 @@ import {
   IDS,
   seedBaseScenario,
   seedGenerator,
-  seedAssignment,
   seedActiveSession,
   seedStoppedSession
 } from './seed'
@@ -53,10 +52,18 @@ beforeEach(() => {
 
 afterAll(() => closeDatabase(mockTestDb.sqlite))
 
-// ── startSession ───────────────────────────��────────────────────────────────
+// Boundary-only tests for the PowerSync SQLite adapter layer. Full
+// enumeration of rule branches (missing generator, already stopped, time
+// ordering, future end time, etc.) lives in
+// `src/data/shared/sessions/__tests__/policy-test.ts` and runs against the
+// pure policy. These tests verify the two things the pure policy cannot:
+//   1. The happy path writes the expected row through the real SQLite
+//      adapter + mutation helpers (newId, nowISO, column mapping).
+//   2. On a representative rejection, the adapter performs no partial write
+//      — the pre-check short-circuits before `db.insert/update/delete`.
 
 describe('startSession', () => {
-  it('succeeds when admin starts a session', async () => {
+  it('inserts an active session row on success', async () => {
     const result = await startSession(IDS.adminUser, IDS.generator)
     expect(result.ok).toBe(true)
 
@@ -70,12 +77,6 @@ describe('startSession', () => {
     expect(rows[0].stoppedAt).toBeNull()
   })
 
-  it('succeeds when assigned member starts a session', async () => {
-    seedAssignment(mockTestDb.db)
-    const result = await startSession(IDS.memberUser, IDS.generator)
-    expect(result.ok).toBe(true)
-  })
-
   it('rejects outsider and does not create a session', async () => {
     const result = await startSession(IDS.outsiderUser, IDS.generator)
     expect(result.ok).toBe(false)
@@ -87,29 +88,10 @@ describe('startSession', () => {
       .all()
     expect(rows).toHaveLength(0)
   })
-
-  it('fails when generator does not exist', async () => {
-    const result = await startSession(IDS.adminUser, 'nonexistent')
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when session already active', async () => {
-    seedActiveSession(mockTestDb.db)
-    const result = await startSession(IDS.adminUser, IDS.generator)
-    expect(result.ok).toBe(false)
-  })
-
-  it('allows starting after previous session was stopped', async () => {
-    seedStoppedSession(mockTestDb.db)
-    const result = await startSession(IDS.adminUser, IDS.generator)
-    expect(result.ok).toBe(true)
-  })
 })
 
-// ── stopSession ────���────────────────────────────────────────────────────────
-
 describe('stopSession', () => {
-  it('updates stoppedAt and stoppedByUserId', async () => {
+  it('updates stoppedAt and stoppedByUserId on success', async () => {
     seedActiveSession(mockTestDb.db)
     const result = await stopSession(IDS.adminUser, IDS.session.active)
     expect(result.ok).toBe(true)
@@ -121,24 +103,6 @@ describe('stopSession', () => {
       .all()
     expect(session.stoppedAt).not.toBeNull()
     expect(session.stoppedByUserId).toBe(IDS.adminUser)
-  })
-
-  it('fails when session does not exist', async () => {
-    const result = await stopSession(IDS.adminUser, 'nonexistent')
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when session already stopped', async () => {
-    seedStoppedSession(mockTestDb.db)
-    const result = await stopSession(IDS.adminUser, IDS.session.stopped)
-    expect(result.ok).toBe(false)
-  })
-
-  it('succeeds when assigned member stops a session', async () => {
-    seedActiveSession(mockTestDb.db)
-    seedAssignment(mockTestDb.db)
-    const result = await stopSession(IDS.memberUser, IDS.session.active)
-    expect(result.ok).toBe(true)
   })
 
   it('rejects outsider and leaves the session intact', async () => {
@@ -155,10 +119,8 @@ describe('stopSession', () => {
   })
 })
 
-// ── deleteSession ──────────���────────────────────────────���───────────────────
-
 describe('deleteSession', () => {
-  it('deletes a stopped session', async () => {
+  it('removes the row on success', async () => {
     seedStoppedSession(mockTestDb.db)
     const result = await deleteSession(IDS.adminUser, IDS.session.stopped)
     expect(result.ok).toBe(true)
@@ -169,17 +131,6 @@ describe('deleteSession', () => {
       .where(eq(generatorSessions.id, IDS.session.stopped))
       .all()
     expect(row).toBeUndefined()
-  })
-
-  it('fails when session does not exist', async () => {
-    const result = await deleteSession(IDS.adminUser, 'nonexistent')
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when session is still active', async () => {
-    seedActiveSession(mockTestDb.db)
-    const result = await deleteSession(IDS.adminUser, IDS.session.active)
-    expect(result.ok).toBe(false)
   })
 
   it('rejects outsider and leaves the session intact', async () => {
@@ -196,10 +147,8 @@ describe('deleteSession', () => {
   })
 })
 
-// ── updateSession ───────────���───────────────────────────────────────────────
-
 describe('updateSession', () => {
-  it('updates startedAt and stoppedAt on a stopped session', async () => {
+  it('updates startedAt and stoppedAt on success', async () => {
     seedStoppedSession(mockTestDb.db)
     const result = await updateSession(IDS.adminUser, IDS.session.stopped, {
       startedAt: '2026-01-15T08:00:00Z',
@@ -214,41 +163,6 @@ describe('updateSession', () => {
       .all()
     expect(session.startedAt).toBe('2026-01-15T08:00:00Z')
     expect(session.stoppedAt).toBe('2026-01-15T10:00:00Z')
-  })
-
-  it('fails when session does not exist', async () => {
-    const result = await updateSession(IDS.adminUser, 'nonexistent', {
-      startedAt: '2026-01-15T08:00:00Z',
-      stoppedAt: '2026-01-15T10:00:00Z'
-    })
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when session is still active', async () => {
-    seedActiveSession(mockTestDb.db)
-    const result = await updateSession(IDS.adminUser, IDS.session.active, {
-      startedAt: '2026-01-15T08:00:00Z',
-      stoppedAt: '2026-01-15T10:00:00Z'
-    })
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when startedAt >= stoppedAt', async () => {
-    seedStoppedSession(mockTestDb.db)
-    const result = await updateSession(IDS.adminUser, IDS.session.stopped, {
-      startedAt: '2026-01-15T12:00:00Z',
-      stoppedAt: '2026-01-15T10:00:00Z'
-    })
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when stoppedAt is in the future', async () => {
-    seedStoppedSession(mockTestDb.db)
-    const result = await updateSession(IDS.adminUser, IDS.session.stopped, {
-      startedAt: '2026-01-15T10:00:00Z',
-      stoppedAt: '2099-01-01T00:00:00Z'
-    })
-    expect(result.ok).toBe(false)
   })
 
   it('rejects outsider and leaves the session intact', async () => {
@@ -269,10 +183,8 @@ describe('updateSession', () => {
   })
 })
 
-// ── logManualSession ─────────��──────────────────────────────────────────────
-
 describe('logManualSession', () => {
-  it('inserts a completed session for admin', async () => {
+  it('inserts a completed session row on success', async () => {
     const result = await logManualSession(IDS.adminUser, {
       generatorId: IDS.generator,
       startedAt: '2026-01-15T08:00:00Z',
@@ -290,43 +202,6 @@ describe('logManualSession', () => {
     expect(rows[0].stoppedByUserId).toBe(IDS.adminUser)
     expect(rows[0].startedAt).toBe('2026-01-15T08:00:00Z')
     expect(rows[0].stoppedAt).toBe('2026-01-15T10:00:00Z')
-  })
-
-  it('succeeds for assigned member', async () => {
-    seedAssignment(mockTestDb.db)
-    const result = await logManualSession(IDS.memberUser, {
-      generatorId: IDS.generator,
-      startedAt: '2026-01-15T08:00:00Z',
-      stoppedAt: '2026-01-15T10:00:00Z'
-    })
-    expect(result.ok).toBe(true)
-  })
-
-  it('fails when generator does not exist', async () => {
-    const result = await logManualSession(IDS.adminUser, {
-      generatorId: 'nonexistent',
-      startedAt: '2026-01-15T08:00:00Z',
-      stoppedAt: '2026-01-15T10:00:00Z'
-    })
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when startedAt >= stoppedAt', async () => {
-    const result = await logManualSession(IDS.adminUser, {
-      generatorId: IDS.generator,
-      startedAt: '2026-01-15T12:00:00Z',
-      stoppedAt: '2026-01-15T10:00:00Z'
-    })
-    expect(result.ok).toBe(false)
-  })
-
-  it('fails when stoppedAt is in the future', async () => {
-    const result = await logManualSession(IDS.adminUser, {
-      generatorId: IDS.generator,
-      startedAt: '2026-01-15T10:00:00Z',
-      stoppedAt: '2099-01-01T00:00:00Z'
-    })
-    expect(result.ok).toBe(false)
   })
 
   it('rejects outsider and creates no session', async () => {

@@ -84,8 +84,7 @@ export function createPowerSyncConnector(opts: {
     const transaction = await database.getNextCrudTransaction()
     if (!transaction) return
 
-    let lastOp: { table: string; op: CrudWrite['op']; id: string } | null =
-      null
+    let lastOp: { table: string; op: CrudWrite['op']; id: string } | null = null
 
     try {
       for (const op of transaction.crud) {
