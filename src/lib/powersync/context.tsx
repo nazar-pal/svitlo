@@ -1,6 +1,7 @@
 import {
   PowerSyncContext as NativePowerSyncContext,
-  useStatus
+  useStatus,
+  type PowerSyncBackendConnector
 } from '@powersync/react-native'
 import { Button } from 'heroui-native'
 import React, {
@@ -17,7 +18,7 @@ import { useLocalIdentity } from '@/lib/auth/local-identity-context'
 import { useSessionStatus } from '@/lib/auth/session-status-context'
 import { disconnectAndSignOut } from '@/lib/auth/sign-out'
 
-import { Connector, clearCredentialCache } from './connector'
+import { createPowerSyncConnector } from './connector'
 import { powersync } from './database'
 import { clearRejections } from './sync-rejections'
 
@@ -37,14 +38,15 @@ export function PowerSyncProvider({
 }) {
   const { sessionStatus, setSessionStatus } = useSessionStatus()
   const [isReady, setIsReady] = useState(false)
-  const connectorRef = useRef<Connector | null>(null)
+  const connectorRef = useRef<PowerSyncBackendConnector | null>(null)
   const connectedRef = useRef(false)
 
   function disconnectIfConnected() {
     if (!connectedRef.current) return
     powersync.disconnect()
-    clearCredentialCache()
     clearRejections()
+    // The connector's credential cache is closure-scoped — discarding
+    // the instance here is sufficient; no manual invalidation needed.
     connectorRef.current = null
     connectedRef.current = false
   }
@@ -89,7 +91,9 @@ export function PowerSyncProvider({
 
     if (sessionStatus === 'valid') {
       if (!connectedRef.current) {
-        connectorRef.current = new Connector(() => setSessionStatus('expired'))
+        connectorRef.current = createPowerSyncConnector({
+          onAuthExpired: () => setSessionStatus('expired')
+        })
         // connect() is fire-and-forget per PowerSync docs
         powersync.connect(connectorRef.current)
         connectedRef.current = true

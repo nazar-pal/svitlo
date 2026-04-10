@@ -1,19 +1,21 @@
 /**
- * Integration tests for the Connector class.
+ * Integration tests for the PowerSync connector.
  *
- * These complement the unit tests in connector-test.ts by exercising the full
- * oRPC serialization round-trip via a fetch interceptor. Exhaustive scenario
- * coverage (caching, expiry, rejection variants, error categorization, etc.)
- * lives in the unit test — this file only covers what the unit test cannot:
+ * These complement the unit tests in connector-test.ts by exercising the
+ * full oRPC serialization round-trip via a fetch interceptor. Exhaustive
+ * scenario coverage (caching, expiry, rejection variants, error
+ * classification, etc.) lives in the unit test — this file only covers
+ * what the unit test cannot:
  *
- * 1. The oRPC wire format ({ json: ... } envelope) is correct
- * 2. Multi-op CRUD ordering through the transport layer
- * 3. A basic fetch round-trip proves the interceptor wiring works
+ *   1. The oRPC wire format ({ json: ... } envelope) is correct
+ *   2. Multi-op CRUD ordering through the transport layer
+ *   3. Fetch round-trip behaviour for structured rejections and for
+ *      unrecognized HTTP errors (the latter guards the bug fix: they
+ *      must re-throw, not drop)
  *
- * Note: the test-rpc-client is a minimal reimplementation of the oRPC wire
- * format, not the real @orpc/client (which is ESM-only). Auth errors here
- * hit the string-matching branch of isAuthError, not the ORPCError instanceof
- * branch — the unit test covers the latter.
+ * Note: the test-rpc-client is a minimal reimplementation of the oRPC
+ * wire format, not the real @orpc/client (which is ESM-only and can't
+ * load in Jest 29's CJS runtime).
  */
 
 import {
@@ -33,7 +35,7 @@ jest.mock('@orpc/client', () => {
 })
 
 jest.mock('@powersync/react-native', () => ({
-  UpdateType: { DELETE: 'DELETE', PATCH: 'PATCH' }
+  UpdateType: { DELETE: 'DELETE', PATCH: 'PATCH', PUT: 'PUT' }
 }))
 
 let mockTestFetch: typeof fetch
@@ -53,10 +55,9 @@ jest.mock('../sync-rejections', () => ({
   addRejection: (...args: unknown[]) => mockAddRejection(...args)
 }))
 
-import { Connector, clearCredentialCache } from '../connector'
+import { createPowerSyncConnector } from '../connector'
 
 afterEach(() => {
-  clearCredentialCache()
   jest.resetAllMocks()
 })
 
@@ -77,6 +78,10 @@ function makeMockDatabase(
   return { getNextCrudTransaction: jest.fn().mockResolvedValue(transaction) }
 }
 
+function buildConnector() {
+  return createPowerSyncConnector({ onAuthExpired: () => {} })
+}
+
 // ── fetchCredentials ─────────────────────────────────────────────────────────
 
 describe('fetchCredentials (integration)', () => {
@@ -86,11 +91,12 @@ describe('fetchCredentials (integration)', () => {
     })
     mockTestFetch = mockFetch
 
-    const connector = new Connector()
+    const connector = buildConnector()
     const creds = await connector.fetchCredentials()
 
-    expect(creds.token).toBe('test-token')
-    expect(creds.endpoint).toBe('https://ps.test.local')
+    expect(creds).not.toBeNull()
+    expect(creds?.token).toBe('test-token')
+    expect(creds?.endpoint).toBe('https://ps.test.local')
   })
 })
 
@@ -112,7 +118,7 @@ describe('uploadData (integration)', () => {
     })
     mockTestFetch = mockFetch
 
-    const connector = new Connector()
+    const connector = buildConnector()
     const tx = makeMockTransaction([
       { op: 'PUT', table: 'generator', id: 'g1', opData: { title: 'Honda' } }
     ])
@@ -142,7 +148,7 @@ describe('uploadData (integration)', () => {
     })
     mockTestFetch = mockFetch
 
-    const connector = new Connector()
+    const connector = buildConnector()
     const tx = makeMockTransaction([
       { op: 'PUT', table: 'generator', id: 'g1', opData: { title: 'Honda' } },
       {
@@ -170,22 +176,24 @@ describe('uploadData (integration)', () => {
     expect(tx.complete).toHaveBeenCalledTimes(1)
   })
 
-  it('adds rejection and completes transaction on non-recoverable server error', async () => {
+  it('handles structured rejection response (200 with ok:false)', async () => {
+    // The server returns constraint errors as a 200 with
+    // `{ok: false, rejection: {...}}` — this is the real production path.
     const { mockFetch } = createFetchInterceptor({
       'powersync/applyWrite': {
-        status: 400,
-        errorBody: {
-          defined: true,
-          code: 'CONSTRAINT_VIOLATION',
-          status: 400,
-          message:
-            'duplicate key value violates unique constraint SQLSTATE: 23505'
+        response: {
+          ok: false,
+          rejection: {
+            code: '23505',
+            table: 'generator',
+            message: 'duplicate key value violates unique constraint'
+          }
         }
       }
     })
     mockTestFetch = mockFetch
 
-    const connector = new Connector()
+    const connector = buildConnector()
     const tx = makeMockTransaction([
       { op: 'PUT', table: 'generator', id: 'g1', opData: { title: 'Honda' } }
     ])
@@ -194,8 +202,45 @@ describe('uploadData (integration)', () => {
     await connector.uploadData(db as never)
 
     expect(mockAddRejection).toHaveBeenCalledWith(
-      expect.objectContaining({ table: 'generator', op: 'insert', id: 'g1' })
+      expect.objectContaining({
+        table: 'generator',
+        op: 'insert',
+        id: 'g1',
+        reason: 'duplicate key value violates unique constraint'
+      })
     )
     expect(tx.complete).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-throws on unrecognized 400 server error (regression guard)', async () => {
+    // On `main`, an unrecognized 400 would be classified as
+    // `{category: 'unknown', isRecoverable: false}` and the upload loop
+    // would silently complete the transaction and drop the op. The new
+    // behaviour is to re-throw so PowerSync retries with backoff.
+    const { mockFetch } = createFetchInterceptor({
+      'powersync/applyWrite': {
+        status: 400,
+        errorBody: {
+          defined: true,
+          code: 'INTERNAL_ERROR',
+          status: 400,
+          message: 'something completely unexpected went wrong'
+        }
+      }
+    })
+    mockTestFetch = mockFetch
+
+    const connector = buildConnector()
+    const tx = makeMockTransaction([
+      { op: 'PUT', table: 'generator', id: 'g1', opData: { title: 'Honda' } }
+    ])
+    const db = makeMockDatabase(tx)
+
+    await expect(connector.uploadData(db as never)).rejects.toThrow(
+      'something completely unexpected went wrong'
+    )
+
+    expect(tx.complete).not.toHaveBeenCalled()
+    expect(mockAddRejection).not.toHaveBeenCalled()
   })
 })

@@ -1,454 +1,493 @@
+/**
+ * Boundary tests for the PowerSync connector.
+ *
+ * Every test drives `createPowerSyncConnector` through its public
+ * interface (`fetchCredentials`, `uploadData`) and asserts on observable
+ * outcomes: calls into the transport fake, entries sunk into the
+ * `addRejection` mock, `tx.complete()` calls, and thrown errors. Nothing
+ * here reaches into private module state or tests internal helpers
+ * directly — the classifier, credential cache, and CRUD mapping are all
+ * verified via the behaviours they produce at the boundary.
+ *
+ * The `jest.mock()` calls below are module-loader shims, not test
+ * doubles. `@powersync/react-native`, `@orpc/client`, and the chain
+ * reached via `@/data/client/rpc-client` (which pulls `@orpc/client/fetch`)
+ * are all ESM-only and can't be `require()`d in Jest 29's CJS runtime.
+ * `sync-rejections` is mocked so tests can observe rejection writes
+ * without a shared module-level store.
+ */
+
+jest.mock('@powersync/react-native', () => ({
+  UpdateType: { PUT: 'PUT', PATCH: 'PATCH', DELETE: 'DELETE' }
+}))
+
 jest.mock('@orpc/client', () => {
+  // Mirrors the real `@orpc/client` constructor signature:
+  // `new ORPCError(code, { message?, status?, ... })`.
   class ORPCError extends Error {
-    code: string
-    constructor(message: string, opts: { code: string }) {
-      super(message)
-      this.code = opts.code
+    readonly code: string
+    constructor(code: string, opts?: { message?: string }) {
+      super(opts?.message ?? code)
+      this.code = code
     }
   }
   return { ORPCError }
 })
-jest.mock('@powersync/react-native', () => ({
-  UpdateType: { DELETE: 'DELETE', PATCH: 'PATCH' }
-}))
-const mockToken = jest.fn()
-const mockApplyWrite = jest.fn()
-jest.mock('@/data/client/rpc-client', () => ({
-  rpcClient: {
-    powersync: {
-      token: (...args: unknown[]) => mockToken(...args),
-      applyWrite: (...args: unknown[]) => mockApplyWrite(...args)
-    }
-  }
-}))
+
+jest.mock('@/data/client/rpc-client', () => ({ rpcClient: {} }))
+
 const mockAddRejection = jest.fn()
 jest.mock('../sync-rejections', () => ({
   addRejection: (...args: unknown[]) => mockAddRejection(...args)
 }))
 
-const { ORPCError } = require('@orpc/client')
+import { ORPCError } from '@orpc/client'
+import {
+  UpdateType,
+  type AbstractPowerSyncDatabase,
+  type CrudEntry,
+  type PowerSyncCredentials
+} from '@powersync/react-native'
 
 import {
-  isAuthError,
-  extractSqlState,
-  categorizeError,
-  Connector,
-  clearCredentialCache
+  createPowerSyncConnector,
+  type ApplyWriteResult,
+  type CrudWrite,
+  type SyncTransport
 } from '../connector'
 
-describe('isAuthError', () => {
-  it('returns true for ORPCError with UNAUTHORIZED code', () => {
-    const error = new ORPCError('Unauthorized', { code: 'UNAUTHORIZED' })
-    expect(isAuthError(error)).toBe(true)
-  })
+// ── Fakes ───────────────────────────────────────────────────────────────────
 
-  it('returns true for Error with 401 in message', () => {
-    expect(isAuthError(new Error('Request failed with status 401'))).toBe(true)
-  })
-
-  it('returns true for Error with unauthorized in message', () => {
-    expect(isAuthError(new Error('unauthorized access'))).toBe(true)
-  })
-
-  it('returns false for regular Error', () => {
-    expect(isAuthError(new Error('Something broke'))).toBe(false)
-  })
-
-  it('returns false for non-error values', () => {
-    expect(isAuthError('just a string')).toBe(false)
-    expect(isAuthError(null)).toBe(false)
-  })
-
-  it('returns false for ORPCError with non-UNAUTHORIZED code', () => {
-    const error = new ORPCError('Not found', { code: 'NOT_FOUND' })
-    expect(isAuthError(error)).toBe(false)
-  })
-})
-
-describe('extractSqlState', () => {
-  it('extracts from .code property', () => {
-    const error = { code: '23505', message: 'unique violation' }
-    expect(extractSqlState(error)).toBe('23505')
-  })
-
-  it('extracts from .sqlState property', () => {
-    const error = { sqlState: '23503', message: 'fk violation' }
-    expect(extractSqlState(error)).toBe('23503')
-  })
-
-  it('extracts from .cause.code property', () => {
-    const error = { cause: { code: '23514' }, message: 'check violation' }
-    expect(extractSqlState(error)).toBe('23514')
-  })
-
-  it('extracts from message string', () => {
-    const error = new Error('SQLSTATE: 23505 unique_violation')
-    expect(extractSqlState(error)).toBe('23505')
-  })
-
-  it('extracts case-insensitive code from message', () => {
-    const error = new Error('code: 08001 connection refused')
-    expect(extractSqlState(error)).toBe('08001')
-  })
-
-  it('returns null for errors without SQL state', () => {
-    expect(extractSqlState(new Error('network timeout'))).toBeNull()
-  })
-
-  it('returns null for non-5-digit .code', () => {
-    const error = { code: 'ECONNREFUSED', message: 'refused' }
-    expect(extractSqlState(error)).toBeNull()
-  })
-})
-
-describe('categorizeError', () => {
-  it('classifies auth errors as recoverable', () => {
-    const error = new ORPCError('Unauthorized', { code: 'UNAUTHORIZED' })
-    const result = categorizeError(error)
-    expect(result.category).toBe('auth_expired')
-    expect(result.isRecoverable).toBe(true)
-  })
-
-  it('classifies constraint violations as non-recoverable', () => {
-    const error = { code: '23505', message: 'unique_violation' }
-    const result = categorizeError(error)
-    expect(result.category).toBe('constraint_violation')
-    expect(result.isRecoverable).toBe(false)
-  })
-
-  it('classifies all class 23 SQLSTATE as constraint violations', () => {
-    for (const code of ['23000', '23502', '23503', '23505', '23514']) {
-      const result = categorizeError({ code, message: 'constraint' })
-      expect(result.category).toBe('constraint_violation')
-      expect(result.isRecoverable).toBe(false)
-    }
-  })
-
-  it('classifies class 08 SQLSTATE (connection) as recoverable', () => {
-    const error = { code: '08001', message: 'connection refused' }
-    const result = categorizeError(error)
-    expect(result.category).toBe('network')
-    expect(result.isRecoverable).toBe(true)
-  })
-
-  it('classifies class 28 SQLSTATE (auth forbidden) as non-recoverable', () => {
-    const error = { code: '28000', message: 'invalid authorization' }
-    const result = categorizeError(error)
-    expect(result.category).toBe('auth_forbidden')
-    expect(result.isRecoverable).toBe(false)
-  })
-
-  it('classifies network keyword errors as recoverable', () => {
-    const keywords = [
-      'network error',
-      'timeout',
-      'ETIMEDOUT',
-      'ECONNREFUSED',
-      'ECONNRESET'
-    ]
-    for (const msg of keywords) {
-      const result = categorizeError(new Error(msg))
-      expect(result.category).toBe('network')
-      expect(result.isRecoverable).toBe(true)
-    }
-  })
-
-  it('classifies 403/forbidden as non-recoverable auth_forbidden', () => {
-    const result403 = categorizeError(new Error('403 Forbidden'))
-    expect(result403.category).toBe('auth_forbidden')
-    expect(result403.isRecoverable).toBe(false)
-
-    const resultForbidden = categorizeError(new Error('access forbidden'))
-    expect(resultForbidden.category).toBe('auth_forbidden')
-    expect(resultForbidden.isRecoverable).toBe(false)
-  })
-
-  it('classifies unknown errors as non-recoverable', () => {
-    const result = categorizeError(new Error('something unexpected'))
-    expect(result.category).toBe('unknown')
-    expect(result.isRecoverable).toBe(false)
-  })
-})
-
-// ── Connector class ───────────────────────────────────────────────────────────
-
-function makeMockTransaction(
-  crud: {
-    op: string
-    table: string
-    id: string
-    opData?: Record<string, unknown>
-  }[]
-) {
-  return { crud, complete: jest.fn() }
+function defaultCredentials(): PowerSyncCredentials {
+  return {
+    endpoint: 'https://ps.test.local',
+    token: 'tok_test',
+    expiresAt: new Date(Date.now() + 600_000)
+  }
 }
 
-function makeMockDatabase(
-  transaction: ReturnType<typeof makeMockTransaction> | null = null
-) {
-  return { getNextCrudTransaction: jest.fn().mockResolvedValue(transaction) }
+function fakeTransport(
+  opts: {
+    token?: () => Promise<PowerSyncCredentials>
+    applyWrite?: (write: CrudWrite) => Promise<ApplyWriteResult>
+  } = {}
+): SyncTransport & { calls: { token: number; writes: CrudWrite[] } } {
+  const calls = { token: 0, writes: [] as CrudWrite[] }
+  return {
+    calls,
+    async fetchToken() {
+      calls.token++
+      return opts.token ? opts.token() : defaultCredentials()
+    },
+    async applyWrite(write) {
+      calls.writes.push(write)
+      return opts.applyWrite ? opts.applyWrite(write) : { ok: true }
+    }
+  }
 }
 
-describe('Connector.fetchCredentials', () => {
-  beforeEach(() => {
-    clearCredentialCache()
-    jest.resetAllMocks()
-  })
+function fakeClock(initial: number) {
+  let current = initial
+  return {
+    now: () => current,
+    advance: (ms: number) => {
+      current += ms
+    }
+  }
+}
 
-  it('returns credentials from RPC on first call', async () => {
-    const connector = new Connector()
-    mockToken.mockResolvedValue({
-      endpoint: 'https://ps.example.com',
-      token: 'tok_123',
-      expiresAt: new Date(Date.now() + 600_000).toISOString()
-    })
+interface FakeCrudOp {
+  op: CrudEntry['op']
+  table: string
+  id: string
+  opData?: Record<string, unknown>
+}
+
+function fakeCrudTransaction(ops: FakeCrudOp[]) {
+  return {
+    crud: ops as unknown as CrudEntry[],
+    complete: jest.fn().mockResolvedValue(undefined)
+  }
+}
+
+function fakeDatabase(
+  tx: ReturnType<typeof fakeCrudTransaction> | null
+): AbstractPowerSyncDatabase {
+  return {
+    getNextCrudTransaction: jest.fn().mockResolvedValue(tx)
+  } as unknown as AbstractPowerSyncDatabase
+}
+
+// ── Lifecycle ───────────────────────────────────────────────────────────────
+
+let consoleErrorSpy: jest.SpyInstance
+
+beforeEach(() => {
+  mockAddRejection.mockReset()
+  consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+})
+
+afterEach(() => {
+  consoleErrorSpy.mockRestore()
+})
+
+// ── fetchCredentials ────────────────────────────────────────────────────────
+
+describe('createPowerSyncConnector — fetchCredentials', () => {
+  it('returns credentials from transport on first call', async () => {
+    const transport = fakeTransport()
+    const connector = createPowerSyncConnector({ transport })
 
     const creds = await connector.fetchCredentials()
-    expect(creds.endpoint).toBe('https://ps.example.com')
-    expect(creds.token).toBe('tok_123')
-    expect(mockToken).toHaveBeenCalledTimes(1)
+
+    expect(creds).toMatchObject({
+      endpoint: 'https://ps.test.local',
+      token: 'tok_test'
+    })
+    expect(transport.calls.token).toBe(1)
   })
 
-  it('returns cached credentials when not expired', async () => {
-    const connector = new Connector()
-    mockToken.mockResolvedValue({
-      endpoint: 'https://ps.example.com',
-      token: 'tok_123',
-      expiresAt: new Date(Date.now() + 600_000).toISOString()
+  it('returns cached credentials on subsequent calls', async () => {
+    const transport = fakeTransport()
+    const connector = createPowerSyncConnector({ transport })
+
+    await connector.fetchCredentials()
+    await connector.fetchCredentials()
+    await connector.fetchCredentials()
+
+    expect(transport.calls.token).toBe(1)
+  })
+
+  it('refetches when within 30s of expiry', async () => {
+    const clock = fakeClock(1_000_000)
+    let counter = 0
+    const transport = fakeTransport({
+      token: async () => ({
+        endpoint: 'https://ps.test.local',
+        token: `tok_${++counter}`,
+        expiresAt: new Date(clock.now() + 60_000)
+      })
+    })
+    const connector = createPowerSyncConnector({
+      transport,
+      now: clock.now
+    })
+
+    const first = await connector.fetchCredentials()
+    expect(first?.token).toBe('tok_1')
+
+    // Advance 40s — cache expires in 20s, which is inside the 30s buffer.
+    clock.advance(40_000)
+    const second = await connector.fetchCredentials()
+    expect(second?.token).toBe('tok_2')
+    expect(transport.calls.token).toBe(2)
+  })
+
+  it('uses cache while still outside the 30s expiry buffer', async () => {
+    const clock = fakeClock(1_000_000)
+    const transport = fakeTransport({
+      token: async () => ({
+        endpoint: 'https://ps.test.local',
+        token: 'tok_stable',
+        expiresAt: new Date(clock.now() + 60_000)
+      })
+    })
+    const connector = createPowerSyncConnector({
+      transport,
+      now: clock.now
     })
 
     await connector.fetchCredentials()
-    const creds = await connector.fetchCredentials()
-    expect(creds.token).toBe('tok_123')
-    expect(mockToken).toHaveBeenCalledTimes(1)
-  })
-
-  it('refetches when cached credentials are within 30s of expiry', async () => {
-    const connector = new Connector()
-    // First call: expires in 10s (within 30s buffer)
-    mockToken.mockResolvedValueOnce({
-      endpoint: 'https://ps.example.com',
-      token: 'tok_old',
-      expiresAt: new Date(Date.now() + 10_000).toISOString()
-    })
+    clock.advance(29_000) // expires in 31s — still outside 30s buffer
     await connector.fetchCredentials()
 
-    // Second call should refetch because expiry is within 30s buffer
-    mockToken.mockResolvedValueOnce({
-      endpoint: 'https://ps.example.com',
-      token: 'tok_new',
-      expiresAt: new Date(Date.now() + 600_000).toISOString()
-    })
-    const creds = await connector.fetchCredentials()
-    expect(creds.token).toBe('tok_new')
-    expect(mockToken).toHaveBeenCalledTimes(2)
+    expect(transport.calls.token).toBe(1)
   })
 
-  it('clears cache and calls onAuthFailure on auth error', async () => {
-    const onAuthFailure = jest.fn()
-    const connector = new Connector(onAuthFailure)
-    mockToken.mockRejectedValue(
-      new ORPCError('Unauthorized', { code: 'UNAUTHORIZED' })
-    )
+  it('clears cache and calls onAuthExpired on auth error', async () => {
+    const onAuthExpired = jest.fn()
+    let failNext = true
+    const transport = fakeTransport({
+      token: async () => {
+        if (failNext) {
+          failNext = false
+          throw new ORPCError('UNAUTHORIZED', { message: 'Unauthorized' })
+        }
+        return defaultCredentials()
+      }
+    })
+    const connector = createPowerSyncConnector({ transport, onAuthExpired })
 
     await expect(connector.fetchCredentials()).rejects.toThrow('Unauthorized')
-    expect(onAuthFailure).toHaveBeenCalledTimes(1)
+    expect(onAuthExpired).toHaveBeenCalledTimes(1)
 
-    // Cache was cleared — next call should attempt RPC again
-    mockToken.mockResolvedValue({
-      endpoint: 'https://ps.example.com',
-      token: 'tok_fresh',
-      expiresAt: new Date(Date.now() + 600_000).toISOString()
-    })
+    // Cache was cleared — a second call must re-hit the transport.
     const creds = await connector.fetchCredentials()
-    expect(creds.token).toBe('tok_fresh')
+    expect(creds?.token).toBe('tok_test')
+    expect(transport.calls.token).toBe(2)
   })
 
-  it('throws non-auth errors without calling onAuthFailure', async () => {
-    const onAuthFailure = jest.fn()
-    const connector = new Connector(onAuthFailure)
-    mockToken.mockRejectedValue(new Error('server down'))
+  it('throws non-auth errors without firing onAuthExpired', async () => {
+    const onAuthExpired = jest.fn()
+    const transport = fakeTransport({
+      token: async () => {
+        throw new Error('server down')
+      }
+    })
+    const connector = createPowerSyncConnector({ transport, onAuthExpired })
 
     await expect(connector.fetchCredentials()).rejects.toThrow('server down')
-    expect(onAuthFailure).not.toHaveBeenCalled()
+    expect(onAuthExpired).not.toHaveBeenCalled()
   })
 })
 
-describe('Connector.uploadData', () => {
-  let consoleErrorSpy: jest.SpyInstance
+// ── uploadData ──────────────────────────────────────────────────────────────
 
-  beforeEach(() => {
-    clearCredentialCache()
-    jest.resetAllMocks()
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
+describe('createPowerSyncConnector — uploadData', () => {
+  it('returns early when there is no pending transaction', async () => {
+    const transport = fakeTransport()
+    const connector = createPowerSyncConnector({ transport })
+
+    await connector.uploadData(fakeDatabase(null))
+
+    expect(transport.calls.writes).toHaveLength(0)
   })
 
-  afterEach(() => {
-    consoleErrorSpy.mockRestore()
-  })
-
-  it('returns early when no transaction', async () => {
-    const connector = new Connector()
-    const db = makeMockDatabase(null)
-    await connector.uploadData(db as never)
-    expect(mockApplyWrite).not.toHaveBeenCalled()
-  })
-
-  it('processes CRUD operations and completes transaction', async () => {
-    const connector = new Connector()
-    const tx = makeMockTransaction([
-      { op: 'DELETE', table: 'session', id: 'id1' },
-      { op: 'PATCH', table: 'generator', id: 'id2', opData: { name: 'G1' } },
-      { op: 'PUT', table: 'organization', id: 'id3', opData: { name: 'Org' } }
+  it('maps CRUD ops and calls applyWrite for each, completing on success', async () => {
+    const transport = fakeTransport()
+    const connector = createPowerSyncConnector({ transport })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.DELETE, table: 'session', id: 'id1' },
+      {
+        op: UpdateType.PATCH,
+        table: 'generator',
+        id: 'id2',
+        opData: { name: 'G1' }
+      },
+      {
+        op: UpdateType.PUT,
+        table: 'organization',
+        id: 'id3',
+        opData: { name: 'Org' }
+      }
     ])
-    const db = makeMockDatabase(tx)
-    mockApplyWrite.mockResolvedValue({ ok: true })
 
-    await connector.uploadData(db as never)
+    await connector.uploadData(fakeDatabase(tx))
 
-    expect(mockApplyWrite).toHaveBeenCalledTimes(3)
-    expect(mockApplyWrite).toHaveBeenCalledWith({
-      table: 'session',
-      op: 'delete',
-      id: 'id1',
-      data: undefined
-    })
-    expect(mockApplyWrite).toHaveBeenCalledWith({
-      table: 'generator',
-      op: 'update',
-      id: 'id2',
-      data: { name: 'G1' }
-    })
-    expect(mockApplyWrite).toHaveBeenCalledWith({
-      table: 'organization',
-      op: 'insert',
-      id: 'id3',
-      data: { name: 'Org' }
-    })
+    expect(transport.calls.writes).toEqual([
+      { table: 'session', op: 'delete', id: 'id1', data: undefined },
+      { table: 'generator', op: 'update', id: 'id2', data: { name: 'G1' } },
+      { table: 'organization', op: 'insert', id: 'id3', data: { name: 'Org' } }
+    ])
     expect(tx.complete).toHaveBeenCalledTimes(1)
   })
 
-  it('handles result.rejection by calling addRejection', async () => {
-    const connector = new Connector()
-    const tx = makeMockTransaction([
-      { op: 'PUT', table: 'session', id: 'id1', opData: {} }
-    ])
-    const db = makeMockDatabase(tx)
-    mockApplyWrite.mockResolvedValue({
-      ok: false,
-      rejection: { table: 'session', message: 'FK violation' }
+  it('sinks structured rejection and completes the transaction', async () => {
+    const transport = fakeTransport({
+      applyWrite: async () => ({
+        ok: false,
+        rejection: { table: 'generator', message: 'FK violation' }
+      })
     })
+    const connector = createPowerSyncConnector({ transport })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }
+    ])
 
-    await connector.uploadData(db as never)
+    await connector.uploadData(fakeDatabase(tx))
 
     expect(mockAddRejection).toHaveBeenCalledWith({
-      table: 'session',
+      table: 'generator',
       op: 'insert',
-      id: 'id1',
+      id: 'g1',
       reason: 'FK violation'
     })
     expect(tx.complete).toHaveBeenCalledTimes(1)
   })
 
-  it('handles result.error by calling addRejection', async () => {
-    const connector = new Connector()
-    const tx = makeMockTransaction([
-      { op: 'PATCH', table: 'generator', id: 'id1', opData: {} }
-    ])
-    const db = makeMockDatabase(tx)
-    mockApplyWrite.mockResolvedValue({
-      ok: false,
-      error: 'something went wrong'
+  it('sinks { ok: false, error } and completes the transaction', async () => {
+    const transport = fakeTransport({
+      applyWrite: async () => ({ ok: false, error: 'something went wrong' })
     })
+    const connector = createPowerSyncConnector({ transport })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.PATCH, table: 'session', id: 's1', opData: {} }
+    ])
 
-    await connector.uploadData(db as never)
+    await connector.uploadData(fakeDatabase(tx))
 
     expect(mockAddRejection).toHaveBeenCalledWith({
-      table: 'generator',
+      table: 'session',
       op: 'update',
-      id: 'id1',
+      id: 's1',
       reason: 'something went wrong'
     })
     expect(tx.complete).toHaveBeenCalledTimes(1)
   })
 
-  it('re-throws recoverable network errors without completing transaction', async () => {
-    const connector = new Connector()
-    const tx = makeMockTransaction([
-      { op: 'PUT', table: 'session', id: 'id1', opData: {} }
-    ])
-    const db = makeMockDatabase(tx)
-    mockApplyWrite.mockRejectedValue(new Error('network timeout'))
-
-    await expect(connector.uploadData(db as never)).rejects.toThrow(
-      'network timeout'
-    )
-    expect(tx.complete).not.toHaveBeenCalled()
-  })
-
-  it('completes transaction and adds rejection for non-recoverable errors', async () => {
-    const connector = new Connector()
-    const tx = makeMockTransaction([
-      { op: 'PUT', table: 'session', id: 'id1', opData: {} }
-    ])
-    const db = makeMockDatabase(tx)
-    const error = Object.assign(new Error('unique_violation'), {
-      code: '23505'
+  it('records a fallback rejection if server returns ok:false without rejection or error', async () => {
+    // Safety net: server should never drift from the contract, but if
+    // it does, we record a generic rejection rather than silently drop.
+    const transport = fakeTransport({
+      applyWrite: async () => ({ ok: false }) as unknown as ApplyWriteResult
     })
-    mockApplyWrite.mockRejectedValue(error)
+    const connector = createPowerSyncConnector({ transport })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }
+    ])
 
-    await connector.uploadData(db as never)
+    await connector.uploadData(fakeDatabase(tx))
 
     expect(mockAddRejection).toHaveBeenCalledWith({
-      table: 'session',
+      table: 'generator',
       op: 'insert',
-      id: 'id1',
-      reason: 'unique_violation'
+      id: 'g1',
+      reason: 'Server returned ok:false without structured rejection or error'
     })
     expect(tx.complete).toHaveBeenCalledTimes(1)
   })
 
-  it('clears cache and calls onAuthFailure on auth error during upload', async () => {
-    const onAuthFailure = jest.fn()
-    const connector = new Connector(onAuthFailure)
-    const tx = makeMockTransaction([
-      { op: 'PUT', table: 'session', id: 'id1', opData: {} }
+  it('re-throws network errors without completing the transaction', async () => {
+    const transport = fakeTransport({
+      applyWrite: async () => {
+        throw new Error('network timeout')
+      }
+    })
+    const connector = createPowerSyncConnector({ transport })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.PUT, table: 'session', id: 's1', opData: {} }
     ])
-    const db = makeMockDatabase(tx)
-    mockApplyWrite.mockRejectedValue(
-      new ORPCError('Unauthorized', { code: 'UNAUTHORIZED' })
+
+    await expect(connector.uploadData(fakeDatabase(tx))).rejects.toThrow(
+      'network timeout'
     )
 
-    // Auth errors are categorized as recoverable, so they re-throw
-    await expect(connector.uploadData(db as never)).rejects.toThrow(
+    expect(tx.complete).not.toHaveBeenCalled()
+    expect(mockAddRejection).not.toHaveBeenCalled()
+  })
+
+  it('fires onAuthExpired, clears cache, and re-throws on ORPCError UNAUTHORIZED', async () => {
+    const onAuthExpired = jest.fn()
+    const transport = fakeTransport({
+      applyWrite: async () => {
+        throw new ORPCError('UNAUTHORIZED', { message: 'Unauthorized' })
+      }
+    })
+    const connector = createPowerSyncConnector({ transport, onAuthExpired })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.PUT, table: 'session', id: 's1', opData: {} }
+    ])
+
+    // Prime the cache so we can prove it was cleared.
+    await connector.fetchCredentials()
+    expect(transport.calls.token).toBe(1)
+
+    await expect(connector.uploadData(fakeDatabase(tx))).rejects.toThrow(
       'Unauthorized'
     )
-    expect(onAuthFailure).toHaveBeenCalledTimes(1)
+    expect(onAuthExpired).toHaveBeenCalledTimes(1)
+    expect(tx.complete).not.toHaveBeenCalled()
+
+    // Cache was cleared during the failed upload — next fetch must re-hit transport.
+    await connector.fetchCredentials()
+    expect(transport.calls.token).toBe(2)
+  })
+
+  it('fires onAuthExpired on a plain Error whose message contains 401', async () => {
+    // Covers the string-matching branch of auth classification — real
+    // HTTP 401s come back as plain Errors, not ORPCError instances.
+    const onAuthExpired = jest.fn()
+    const transport = fakeTransport({
+      applyWrite: async () => {
+        throw new Error('Request failed with status 401')
+      }
+    })
+    const connector = createPowerSyncConnector({ transport, onAuthExpired })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.PUT, table: 'session', id: 's1', opData: {} }
+    ])
+
+    await expect(connector.uploadData(fakeDatabase(tx))).rejects.toThrow('401')
+
+    expect(onAuthExpired).toHaveBeenCalledTimes(1)
     expect(tx.complete).not.toHaveBeenCalled()
   })
-})
 
-describe('clearCredentialCache', () => {
-  it('forces next fetchCredentials to refetch', async () => {
-    const connector = new Connector()
-    mockToken.mockResolvedValue({
-      endpoint: 'https://ps.example.com',
-      token: 'tok_1',
-      expiresAt: new Date(Date.now() + 600_000).toISOString()
+  it('completes and sinks rejection on auth_forbidden via SQLSTATE 28', async () => {
+    const error = Object.assign(new Error('invalid authorization'), {
+      code: '28000'
     })
-
-    await connector.fetchCredentials()
-    expect(mockToken).toHaveBeenCalledTimes(1)
-
-    clearCredentialCache()
-
-    mockToken.mockResolvedValue({
-      endpoint: 'https://ps.example.com',
-      token: 'tok_2',
-      expiresAt: new Date(Date.now() + 600_000).toISOString()
+    const transport = fakeTransport({
+      applyWrite: async () => {
+        throw error
+      }
     })
-    const creds = await connector.fetchCredentials()
-    expect(creds.token).toBe('tok_2')
-    expect(mockToken).toHaveBeenCalledTimes(2)
+    const connector = createPowerSyncConnector({ transport })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }
+    ])
+
+    await connector.uploadData(fakeDatabase(tx))
+
+    expect(tx.complete).toHaveBeenCalledTimes(1)
+    expect(mockAddRejection).toHaveBeenCalledWith({
+      table: 'generator',
+      op: 'insert',
+      id: 'g1',
+      reason: 'invalid authorization'
+    })
+  })
+
+  it('completes and sinks rejection on auth_forbidden via 403 message', async () => {
+    const transport = fakeTransport({
+      applyWrite: async () => {
+        throw new Error('403 Forbidden')
+      }
+    })
+    const connector = createPowerSyncConnector({ transport })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }
+    ])
+
+    await connector.uploadData(fakeDatabase(tx))
+
+    expect(tx.complete).toHaveBeenCalledTimes(1)
+    expect(mockAddRejection).toHaveBeenCalledWith({
+      table: 'generator',
+      op: 'insert',
+      id: 'g1',
+      reason: '403 Forbidden'
+    })
+  })
+
+  it('regression guard: unknown error re-throws without completing or sinking', async () => {
+    // The bug fix. On the pre-refactor code, an unrecognised error was
+    // classified as permanent-failure and the upload loop called
+    // `transaction.complete()`, silently dropping the op from the sync
+    // queue. The safe default is *retry*: re-throw so PowerSync's SDK
+    // backs off and replays the transaction.
+    const transport = fakeTransport({
+      applyWrite: async () => {
+        throw new Error('totally weird error')
+      }
+    })
+    const connector = createPowerSyncConnector({ transport })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }
+    ])
+
+    await expect(connector.uploadData(fakeDatabase(tx))).rejects.toThrow(
+      'totally weird error'
+    )
+
+    expect(tx.complete).not.toHaveBeenCalled()
+    expect(mockAddRejection).not.toHaveBeenCalled()
+    // Logger is called so operators can see the classification in logs.
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '[sync] upload failed',
+      expect.objectContaining({
+        classification: { kind: 'unknown', action: 'retry' }
+      })
+    )
   })
 })

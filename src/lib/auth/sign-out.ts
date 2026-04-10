@@ -1,5 +1,4 @@
 import { powersync } from '@/lib/powersync/database'
-import { clearCredentialCache } from '@/lib/powersync/connector'
 
 import { authClient } from './auth-client'
 import { clearLocalIdentity } from './offline-identity'
@@ -14,11 +13,12 @@ export async function signOut() {
   }
 }
 
-// Full teardown: wipes PowerSync local data, clears cached credentials, and
-// signs out from BetterAuth. Call this when the user explicitly signs out or
-// when emergency sign-out is needed.
+// Full teardown: wipes PowerSync local data and signs out from BetterAuth.
+// The connector's credential cache is per-instance closure state — it dies
+// with the connector when PowerSyncProvider's effect tears down after the
+// session flips away from 'valid'. Call this when the user explicitly signs
+// out or when emergency sign-out is needed.
 export async function disconnectAndSignOut() {
   await powersync.disconnectAndClear()
-  clearCredentialCache()
   await signOut()
 }
