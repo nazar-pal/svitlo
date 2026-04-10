@@ -7,6 +7,7 @@ import { getOrganization } from '@/data/client/queries'
 import { notifyWarning } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useTranslation } from '@/lib/i18n'
+import { translateMutationError } from '@/lib/i18n/translate-mutation-error'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 
 interface DeleteOrgDialogProps {
@@ -44,8 +45,9 @@ export function DeleteOrgDialog({
 
         const result = await deleteOrganization(userId, orgId)
         if (!result.ok) {
-          Alert.alert(t('common.error'), result.error)
-          throw new Error(result.error)
+          const message = translateMutationError(result.error)
+          Alert.alert(t('common.error'), message)
+          throw new Error(message)
         }
 
         notifyWarning()

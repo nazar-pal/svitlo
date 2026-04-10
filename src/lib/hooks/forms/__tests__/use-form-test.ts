@@ -2,11 +2,17 @@ import { act, renderHook, waitFor } from '@testing-library/react-native'
 import { z } from 'zod'
 
 import { fail, ok } from '@/data/shared/result'
-import { useForm } from '../use-form'
-import { validateWithZod } from '../validate-with-zod'
+import { useForm, validateWithZod } from '../use-form'
 
 jest.mock('@/lib/haptics', () => ({
   notifySuccess: jest.fn()
+}))
+
+jest.mock('@/lib/i18n/translate-mutation-error', () => ({
+  translateMutationError: (error: {
+    code: string
+    params?: { message?: string }
+  }) => error.params?.message ?? error.code
 }))
 
 const { notifySuccess } = jest.requireMock<{
@@ -121,7 +127,7 @@ describe('useForm', () => {
     })
 
     it('clears formError on demand via clearFormError', async () => {
-      const mutate = jest.fn().mockResolvedValue(fail('boom'))
+      const mutate = jest.fn().mockResolvedValue(fail('GENERATOR_NOT_FOUND'))
       const { result } = renderHook(() =>
         useForm({
           initial: { name: 'Alice' },
@@ -133,7 +139,7 @@ describe('useForm', () => {
       await act(async () => {
         await result.current.submit()
       })
-      expect(result.current.formError).toBe('boom')
+      expect(result.current.formError).toBe('GENERATOR_NOT_FOUND')
 
       act(() => result.current.clearFormError())
       expect(result.current.formError).toBe('')
@@ -142,7 +148,7 @@ describe('useForm', () => {
     it('clears stale formError before re-running build', async () => {
       const mutate = jest
         .fn()
-        .mockResolvedValueOnce(fail('first attempt failed'))
+        .mockResolvedValueOnce(fail('SESSION_NOT_FOUND'))
         .mockResolvedValueOnce(ok)
       const { result } = renderHook(() =>
         useForm({
@@ -155,7 +161,7 @@ describe('useForm', () => {
       await act(async () => {
         await result.current.submit()
       })
-      expect(result.current.formError).toBe('first attempt failed')
+      expect(result.current.formError).toBe('SESSION_NOT_FOUND')
 
       await act(async () => {
         await result.current.submit()
@@ -166,7 +172,9 @@ describe('useForm', () => {
 
   describe('mutation failures', () => {
     it('routes mutation errors to formError without calling onSuccess', async () => {
-      const mutate = jest.fn().mockResolvedValue(fail('boom'))
+      const mutate = jest
+        .fn()
+        .mockResolvedValue(fail('NOT_AUTHORIZED_FOR_GENERATOR'))
       const onSuccess = jest.fn()
       const { result } = renderHook(() =>
         useForm({
@@ -181,9 +189,28 @@ describe('useForm', () => {
         await result.current.submit()
       })
 
-      expect(result.current.formError).toBe('boom')
+      expect(result.current.formError).toBe('NOT_AUTHORIZED_FOR_GENERATOR')
       expect(notifySuccess).not.toHaveBeenCalled()
       expect(onSuccess).not.toHaveBeenCalled()
+    })
+
+    it('surfaces external provider messages carried via AUTH_FAILED params', async () => {
+      const mutate = jest
+        .fn()
+        .mockResolvedValue(fail('AUTH_FAILED', { message: 'Server is down' }))
+      const { result } = renderHook(() =>
+        useForm({
+          initial: { name: 'Alice' },
+          build: values => ({ ok: true, data: values }),
+          mutate
+        })
+      )
+
+      await act(async () => {
+        await result.current.submit()
+      })
+
+      expect(result.current.formError).toBe('Server is down')
     })
 
     it('clears the submitting flag even if mutate throws', async () => {
@@ -310,12 +337,12 @@ describe('useForm', () => {
   describe('zod composition', () => {
     it('builds with validateWithZod and propagates field errors on failure', async () => {
       const schema = z.object({
-        name: z.string().min(2, { message: 'too short' })
+        name: z.string().min(1, { error: 'ENTER_NAME' })
       })
       const mutate = jest.fn().mockResolvedValue(ok)
       const { result } = renderHook(() =>
         useForm({
-          initial: { name: 'A' },
+          initial: { name: '' },
           build: values => validateWithZod(schema, values),
           mutate
         })
@@ -326,7 +353,7 @@ describe('useForm', () => {
       })
 
       expect(mutate).not.toHaveBeenCalled()
-      expect(result.current.form.fieldErrors.name).toBe('too short')
+      expect(result.current.form.fieldErrors.name).toBe('ENTER_NAME')
     })
 
     it('builds with validateWithZod and runs mutate with parsed data on success', async () => {
@@ -347,6 +374,28 @@ describe('useForm', () => {
       })
 
       expect(mutate).toHaveBeenCalledWith({ name: 'Alice' })
+    })
+
+    it('routes a root-level refine error into formError, not fieldErrors', async () => {
+      const schema = z
+        .object({ start: z.number(), end: z.number() })
+        .refine(v => v.end > v.start, { error: 'START_BEFORE_END' })
+      const mutate = jest.fn().mockResolvedValue(ok)
+      const { result } = renderHook(() =>
+        useForm({
+          initial: { start: 5, end: 1 },
+          build: values => validateWithZod(schema, values),
+          mutate
+        })
+      )
+
+      await act(async () => {
+        await result.current.submit()
+      })
+
+      expect(mutate).not.toHaveBeenCalled()
+      expect(result.current.formError).toBe('START_BEFORE_END')
+      expect(result.current.form.fieldErrors).toEqual({})
     })
   })
 })

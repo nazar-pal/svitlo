@@ -28,7 +28,6 @@ jest.mock('../helpers', () => ({
 }))
 
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'mock-uuid' }))
-jest.mock('@/lib/i18n', () => ({ t: (key: string) => key }))
 jest.mock('react-native', () => ({ Alert: { alert: jest.fn() } }))
 
 import {
@@ -70,6 +69,8 @@ describe('updateGenerator', () => {
       title: 'Hacked'
     })
     expect(result.ok).toBe(false)
+    if (!result.ok)
+      expect(result.error.code).toBe('ONLY_ADMIN_CAN_UPDATE_GENERATORS')
 
     const [gen] = mockTestDb.db
       .select()
@@ -250,7 +251,11 @@ describe('createGeneratorWithMaintenance', () => {
       ]
     )
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error).toContain('Air Filter')
+    if (!result.ok)
+      expect(result.error).toEqual({
+        code: 'MAINTENANCE_TASK_VALIDATION_FAILED',
+        params: { taskName: 'Air Filter' }
+      })
   })
 })
 

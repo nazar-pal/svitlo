@@ -28,7 +28,6 @@ jest.mock('../helpers', () => ({
 }))
 
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'mock-uuid' }))
-jest.mock('@/lib/i18n', () => ({ t: (key: string) => key }))
 jest.mock('react-native', () => ({ Alert: { alert: jest.fn() } }))
 
 import { removeMember, leaveOrganization } from '../members'

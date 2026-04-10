@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-import { t } from '@/lib/i18n'
 import { zNonEmptyString } from './helpers'
 
 export const insertOrganizationSchema = z.object({
@@ -11,9 +10,7 @@ export type InsertOrganizationInput = z.input<typeof insertOrganizationSchema>
 
 export const insertInvitationSchema = z.object({
   organizationId: z.string(),
-  inviteeEmail: z
-    .string()
-    .email({ error: () => t('validation.mustBeValidEmail') })
+  inviteeEmail: z.string().email({ error: 'MUST_BE_VALID_EMAIL' })
 })
 
 export type InsertInvitationInput = z.input<typeof insertInvitationSchema>

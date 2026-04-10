@@ -1,28 +1,16 @@
 import { z } from 'zod'
 
-import { t } from '@/lib/i18n'
-
+// Error codes are literal markers resolved by `mapZodIssueToError` and
+// translated in `translate-mutation-error.ts`. Attach them explicitly so
+// these helpers don't silently depend on the fallback heuristic chain.
 export const zNonEmptyString = z
   .string()
   .trim()
-  .min(1, { error: () => t('validation.mustNotBeEmpty') })
+  .min(1, { error: 'MUST_NOT_BE_EMPTY' })
 
-export const zPositiveReal = z
-  .number()
-  .positive({ error: () => t('validation.mustBePositive') })
+export const zPositiveReal = z.number().positive({ error: 'MUST_BE_POSITIVE' })
 
 export const zPositiveInt = z
   .number()
-  .int()
-  .positive({ error: () => t('validation.mustBePositiveInt') })
-
-export function flattenZodErrors(error: z.ZodError): Record<string, string> {
-  const flat = z.flattenError(error).fieldErrors as Record<
-    string,
-    string[] | undefined
-  >
-  const mapped: Record<string, string> = {}
-  for (const [key, msgs] of Object.entries(flat))
-    if (msgs?.[0]) mapped[key] = msgs[0]
-  return mapped
-}
+  .int({ error: 'MUST_BE_POSITIVE_INT' })
+  .positive({ error: 'MUST_BE_POSITIVE_INT' })

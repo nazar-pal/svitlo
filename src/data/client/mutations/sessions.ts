@@ -7,7 +7,6 @@ import {
   getGeneratorSessionById,
   getOpenSessionForGenerator
 } from '@/data/client/queries'
-import { t } from '@/lib/i18n'
 import { db } from '@/lib/powersync/database'
 
 import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
@@ -17,14 +16,14 @@ export async function startSession(
   generatorId: string
 ): Promise<MutationResult> {
   const gen = await getGeneratorById(generatorId)
-  if (!gen) return fail(t('errors.generatorNotFound'))
+  if (!gen) return fail('GENERATOR_NOT_FOUND')
 
   if (!(await canAccessGenerator(userId, generatorId)))
-    return fail(t('errors.notAuthorizedForGenerator'))
+    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
 
   // Check no open session exists (generator is not running)
   const openSession = await getOpenSessionForGenerator(generatorId)
-  if (openSession) return fail(t('errors.generatorAlreadyActive'))
+  if (openSession) return fail('GENERATOR_ALREADY_ACTIVE')
 
   await db.insert(generatorSessions).values({
     id: newId(),
@@ -46,11 +45,11 @@ export async function deleteSession(
 ): Promise<MutationResult> {
   const session = await getGeneratorSessionById(sessionId)
 
-  if (!session) return fail(t('errors.sessionNotFound'))
-  if (!session.stoppedAt) return fail(t('errors.cannotDeleteActiveSession'))
+  if (!session) return fail('SESSION_NOT_FOUND')
+  if (!session.stoppedAt) return fail('CANNOT_DELETE_ACTIVE_SESSION')
 
   if (!(await canAccessGenerator(userId, session.generatorId)))
-    return fail(t('errors.notAuthorizedForGenerator'))
+    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
 
   await db.delete(generatorSessions).where(eq(generatorSessions.id, sessionId))
 
@@ -63,11 +62,11 @@ export async function stopSession(
 ): Promise<MutationResult> {
   const session = await getGeneratorSessionById(sessionId)
 
-  if (!session) return fail(t('errors.sessionNotFound'))
-  if (session.stoppedAt) return fail(t('errors.sessionAlreadyStopped'))
+  if (!session) return fail('SESSION_NOT_FOUND')
+  if (session.stoppedAt) return fail('SESSION_ALREADY_STOPPED')
 
   if (!(await canAccessGenerator(userId, session.generatorId)))
-    return fail(t('errors.notAuthorizedForGenerator'))
+    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
 
   await db
     .update(generatorSessions)
@@ -89,17 +88,15 @@ export async function updateSession(
 ): Promise<MutationResult> {
   const session = await getGeneratorSessionById(sessionId)
 
-  if (!session) return fail(t('errors.sessionNotFound'))
-  if (!session.stoppedAt) return fail(t('errors.cannotEditActiveSession'))
+  if (!session) return fail('SESSION_NOT_FOUND')
+  if (!session.stoppedAt) return fail('CANNOT_EDIT_ACTIVE_SESSION')
 
   if (!(await canAccessGenerator(userId, session.generatorId)))
-    return fail(t('errors.notAuthorizedForGenerator'))
+    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
 
-  if (input.startedAt >= input.stoppedAt)
-    return fail(t('errors.startBeforeEnd'))
+  if (input.startedAt >= input.stoppedAt) return fail('START_BEFORE_END')
 
-  if (new Date(input.stoppedAt) > new Date())
-    return fail(t('errors.endTimeInFuture'))
+  if (new Date(input.stoppedAt) > new Date()) return fail('END_TIME_IN_FUTURE')
 
   await db
     .update(generatorSessions)
@@ -119,14 +116,14 @@ export async function logManualSession(
   const { generatorId, startedAt, stoppedAt } = input
 
   const gen = await getGeneratorById(generatorId)
-  if (!gen) return fail(t('errors.generatorNotFound'))
+  if (!gen) return fail('GENERATOR_NOT_FOUND')
 
   if (!(await canAccessGenerator(userId, generatorId)))
-    return fail(t('errors.notAuthorizedForGenerator'))
+    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
 
-  if (startedAt >= stoppedAt) return fail(t('errors.startBeforeEnd'))
+  if (startedAt >= stoppedAt) return fail('START_BEFORE_END')
 
-  if (new Date(stoppedAt) > new Date()) return fail(t('errors.endTimeInFuture'))
+  if (new Date(stoppedAt) > new Date()) return fail('END_TIME_IN_FUTURE')
 
   await db.insert(generatorSessions).values({
     id: newId(),

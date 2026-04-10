@@ -11,7 +11,7 @@ import {
   getInvitationByOrgAndEmail,
   getOrgMemberById
 } from '@/data/client/queries'
-import { t } from '@/lib/i18n'
+import { failFromZod } from '@/data/shared/errors-from-zod'
 import {
   insertInvitationSchema,
   insertOrganizationSchema,
@@ -29,7 +29,7 @@ export async function createOrganization(
   input: InsertOrganizationInput
 ): Promise<MutationResult> {
   const parsed = insertOrganizationSchema.safeParse(input)
-  if (!parsed.success) return fail(parsed.error.issues[0].message)
+  if (!parsed.success) return failFromZod(parsed.error)
 
   await db.insert(organizations).values({
     id: newId(),
@@ -46,16 +46,16 @@ export async function createInvitation(
   input: InsertInvitationInput
 ): Promise<MutationResult> {
   const parsed = insertInvitationSchema.safeParse(input)
-  if (!parsed.success) return fail(parsed.error.issues[0].message)
+  if (!parsed.success) return failFromZod(parsed.error)
 
   if (!(await isOrgAdmin(userId, parsed.data.organizationId)))
-    return fail(t('errors.onlyAdminCanInvite'))
+    return fail('ONLY_ADMIN_CAN_INVITE')
 
   const existing = await getInvitationByOrgAndEmail(
     parsed.data.organizationId,
     parsed.data.inviteeEmail
   )
-  if (existing) return fail(t('errors.invitationAlreadySent'))
+  if (existing) return fail('INVITATION_ALREADY_SENT')
 
   await db.insert(invitations).values({
     id: newId(),
@@ -75,12 +75,12 @@ export async function acceptInvitation(
 ): Promise<MutationResult> {
   const invitation = await getInvitationById(invitationId)
 
-  if (!invitation) return fail(t('errors.invitationNotFound'))
+  if (!invitation) return fail('INVITATION_NOT_FOUND')
   if (invitation.inviteeEmail.toLowerCase() !== userEmail.toLowerCase())
-    return fail(t('errors.invitationNotForYou'))
+    return fail('INVITATION_NOT_FOR_YOU')
 
   const existing = await getOrgMemberById(userId, invitation.organizationId)
-  if (existing) return fail(t('errors.alreadyMember'))
+  if (existing) return fail('ALREADY_MEMBER')
 
   await db.insert(organizationMembers).values({
     id: newId(),
@@ -100,9 +100,9 @@ export async function declineInvitation(
 ): Promise<MutationResult> {
   const invitation = await getInvitationById(invitationId)
 
-  if (!invitation) return fail(t('errors.invitationNotFound'))
+  if (!invitation) return fail('INVITATION_NOT_FOUND')
   if (invitation.inviteeEmail.toLowerCase() !== userEmail.toLowerCase())
-    return fail(t('errors.invitationNotForYou'))
+    return fail('INVITATION_NOT_FOR_YOU')
 
   await db.delete(invitations).where(eq(invitations.id, invitationId))
 
@@ -115,10 +115,10 @@ export async function cancelInvitation(
 ): Promise<MutationResult> {
   const invitation = await getInvitationById(invitationId)
 
-  if (!invitation) return fail(t('errors.invitationNotFound'))
+  if (!invitation) return fail('INVITATION_NOT_FOUND')
 
   if (!(await isOrgAdmin(userId, invitation.organizationId)))
-    return fail(t('errors.onlyAdminCanCancelInvitations'))
+    return fail('ONLY_ADMIN_CAN_CANCEL_INVITATIONS')
 
   await db.delete(invitations).where(eq(invitations.id, invitationId))
 
@@ -131,10 +131,10 @@ export async function renameOrganization(
   input: UpdateOrganizationInput
 ): Promise<MutationResult> {
   const parsed = updateOrganizationSchema.safeParse(input)
-  if (!parsed.success) return fail(parsed.error.issues[0].message)
+  if (!parsed.success) return failFromZod(parsed.error)
 
   if (!(await isOrgAdmin(userId, orgId)))
-    return fail(t('errors.onlyAdminCanRenameOrg'))
+    return fail('ONLY_ADMIN_CAN_RENAME_ORG')
 
   await db
     .update(organizations)
@@ -149,7 +149,7 @@ export async function deleteOrganization(
   orgId: string
 ): Promise<MutationResult> {
   if (!(await isOrgAdmin(userId, orgId)))
-    return fail(t('errors.onlyAdminCanDeleteOrg'))
+    return fail('ONLY_ADMIN_CAN_DELETE_ORG')
 
   await powersync.writeTransaction(async tx => {
     // Cascade delete leaves-first (client SQLite has no FK constraints)

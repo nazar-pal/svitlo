@@ -13,6 +13,7 @@ import { Pressable, Text, TextInput, View } from 'react-native'
 import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { signInSchema, signUpSchema } from '@/data/client/validation'
+import { fail, ok } from '@/data/shared/result'
 import { authClient } from '@/lib/auth/auth-client'
 import { type BuildResult, useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useTranslation } from '@/lib/i18n'
@@ -83,11 +84,10 @@ export default function EmailAuthScreen() {
                 password: input.password
               })
         if (res.error)
-          return {
-            ok: false,
-            error: res.error.message ?? t('auth.somethingWentWrong')
-          }
-        return { ok: true }
+          return fail('AUTH_FAILED', {
+            message: res.error.message ?? t('auth.somethingWentWrong')
+          })
+        return ok
       },
       onSuccess: () => router.back()
     })

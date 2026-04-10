@@ -2,7 +2,6 @@ import { eq } from 'drizzle-orm'
 
 import { isGeneratorOrgAdmin, isOrgAdmin } from '@/data/client/authz'
 import { generators } from '@/data/client/db-schema'
-import { t } from '@/lib/i18n'
 import {
   insertGeneratorSchema,
   insertMaintenanceTemplateSchema,
@@ -11,6 +10,7 @@ import {
   type InsertMaintenanceTemplateInput,
   type UpdateGeneratorInput
 } from '@/data/client/validation'
+import { failFromZod } from '@/data/shared/errors-from-zod'
 import { db, powersync } from '@/lib/powersync/database'
 
 import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
@@ -21,10 +21,10 @@ export async function updateGenerator(
   input: UpdateGeneratorInput
 ): Promise<MutationResult> {
   const parsed = updateGeneratorSchema.safeParse(input)
-  if (!parsed.success) return fail(parsed.error.issues[0].message)
+  if (!parsed.success) return failFromZod(parsed.error)
 
   if (!(await isGeneratorOrgAdmin(userId, generatorId)))
-    return fail(t('errors.onlyAdminCanUpdateGenerators'))
+    return fail('ONLY_ADMIN_CAN_UPDATE_GENERATORS')
 
   await db
     .update(generators)
@@ -40,10 +40,10 @@ export async function createGeneratorWithMaintenance(
   maintenanceInputs: Omit<InsertMaintenanceTemplateInput, 'generatorId'>[]
 ): Promise<MutationResult> {
   const parsed = insertGeneratorSchema.safeParse(input)
-  if (!parsed.success) return fail(parsed.error.issues[0].message)
+  if (!parsed.success) return failFromZod(parsed.error)
 
   if (!(await isOrgAdmin(userId, parsed.data.organizationId)))
-    return fail(t('errors.onlyAdminCanCreateGenerators'))
+    return fail('ONLY_ADMIN_CAN_CREATE_GENERATORS')
 
   const generatorId = newId()
   const now = nowISO()
@@ -54,7 +54,9 @@ export async function createGeneratorWithMaintenance(
       generatorId
     })
     if (!mParsed.success)
-      return fail(`${mi.taskName}: ${mParsed.error.issues[0].message}`)
+      return fail('MAINTENANCE_TASK_VALIDATION_FAILED', {
+        taskName: mi.taskName
+      })
   }
 
   await powersync.writeTransaction(async tx => {
@@ -103,7 +105,7 @@ export async function deleteGenerator(
   generatorId: string
 ): Promise<MutationResult> {
   if (!(await isGeneratorOrgAdmin(userId, generatorId)))
-    return fail(t('errors.onlyAdminCanDeleteGenerators'))
+    return fail('ONLY_ADMIN_CAN_DELETE_GENERATORS')
 
   await db.delete(generators).where(eq(generators.id, generatorId))
 

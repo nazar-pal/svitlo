@@ -444,7 +444,8 @@ export const en = {
     calendarDaysRequired: 'Calendar days required for this trigger type',
     userNotOrgMember: 'User is not a member of this organization',
     userAlreadyAssigned: 'User is already assigned to this generator',
-    userNotAssigned: 'User is not assigned to this generator'
+    userNotAssigned: 'User is not assigned to this generator',
+    maintenanceTaskValidationFailed: '"{{taskName}}" has invalid data'
   },
 
   privacy: {

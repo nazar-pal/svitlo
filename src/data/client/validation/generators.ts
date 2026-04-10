@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-import { t } from '@/lib/i18n'
 import { zNonEmptyString, zPositiveReal } from './helpers'
 
 export const insertGeneratorSchema = z.object({
@@ -13,8 +12,8 @@ export const insertGeneratorSchema = z.object({
   runWarningThresholdPct: z
     .number()
     .int()
-    .min(1, { error: () => t('validation.minPercent') })
-    .max(100, { error: () => t('validation.maxPercent') })
+    .min(1, { error: 'MIN_PERCENT' })
+    .max(100, { error: 'MAX_PERCENT' })
     .default(80)
 })
 
@@ -30,12 +29,12 @@ export const updateGeneratorSchema = z
     runWarningThresholdPct: z
       .number()
       .int()
-      .min(1, { error: () => t('validation.minPercent') })
-      .max(100, { error: () => t('validation.maxPercent') })
+      .min(1, { error: 'MIN_PERCENT' })
+      .max(100, { error: 'MAX_PERCENT' })
   })
   .partial()
   .refine(data => Object.keys(data).length > 0, {
-    error: () => t('validation.atLeastOneField')
+    error: 'AT_LEAST_ONE_FIELD'
   })
 
 export type UpdateGeneratorInput = z.input<typeof updateGeneratorSchema>

@@ -9,7 +9,6 @@ import {
   getMaintenanceRecordById,
   getMaintenanceTemplateById
 } from '@/data/client/queries'
-import { t } from '@/lib/i18n'
 import {
   insertMaintenanceRecordSchema,
   insertMaintenanceTemplateSchema,
@@ -18,6 +17,7 @@ import {
   type InsertMaintenanceTemplateInput,
   type UpdateMaintenanceTemplateInput
 } from '@/data/client/validation'
+import { failFromZod } from '@/data/shared/errors-from-zod'
 import { db } from '@/lib/powersync/database'
 
 import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
@@ -27,10 +27,10 @@ export async function createMaintenanceTemplate(
   input: InsertMaintenanceTemplateInput
 ): Promise<MutationResult> {
   const parsed = insertMaintenanceTemplateSchema.safeParse(input)
-  if (!parsed.success) return fail(parsed.error.issues[0].message)
+  if (!parsed.success) return failFromZod(parsed.error)
 
   if (!(await isGeneratorOrgAdmin(userId, parsed.data.generatorId)))
-    return fail(t('errors.onlyAdminCanCreateTemplates'))
+    return fail('ONLY_ADMIN_CAN_CREATE_TEMPLATES')
 
   await db.insert(maintenanceTemplates).values({
     id: newId(),
@@ -53,13 +53,13 @@ export async function updateMaintenanceTemplate(
   input: UpdateMaintenanceTemplateInput
 ): Promise<MutationResult> {
   const parsed = updateMaintenanceTemplateSchema.safeParse(input)
-  if (!parsed.success) return fail(parsed.error.issues[0].message)
+  if (!parsed.success) return failFromZod(parsed.error)
 
   const existing = await getMaintenanceTemplateById(templateId)
-  if (!existing) return fail(t('errors.templateNotFound'))
+  if (!existing) return fail('TEMPLATE_NOT_FOUND')
 
   if (!(await isGeneratorOrgAdmin(userId, existing.generatorId)))
-    return fail(t('errors.onlyAdminCanUpdateTemplates'))
+    return fail('ONLY_ADMIN_CAN_UPDATE_TEMPLATES')
 
   // When updating triggerType, validate that the required companion fields
   // will be present after the update. If they're not in the update payload,
@@ -78,9 +78,8 @@ export async function updateMaintenanceTemplate(
       parsed.data.triggerType === 'whichever_first'
 
     if (needsHours && mergedHours == null)
-      return fail(t('errors.hoursIntervalRequired'))
-    if (needsDays && mergedDays == null)
-      return fail(t('errors.calendarDaysRequired'))
+      return fail('HOURS_INTERVAL_REQUIRED')
+    if (needsDays && mergedDays == null) return fail('CALENDAR_DAYS_REQUIRED')
   }
 
   const { isOneTime, ...rest } = parsed.data
@@ -100,10 +99,10 @@ export async function deleteMaintenanceTemplate(
   templateId: string
 ): Promise<MutationResult> {
   const template = await getMaintenanceTemplateById(templateId)
-  if (!template) return fail(t('errors.templateNotFound'))
+  if (!template) return fail('TEMPLATE_NOT_FOUND')
 
   if (!(await isGeneratorOrgAdmin(userId, template.generatorId)))
-    return fail(t('errors.onlyAdminCanDeleteTemplates'))
+    return fail('ONLY_ADMIN_CAN_DELETE_TEMPLATES')
 
   await db
     .delete(maintenanceTemplates)
@@ -119,10 +118,10 @@ export async function deleteMaintenanceRecord(
   recordId: string
 ): Promise<MutationResult> {
   const record = await getMaintenanceRecordById(recordId)
-  if (!record) return fail(t('errors.recordNotFound'))
+  if (!record) return fail('RECORD_NOT_FOUND')
 
   if (!(await canAccessGenerator(userId, record.generatorId)))
-    return fail(t('errors.notAuthorizedForGenerator'))
+    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
 
   await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, recordId))
 
@@ -137,13 +136,13 @@ export async function updateMaintenanceRecord(
   input: { performedAt: string; notes: string | null }
 ): Promise<MutationResult> {
   const record = await getMaintenanceRecordById(recordId)
-  if (!record) return fail(t('errors.recordNotFound'))
+  if (!record) return fail('RECORD_NOT_FOUND')
 
   if (!(await canAccessGenerator(userId, record.generatorId)))
-    return fail(t('errors.notAuthorizedForGenerator'))
+    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
 
   if (new Date(input.performedAt) > new Date())
-    return fail(t('errors.performedTimeInFuture'))
+    return fail('PERFORMED_TIME_IN_FUTURE')
 
   await db
     .update(maintenanceRecords)
@@ -161,16 +160,16 @@ export async function recordMaintenance(
   input: InsertMaintenanceRecordInput
 ): Promise<MutationResult> {
   const parsed = insertMaintenanceRecordSchema.safeParse(input)
-  if (!parsed.success) return fail(parsed.error.issues[0].message)
+  if (!parsed.success) return failFromZod(parsed.error)
 
   if (!(await canAccessGenerator(userId, parsed.data.generatorId)))
-    return fail(t('errors.notAuthorizedForGenerator'))
+    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
 
   // Verify template exists and belongs to the generator
   const template = await getMaintenanceTemplateById(parsed.data.templateId)
-  if (!template) return fail(t('errors.maintenanceTemplateNotFound'))
+  if (!template) return fail('MAINTENANCE_TEMPLATE_NOT_FOUND')
   if (template.generatorId !== parsed.data.generatorId)
-    return fail(t('errors.templateNotForGenerator'))
+    return fail('TEMPLATE_NOT_FOR_GENERATOR')
 
   await db.insert(maintenanceRecords).values({
     id: newId(),

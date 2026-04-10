@@ -13,11 +13,20 @@ import {
 } from '@/data/server/db-schema'
 import type { db } from '@/data/server'
 import { createServerAuthz } from '@/data/server/authz'
-import { fail, ok, type MutationResult } from '@/data/shared/result'
 
 import { transformSyncData } from './transform'
 
 // ── Types ────────────────────────────────────────────────────────────────────
+
+// Local to this file: server-side handlers return free-form string errors
+// that flow back through the PowerSync wire contract for connector-side
+// logging. These are developer/audit messages, not user-facing strings —
+// the client-facing structured `MutationError` contract lives in
+// `@/data/shared/errors.ts` and is used only by client mutations.
+type MutationResult = { ok: true } | { ok: false; error: string }
+
+const ok: MutationResult = { ok: true }
+const fail = (error: string): MutationResult => ({ ok: false, error })
 
 type Db = typeof db
 

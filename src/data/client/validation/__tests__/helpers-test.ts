@@ -1,48 +1,50 @@
-import { z } from 'zod'
+import { zNonEmptyString, zPositiveInt, zPositiveReal } from '../helpers'
 
-import { flattenZodErrors } from '../helpers'
-
-describe('flattenZodErrors', () => {
-  it('flattens field errors into Record<string, string>', () => {
-    const schema = z.object({
-      name: z.string().min(1, 'required'),
-      age: z.number().positive('must be positive')
-    })
-    const result = schema.safeParse({ name: '', age: -1 })
-    if (result.error) {
-      const flat = flattenZodErrors(result.error)
-      expect(flat).toHaveProperty('name')
-      expect(flat).toHaveProperty('age')
-      expect(typeof flat.name).toBe('string')
-      expect(typeof flat.age).toBe('string')
-    }
+describe('zNonEmptyString', () => {
+  it('accepts a non-empty string', () => {
+    expect(zNonEmptyString.safeParse('hello').success).toBe(true)
   })
 
-  it('takes first message when field has multiple errors', () => {
-    const schema = z.object({
-      value: z
-        .string()
-        .min(3, 'too short')
-        .includes('@', { message: 'needs @' })
-    })
-    const result = schema.safeParse({ value: '' })
-    if (result.error) {
-      const flat = flattenZodErrors(result.error)
-      expect(flat.value).toBeDefined()
-      expect(typeof flat.value).toBe('string')
-    }
+  it('trims whitespace before the length check', () => {
+    const result = zNonEmptyString.safeParse('  hello  ')
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data).toBe('hello')
   })
 
-  it('returns empty object for error with no field errors', () => {
-    // Refinement errors without a path don't appear in fieldErrors
-    const schema = z
-      .object({ a: z.string(), b: z.string() })
-      .refine(d => d.a === d.b, 'must match')
-    const result = schema.safeParse({ a: 'x', b: 'y' })
-    if (result.error) {
-      const flat = flattenZodErrors(result.error)
-      // The refinement error has no field path, so it won't appear
-      expect(Object.keys(flat).length).toBe(0)
-    }
+  it('rejects an empty string with a too_small issue', () => {
+    const result = zNonEmptyString.safeParse('')
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error.issues[0].code).toBe('too_small')
+  })
+
+  it('rejects whitespace-only as empty after trim', () => {
+    expect(zNonEmptyString.safeParse('   ').success).toBe(false)
+  })
+})
+
+describe('zPositiveReal', () => {
+  it('accepts a positive number', () => {
+    expect(zPositiveReal.safeParse(1.5).success).toBe(true)
+  })
+
+  it('rejects zero and negatives with a too_small issue', () => {
+    const result = zPositiveReal.safeParse(0)
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error.issues[0].code).toBe('too_small')
+  })
+})
+
+describe('zPositiveInt', () => {
+  it('accepts a positive integer', () => {
+    expect(zPositiveInt.safeParse(5).success).toBe(true)
+  })
+
+  it('rejects a floating-point number with an invalid_type issue', () => {
+    const result = zPositiveInt.safeParse(1.5)
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error.issues[0].code).toBe('invalid_type')
   })
 })

@@ -7,7 +7,6 @@ import {
   getOrgMemberById,
   getOrgMembershipById
 } from '@/data/client/queries'
-import { t } from '@/lib/i18n'
 import { db, powersync } from '@/lib/powersync/database'
 
 import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
@@ -78,10 +77,10 @@ export async function removeMember(
   memberId: string
 ): Promise<MutationResult> {
   const member = await getOrgMembershipById(memberId)
-  if (!member) return fail(t('errors.memberNotFound'))
+  if (!member) return fail('MEMBER_NOT_FOUND')
 
   if (!(await isOrgAdmin(adminUserId, member.organizationId)))
-    return fail(t('errors.onlyAdminCanRemoveMembers'))
+    return fail('ONLY_ADMIN_CAN_REMOVE_MEMBERS')
 
   await reassignAndRemoveMember(
     member.userId,
@@ -105,13 +104,13 @@ export async function leaveOrganization(
   userId: string,
   orgId: string
 ): Promise<MutationResult> {
-  if (await isOrgAdmin(userId, orgId)) return fail(t('errors.adminCannotLeave'))
+  if (await isOrgAdmin(userId, orgId)) return fail('ADMIN_CANNOT_LEAVE')
 
   const member = await getOrgMemberById(userId, orgId)
-  if (!member) return fail(t('errors.notMemberOfOrg'))
+  if (!member) return fail('NOT_MEMBER_OF_ORG')
 
   const adminUserId = await getOrganizationAdminUserId(orgId)
-  if (!adminUserId) return fail(t('errors.organizationNotFound'))
+  if (!adminUserId) return fail('ORGANIZATION_NOT_FOUND')
 
   await reassignAndRemoveMember(userId, orgId, adminUserId, member.id)
 

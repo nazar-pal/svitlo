@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-import { t } from '@/lib/i18n'
 import { TRIGGER_TYPES } from '@/lib/maintenance/trigger-type'
 import { zNonEmptyString, zPositiveInt, zPositiveReal } from './helpers'
 
@@ -25,14 +24,14 @@ function refineTriggerFields(
     ctx.addIssue({
       code: 'custom',
       path: ['triggerHoursInterval'],
-      message: t('validation.required')
+      message: 'REQUIRED_FOR_TRIGGER_TYPE'
     })
 
   if (needsDays && data.triggerCalendarDays == null)
     ctx.addIssue({
       code: 'custom',
       path: ['triggerCalendarDays'],
-      message: t('validation.required')
+      message: 'REQUIRED_FOR_TRIGGER_TYPE'
     })
 }
 
@@ -63,7 +62,7 @@ export const updateMaintenanceTemplateSchema = z
   })
   .partial()
   .refine(data => Object.keys(data).length > 0, {
-    error: () => t('validation.atLeastOneField')
+    error: 'AT_LEAST_ONE_FIELD'
   })
 
 export type UpdateMaintenanceTemplateInput = z.input<

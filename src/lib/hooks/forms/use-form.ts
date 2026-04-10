@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react'
+import type { z } from 'zod'
 
+import { mapZodIssueToError } from '@/data/shared/errors-from-zod'
 import type { MutationResult } from '@/data/shared/result'
 import { notifySuccess } from '@/lib/haptics'
+import { translateMutationError } from '@/lib/i18n/translate-mutation-error'
 
 import {
   bindText,
@@ -81,7 +84,7 @@ export function useForm<TValues extends Record<string, unknown>, TInput>(
     try {
       const mutationResult = await options.mutate(result.data)
       if (!mutationResult.ok) {
-        setFormError(mutationResult.error)
+        setFormError(translateMutationError(mutationResult.error))
         return
       }
       notifySuccess()
@@ -102,4 +105,34 @@ export function useForm<TValues extends Record<string, unknown>, TInput>(
   }
 
   return { form, submit, formError, clearFormError, isSubmitting, bind }
+}
+
+/**
+ * Parse `input` with `schema` and adapt zod issues into `BuildResult`'s
+ * field-errors / form-error shape. Every issue is translated through the
+ * single `translateMutationError` chokepoint so the hook stays i18n-agnostic.
+ */
+export function validateWithZod<TIn, TOut>(
+  schema: z.ZodType<TOut, TIn>,
+  input: TIn
+): BuildResult<TOut> {
+  const parsed = schema.safeParse(input)
+  if (parsed.success) return { ok: true, data: parsed.data }
+
+  const fieldErrors: Record<string, string> = {}
+  let formError: string | undefined
+
+  for (const issue of parsed.error.issues) {
+    const translated = translateMutationError(mapZodIssueToError(issue))
+    if (issue.path.length === 0) {
+      formError ??= translated
+    } else {
+      const key = issue.path.join('.')
+      // First issue per field wins — later issues on the same field are
+      // dropped so downstream UI shows a single message.
+      if (!fieldErrors[key]) fieldErrors[key] = translated
+    }
+  }
+
+  return { ok: false, fieldErrors, formError }
 }

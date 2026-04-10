@@ -7,7 +7,6 @@ import {
   getGeneratorOrgId,
   getOrgMemberById
 } from '@/data/client/queries'
-import { t } from '@/lib/i18n'
 import { db } from '@/lib/powersync/database'
 
 import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
@@ -18,22 +17,22 @@ export async function assignUserToGenerator(
   targetUserId: string
 ): Promise<MutationResult> {
   const orgId = await getGeneratorOrgId(generatorId)
-  if (!orgId) return fail(t('errors.generatorNotFound'))
+  if (!orgId) return fail('GENERATOR_NOT_FOUND')
 
   if (!(await isOrgAdmin(adminUserId, orgId)))
-    return fail(t('errors.onlyAdminCanAssignUsers'))
+    return fail('ONLY_ADMIN_CAN_ASSIGN_USERS')
 
   // Check target is a member of the org (not needed for admin)
   if (targetUserId !== adminUserId) {
     const member = await getOrgMemberById(targetUserId, orgId)
-    if (!member) return fail(t('errors.userNotOrgMember'))
+    if (!member) return fail('USER_NOT_ORG_MEMBER')
   }
 
   const existing = await getAssignmentForUserAndGenerator(
     targetUserId,
     generatorId
   )
-  if (existing) return fail(t('errors.userAlreadyAssigned'))
+  if (existing) return fail('USER_ALREADY_ASSIGNED')
 
   await db.insert(generatorUserAssignments).values({
     id: newId(),
@@ -51,16 +50,16 @@ export async function unassignUserFromGenerator(
   targetUserId: string
 ): Promise<MutationResult> {
   const orgId = await getGeneratorOrgId(generatorId)
-  if (!orgId) return fail(t('errors.generatorNotFound'))
+  if (!orgId) return fail('GENERATOR_NOT_FOUND')
 
   if (!(await isOrgAdmin(adminUserId, orgId)))
-    return fail(t('errors.onlyAdminCanUnassignUsers'))
+    return fail('ONLY_ADMIN_CAN_UNASSIGN_USERS')
 
   const assignment = await getAssignmentForUserAndGenerator(
     targetUserId,
     generatorId
   )
-  if (!assignment) return fail(t('errors.userNotAssigned'))
+  if (!assignment) return fail('USER_NOT_ASSIGNED')
 
   await db
     .delete(generatorUserAssignments)

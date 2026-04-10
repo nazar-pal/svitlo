@@ -1,5 +1,3 @@
-import { useTranslation } from '@/lib/i18n'
-
 export const TRIGGER_TYPES = ['hours', 'calendar', 'whichever_first'] as const
 
 export type TriggerType = (typeof TRIGGER_TYPES)[number]
@@ -22,13 +20,4 @@ export function parseOptionalNumber(
 ): number | undefined {
   const n = parse(value)
   return Number.isFinite(n) ? n : undefined
-}
-
-export function useTriggerLabels(): Record<TriggerType, string> {
-  const { t } = useTranslation()
-  return {
-    hours: t('maintenanceTemplate.byHours'),
-    calendar: t('maintenanceTemplate.byCalendar'),
-    whichever_first: t('maintenanceTemplate.whicheverFirst')
-  }
 }

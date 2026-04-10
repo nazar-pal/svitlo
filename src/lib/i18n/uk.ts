@@ -487,7 +487,8 @@ export const uk = {
       'Календарні дні обов\u0027язкові для обраного типу тригера',
     userNotOrgMember: 'Користувач не є учасником цієї організації',
     userAlreadyAssigned: 'Користувача вже призначено до цього генератора',
-    userNotAssigned: 'Користувача не призначено до цього генератора'
+    userNotAssigned: 'Користувача не призначено до цього генератора',
+    maintenanceTaskValidationFailed: '"{{taskName}}" містить недійсні дані'
   },
 
   privacy: {

@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/empty-state'
 import { deleteGenerator } from '@/data/client/mutations/generators'
 import { impactLight, notifyWarning } from '@/lib/haptics'
 import { useTranslation } from '@/lib/i18n'
+import { translateMutationError } from '@/lib/i18n/translate-mutation-error'
 import {
   Host,
   Button as SwiftButton,
@@ -228,7 +229,7 @@ export default function HomeScreen() {
                                 if (!result.ok)
                                   return Alert.alert(
                                     t('common.error'),
-                                    result.error
+                                    translateMutationError(result.error)
                                   )
                                 notifyWarning()
                               }

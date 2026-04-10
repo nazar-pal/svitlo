@@ -4,6 +4,7 @@ import { Text, View } from 'react-native'
 import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { completeNameSchema } from '@/data/client/validation'
+import { fail, ok } from '@/data/shared/result'
 import { authClient } from '@/lib/auth/auth-client'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useTranslation } from '@/lib/i18n'
@@ -17,11 +18,10 @@ export default function CompleteNameScreen() {
     mutate: async input => {
       const result = await authClient.updateUser({ name: input.name })
       if (result.error)
-        return {
-          ok: false,
-          error: result.error.message ?? t('auth.somethingWentWrong')
-        }
-      return { ok: true }
+        return fail('AUTH_FAILED', {
+          message: result.error.message ?? t('auth.somethingWentWrong')
+        })
+      return ok
     }
   })
 

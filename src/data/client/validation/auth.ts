@@ -1,40 +1,30 @@
 import { z } from 'zod'
 
-import { t } from '@/lib/i18n'
-
 export const signInSchema = z.object({
   email: z
     .string()
     .trim()
-    .min(1, { error: () => t('validation.enterEmail') })
-    .email({ error: () => t('validation.validEmail') }),
-  password: z.string().min(1, { error: () => t('validation.enterPassword') })
+    .min(1, { error: 'ENTER_EMAIL' })
+    .email({ error: 'VALID_EMAIL' }),
+  password: z.string().min(1, { error: 'ENTER_PASSWORD' })
 })
 
 export const completeNameSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, { error: () => t('validation.enterName') })
+  name: z.string().trim().min(1, { error: 'ENTER_NAME' })
 })
 
 export const signUpSchema = z
   .object({
-    name: z
-      .string()
-      .trim()
-      .min(1, { error: () => t('validation.enterName') }),
+    name: z.string().trim().min(1, { error: 'ENTER_NAME' }),
     email: z
       .string()
       .trim()
-      .min(1, { error: () => t('validation.enterEmail') })
-      .email({ error: () => t('validation.validEmail') }),
-    password: z
-      .string()
-      .min(8, { error: () => t('validation.passwordMinLength') }),
+      .min(1, { error: 'ENTER_EMAIL' })
+      .email({ error: 'VALID_EMAIL' }),
+    password: z.string().min(8, { error: 'PASSWORD_MIN_LENGTH' }),
     confirmPassword: z.string()
   })
   .refine(d => d.password === d.confirmPassword, {
     path: ['confirmPassword'],
-    error: () => t('validation.passwordsDoNotMatch')
+    error: 'PASSWORDS_DO_NOT_MATCH'
   })

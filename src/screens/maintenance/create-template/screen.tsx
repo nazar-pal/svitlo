@@ -24,9 +24,9 @@ import {
   isTriggerType,
   parseOptionalNumber,
   showsCalendar,
-  showsHours,
-  useTriggerLabels
+  showsHours
 } from '@/lib/maintenance/trigger-type'
+import { useTriggerLabels } from '@/lib/maintenance/use-trigger-labels'
 import { useLocalUser } from '@/lib/powersync'
 
 export default function CreateMaintenanceTemplateScreen() {
