@@ -12,7 +12,7 @@ import {
   maintenanceRecords
 } from '@/data/server/db-schema'
 import type { db } from '@/data/server'
-import * as policy from '@/data/shared/authz/policy'
+import { createServerAuthz } from '@/data/server/authz'
 import { fail, ok, type MutationResult } from '@/data/shared/result'
 
 import { transformSyncData } from './transform'
@@ -31,66 +31,6 @@ export interface WriteContext {
 }
 
 type Insert<T extends { $inferInsert: unknown }> = T['$inferInsert']
-
-// ── Authorization ────────────────────────────────────────────────────────────
-// Thin wrappers that fetch via Drizzle and apply the shared pure policy.
-
-async function getOrgAdminUserId(db: Db, orgId: string) {
-  const row = await db.query.organizations.findFirst({
-    where: eq(organizations.id, orgId),
-    columns: { adminUserId: true }
-  })
-  return row?.adminUserId ?? null
-}
-
-// Single round trip: joins generators → organizations and probes the
-// assignment table with an EXISTS subquery so generator-level authz
-// questions cost one SQL statement.
-async function getGeneratorAuthzFacts(
-  db: Db,
-  userId: string,
-  generatorId: string
-) {
-  const [row] = await db
-    .select({
-      orgAdminUserId: organizations.adminUserId,
-      hasAssignment: sql<boolean>`
-        EXISTS (
-          SELECT 1 FROM ${generatorUserAssignments}
-          WHERE ${generatorUserAssignments.generatorId} = ${generators.id}
-            AND ${generatorUserAssignments.userId} = ${userId}
-        )
-      `
-    })
-    .from(generators)
-    .leftJoin(organizations, eq(generators.organizationId, organizations.id))
-    .where(eq(generators.id, generatorId))
-    .limit(1)
-  return row ?? null
-}
-
-async function isOrgAdmin(db: Db, userId: string, orgId: string) {
-  return policy.isOrgAdmin(userId, await getOrgAdminUserId(db, orgId))
-}
-
-async function isGeneratorOrgAdmin(
-  db: Db,
-  userId: string,
-  generatorId: string
-) {
-  const facts = await getGeneratorAuthzFacts(db, userId, generatorId)
-  return facts ? policy.isOrgAdmin(userId, facts.orgAdminUserId) : false
-}
-
-async function canAccessGenerator(db: Db, userId: string, generatorId: string) {
-  const facts = await getGeneratorAuthzFacts(db, userId, generatorId)
-  if (!facts) return false
-  return policy.canAccessGenerator(
-    userId,
-    facts.orgAdminUserId,
-    facts.hasAssignment === true
-  )
-}
 
 /**
  * Transfer a departing member's generator assignments to the org admin,
@@ -164,6 +104,7 @@ export async function handleOrganizations(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+  const authz = createServerAuthz(db)
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof organizations>>(data)
     await db
@@ -174,7 +115,7 @@ export async function handleOrganizations(
   }
 
   if (op === 'update') {
-    if (!(await isOrgAdmin(db, userId, id)))
+    if (!(await authz.isOrgAdmin(userId, id)))
       return fail('Only admin can update organization')
 
     const fields: Record<string, unknown> = {}
@@ -187,7 +128,7 @@ export async function handleOrganizations(
   }
 
   if (op === 'delete') {
-    if (!(await isOrgAdmin(db, userId, id)))
+    if (!(await authz.isOrgAdmin(userId, id)))
       return fail('Only admin can delete organization')
     await db.delete(organizations).where(eq(organizations.id, id))
     return ok
@@ -200,6 +141,7 @@ export async function handleOrganizationMembers(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, userEmail, op, id, data } = ctx
+  const authz = createServerAuthz(db)
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof organizationMembers>>(data)
@@ -207,7 +149,7 @@ export async function handleOrganizationMembers(
     const memberUserId = values.userId as string
 
     // Admin adding an employee
-    if (await isOrgAdmin(db, userId, orgId)) {
+    if (await authz.isOrgAdmin(userId, orgId)) {
       await db
         .insert(organizationMembers)
         .values({ ...values, id })
@@ -246,7 +188,7 @@ export async function handleOrganizationMembers(
     if (!member) return ok // already deleted
 
     // Admin removing a member
-    if (await isOrgAdmin(db, userId, member.organizationId)) {
+    if (await authz.isOrgAdmin(userId, member.organizationId)) {
       await transferAssignmentsAndRemoveMember(db, userId, member, id)
       return ok
     }
@@ -273,11 +215,12 @@ export async function handleInvitations(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, userEmail, op, id, data } = ctx
+  const authz = createServerAuthz(db)
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof invitations>>(data)
     const orgId = values.organizationId as string
-    if (!(await isOrgAdmin(db, userId, orgId)))
+    if (!(await authz.isOrgAdmin(userId, orgId)))
       return fail('Only admin can create invitations')
 
     await db
@@ -295,7 +238,7 @@ export async function handleInvitations(
     if (!invitation) return ok // already deleted
 
     // Admin canceling
-    if (await isOrgAdmin(db, userId, invitation.organizationId)) {
+    if (await authz.isOrgAdmin(userId, invitation.organizationId)) {
       await db.delete(invitations).where(eq(invitations.id, id))
       return ok
     }
@@ -316,11 +259,12 @@ export async function handleGenerators(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+  const authz = createServerAuthz(db)
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof generators>>(data)
     const orgId = values.organizationId as string
-    if (!(await isOrgAdmin(db, userId, orgId)))
+    if (!(await authz.isOrgAdmin(userId, orgId)))
       return fail('Only admin can create generators')
 
     await db
@@ -331,7 +275,7 @@ export async function handleGenerators(
   }
 
   if (op === 'update') {
-    if (!(await isGeneratorOrgAdmin(db, userId, id)))
+    if (!(await authz.isGeneratorOrgAdmin(userId, id)))
       return fail('Only admin can update generators')
 
     const fields = transformSyncData<Partial<Insert<typeof generators>>>(data)
@@ -342,7 +286,7 @@ export async function handleGenerators(
   }
 
   if (op === 'delete') {
-    if (!(await isGeneratorOrgAdmin(db, userId, id)))
+    if (!(await authz.isGeneratorOrgAdmin(userId, id)))
       return fail('Only admin can delete generators')
     await db.delete(generators).where(eq(generators.id, id))
     return ok
@@ -355,12 +299,13 @@ export async function handleGeneratorUserAssignments(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+  const authz = createServerAuthz(db)
 
   if (op === 'insert') {
     const values =
       transformSyncData<Insert<typeof generatorUserAssignments>>(data)
     const generatorId = values.generatorId as string
-    if (!(await isGeneratorOrgAdmin(db, userId, generatorId)))
+    if (!(await authz.isGeneratorOrgAdmin(userId, generatorId)))
       return fail('Only admin can assign users to generators')
 
     await db
@@ -377,7 +322,7 @@ export async function handleGeneratorUserAssignments(
     })
     if (!assignment) return ok
 
-    if (!(await isGeneratorOrgAdmin(db, userId, assignment.generatorId)))
+    if (!(await authz.isGeneratorOrgAdmin(userId, assignment.generatorId)))
       return fail('Only admin can remove generator assignments')
 
     await db
@@ -393,11 +338,12 @@ export async function handleGeneratorSessions(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+  const authz = createServerAuthz(db)
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof generatorSessions>>(data)
     const generatorId = values.generatorId as string
-    if (!(await canAccessGenerator(db, userId, generatorId)))
+    if (!(await authz.canAccessGenerator(userId, generatorId)))
       return fail('Not authorized for this generator')
 
     await db
@@ -414,7 +360,7 @@ export async function handleGeneratorSessions(
     })
     if (!session) return fail('Session not found')
 
-    if (!(await canAccessGenerator(db, userId, session.generatorId)))
+    if (!(await authz.canAccessGenerator(userId, session.generatorId)))
       return fail('Not authorized for this generator')
 
     // Only stoppedAt and stoppedByUserId are updatable; userId is server-enforced
@@ -441,9 +387,9 @@ export async function handleGeneratorSessions(
     })
     if (!session) return ok
 
-    const isAdmin = await isGeneratorOrgAdmin(db, userId, session.generatorId)
+    const isAdmin = await authz.isGeneratorOrgAdmin(userId, session.generatorId)
     if (!isAdmin) {
-      if (!(await canAccessGenerator(db, userId, session.generatorId)))
+      if (!(await authz.canAccessGenerator(userId, session.generatorId)))
         return fail('Not authorized for this generator')
       if (session.startedByUserId !== userId)
         return fail('Can only delete your own sessions')
@@ -460,11 +406,12 @@ export async function handleMaintenanceTemplates(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+  const authz = createServerAuthz(db)
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof maintenanceTemplates>>(data)
     const generatorId = values.generatorId as string
-    if (!(await isGeneratorOrgAdmin(db, userId, generatorId)))
+    if (!(await authz.isGeneratorOrgAdmin(userId, generatorId)))
       return fail('Only admin can create maintenance templates')
 
     await db
@@ -481,7 +428,7 @@ export async function handleMaintenanceTemplates(
     })
     if (!template) return fail('Template not found')
 
-    if (!(await isGeneratorOrgAdmin(db, userId, template.generatorId)))
+    if (!(await authz.isGeneratorOrgAdmin(userId, template.generatorId)))
       return fail('Only admin can update maintenance templates')
 
     const fields =
@@ -502,7 +449,7 @@ export async function handleMaintenanceTemplates(
     })
     if (!template) return ok
 
-    if (!(await isGeneratorOrgAdmin(db, userId, template.generatorId)))
+    if (!(await authz.isGeneratorOrgAdmin(userId, template.generatorId)))
       return fail('Only admin can delete maintenance templates')
 
     await db.delete(maintenanceTemplates).where(eq(maintenanceTemplates.id, id))
@@ -516,11 +463,12 @@ export async function handleMaintenanceRecords(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
+  const authz = createServerAuthz(db)
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof maintenanceRecords>>(data)
     const generatorId = values.generatorId as string
-    if (!(await canAccessGenerator(db, userId, generatorId)))
+    if (!(await authz.canAccessGenerator(userId, generatorId)))
       return fail('Not authorized for this generator')
 
     await db
@@ -537,7 +485,7 @@ export async function handleMaintenanceRecords(
     })
     if (!record) return fail('Record not found')
 
-    if (!(await canAccessGenerator(db, userId, record.generatorId)))
+    if (!(await authz.canAccessGenerator(userId, record.generatorId)))
       return fail('Not authorized for this generator')
 
     // Only notes is updatable
@@ -561,9 +509,9 @@ export async function handleMaintenanceRecords(
     })
     if (!record) return ok
 
-    const isAdmin = await isGeneratorOrgAdmin(db, userId, record.generatorId)
+    const isAdmin = await authz.isGeneratorOrgAdmin(userId, record.generatorId)
     if (!isAdmin) {
-      if (!(await canAccessGenerator(db, userId, record.generatorId)))
+      if (!(await authz.canAccessGenerator(userId, record.generatorId)))
         return fail('Not authorized for this generator')
       if (record.performedByUserId !== userId)
         return fail('Can only delete your own maintenance records')

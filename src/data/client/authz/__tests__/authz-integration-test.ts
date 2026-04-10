@@ -25,7 +25,7 @@ jest.mock('@/lib/powersync/database', () => ({
   }
 }))
 
-import { canAccessGenerator, isGeneratorOrgAdmin, isOrgAdmin } from '../index'
+import { clientAuthzProvider } from '../provider'
 
 beforeEach(() => {
   resetDatabase(mockTestDb.sqlite)
@@ -42,82 +42,61 @@ function dropOrgRow() {
   mockTestDb.db.delete(organizations).where(eq(organizations.id, IDS.org)).run()
 }
 
-// ── isOrgAdmin ──────────────────────────────────────────────────────────────
+// These tests cover the SQLite-specific concerns the dialect-independent
+// shared checks-test.ts cannot reach: EXISTS 0/1 → boolean coercion,
+// LEFT JOIN orphan-org nullability, and the missing-row path.
 
-describe('isOrgAdmin', () => {
-  it('returns true for the org admin', async () => {
-    expect(await isOrgAdmin(IDS.adminUser, IDS.org)).toBe(true)
+describe('getOrgFacts', () => {
+  it('returns facts for an existing organization', async () => {
+    expect(await clientAuthzProvider.getOrgFacts(IDS.org)).toEqual({
+      adminUserId: IDS.adminUser
+    })
   })
 
-  it('returns false for a non-admin member of the same org', async () => {
-    expect(await isOrgAdmin(IDS.memberUser, IDS.org)).toBe(false)
-  })
-
-  it('returns false for an unrelated user', async () => {
-    expect(await isOrgAdmin(IDS.outsiderUser, IDS.org)).toBe(false)
-  })
-
-  it('returns false when the org does not exist', async () => {
-    expect(await isOrgAdmin(IDS.adminUser, 'ghost-org')).toBe(false)
+  it('returns null when the organization does not exist', async () => {
+    expect(await clientAuthzProvider.getOrgFacts('ghost-org')).toBeNull()
   })
 })
 
-// ── isGeneratorOrgAdmin ─────────────────────────────────────────────────────
-
-describe('isGeneratorOrgAdmin', () => {
-  it('returns true for the org admin of the generator', async () => {
-    expect(await isGeneratorOrgAdmin(IDS.adminUser, IDS.generator)).toBe(true)
-  })
-
-  it('returns false for an assigned non-admin member', async () => {
-    seedAssignment(mockTestDb.db)
-    expect(await isGeneratorOrgAdmin(IDS.memberUser, IDS.generator)).toBe(false)
-  })
-
-  it('returns false for an unrelated user', async () => {
-    expect(await isGeneratorOrgAdmin(IDS.outsiderUser, IDS.generator)).toBe(
-      false
+describe('getGeneratorFacts', () => {
+  it('coerces the EXISTS subquery to a real boolean (no assignment)', async () => {
+    const facts = await clientAuthzProvider.getGeneratorFacts(
+      IDS.memberUser,
+      IDS.generator
     )
+    expect(facts).toEqual({
+      orgAdminUserId: IDS.adminUser,
+      hasAssignment: false
+    })
   })
 
-  it('returns false when the generator does not exist', async () => {
-    expect(await isGeneratorOrgAdmin(IDS.adminUser, 'ghost-gen')).toBe(false)
-  })
-
-  it('returns false when the generator exists but its org row is missing', async () => {
-    dropOrgRow()
-    expect(await isGeneratorOrgAdmin(IDS.adminUser, IDS.generator)).toBe(false)
-  })
-})
-
-// ── canAccessGenerator ──────────────────────────────────────────────────────
-
-describe('canAccessGenerator', () => {
-  it('returns true for the org admin without any assignment', async () => {
-    expect(await canAccessGenerator(IDS.adminUser, IDS.generator)).toBe(true)
-  })
-
-  it('returns true for a non-admin member who has an assignment', async () => {
+  it('coerces the EXISTS subquery to a real boolean (with assignment)', async () => {
     seedAssignment(mockTestDb.db)
-    expect(await canAccessGenerator(IDS.memberUser, IDS.generator)).toBe(true)
+    const facts = await clientAuthzProvider.getGeneratorFacts(
+      IDS.memberUser,
+      IDS.generator
+    )
+    expect(facts).toEqual({
+      orgAdminUserId: IDS.adminUser,
+      hasAssignment: true
+    })
   })
 
-  it('returns false for a non-admin member without an assignment', async () => {
-    expect(await canAccessGenerator(IDS.memberUser, IDS.generator)).toBe(false)
-  })
-
-  it('returns false when the generator does not exist', async () => {
-    expect(await canAccessGenerator(IDS.adminUser, 'ghost-gen')).toBe(false)
-  })
-
-  it('returns false for an unassigned user when the org row is missing', async () => {
+  it('returns orgAdminUserId: null when the generator is orphaned (LEFT JOIN)', async () => {
     dropOrgRow()
-    expect(await canAccessGenerator(IDS.memberUser, IDS.generator)).toBe(false)
+    const facts = await clientAuthzProvider.getGeneratorFacts(
+      IDS.memberUser,
+      IDS.generator
+    )
+    expect(facts).toEqual({
+      orgAdminUserId: null,
+      hasAssignment: false
+    })
   })
 
-  it('returns true when the org row is missing but the user has an assignment', async () => {
-    seedAssignment(mockTestDb.db)
-    dropOrgRow()
-    expect(await canAccessGenerator(IDS.memberUser, IDS.generator)).toBe(true)
+  it('returns null when the generator does not exist', async () => {
+    expect(
+      await clientAuthzProvider.getGeneratorFacts(IDS.adminUser, 'ghost-gen')
+    ).toBeNull()
   })
 })
