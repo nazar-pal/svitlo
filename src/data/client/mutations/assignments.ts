@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 
+import { isOrgAdmin } from '@/data/client/authz'
 import { generatorUserAssignments } from '@/data/client/db-schema'
 import {
   getAssignmentForUserAndGenerator,
@@ -9,14 +10,7 @@ import {
 import { t } from '@/lib/i18n'
 import { db } from '@/lib/powersync/database'
 
-import {
-  fail,
-  isOrgAdmin,
-  newId,
-  nowISO,
-  ok,
-  type MutationResult
-} from './helpers'
+import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
 
 export async function assignUserToGenerator(
   adminUserId: string,

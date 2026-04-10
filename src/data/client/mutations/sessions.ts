@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 
+import { canAccessGenerator } from '@/data/client/authz'
 import { generatorSessions } from '@/data/client/db-schema'
 import {
   getGeneratorById,
@@ -9,14 +10,7 @@ import {
 import { t } from '@/lib/i18n'
 import { db } from '@/lib/powersync/database'
 
-import {
-  canAccessGenerator,
-  fail,
-  newId,
-  nowISO,
-  ok,
-  type MutationResult
-} from './helpers'
+import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
 
 export async function startSession(
   userId: string,

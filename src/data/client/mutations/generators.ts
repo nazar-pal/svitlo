@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 
+import { isGeneratorOrgAdmin, isOrgAdmin } from '@/data/client/authz'
 import { generators } from '@/data/client/db-schema'
 import { t } from '@/lib/i18n'
 import {
@@ -12,15 +13,7 @@ import {
 } from '@/data/client/validation'
 import { db, powersync } from '@/lib/powersync/database'
 
-import {
-  fail,
-  isGeneratorOrgAdmin,
-  isOrgAdmin,
-  newId,
-  nowISO,
-  ok,
-  type MutationResult
-} from './helpers'
+import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
 
 export async function updateGenerator(
   userId: string,

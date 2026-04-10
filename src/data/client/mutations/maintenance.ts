@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 
+import { canAccessGenerator, isGeneratorOrgAdmin } from '@/data/client/authz'
 import {
   maintenanceRecords,
   maintenanceTemplates
@@ -19,15 +20,7 @@ import {
 } from '@/data/client/validation'
 import { db } from '@/lib/powersync/database'
 
-import {
-  canAccessGenerator,
-  fail,
-  isGeneratorOrgAdmin,
-  newId,
-  nowISO,
-  ok,
-  type MutationResult
-} from './helpers'
+import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
 
 export async function createMaintenanceTemplate(
   userId: string,

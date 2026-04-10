@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 
+import { isOrgAdmin } from '@/data/client/authz'
 import { generators, generatorUserAssignments } from '@/data/client/db-schema'
 import {
   getOrganizationAdminUserId,
@@ -9,14 +10,7 @@ import {
 import { t } from '@/lib/i18n'
 import { db, powersync } from '@/lib/powersync/database'
 
-import {
-  fail,
-  isOrgAdmin,
-  newId,
-  nowISO,
-  ok,
-  type MutationResult
-} from './helpers'
+import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
 
 /**
  * Reassign all of a member's generators to the admin and delete the membership.
