@@ -5,12 +5,8 @@ import { Pressable, Text, View } from 'react-native'
 
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator } from '@/data/client/db-schema'
-import {
-  alertOnError,
-  startSession,
-  stopSession
-} from '@/data/client/mutations'
-import { confirmRestingStart } from '@/lib/alerts'
+import { startSession, stopSession } from '@/data/client/mutations'
+import { alertOnError, confirmRestingStart } from '@/lib/alerts'
 import {
   GENERATOR_STATUS_KEYS,
   type GeneratorStatus,

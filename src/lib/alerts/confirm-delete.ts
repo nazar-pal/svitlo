@@ -1,14 +1,15 @@
 import { Alert } from 'react-native'
 
 import {
-  alertOnError,
   deleteMaintenanceRecord,
   deleteMaintenanceTemplate,
   deleteSession
 } from '@/data/client/mutations'
-import type { MutationResult } from '@/data/client/mutations'
+import type { MutationResult } from '@/data/shared/result'
 import { notifyWarning } from '@/lib/haptics'
 import { t } from '@/lib/i18n'
+
+import { alertOnError } from './alert-on-error'
 
 function confirmDestructive(
   title: string,

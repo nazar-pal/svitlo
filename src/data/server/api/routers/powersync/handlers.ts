@@ -12,6 +12,8 @@ import {
   maintenanceRecords
 } from '@/data/server/db-schema'
 import type { db } from '@/data/server'
+import * as policy from '@/data/shared/authz/policy'
+import { fail, ok, type MutationResult } from '@/data/shared/result'
 
 import { transformSyncData } from './transform'
 
@@ -28,29 +30,29 @@ export interface WriteContext {
   data: Record<string, unknown>
 }
 
-type Result = { ok: true } | { ok: false; error: string }
-
 type Insert<T extends { $inferInsert: unknown }> = T['$inferInsert']
 
-const ok: Result = { ok: true as const }
-const deny = (reason: string): Result => ({ ok: false as const, error: reason })
+// ── Authorization ────────────────────────────────────────────────────────────
+// Thin wrappers that fetch via Drizzle and apply the shared pure policy.
 
-// ── Auth helpers ─────────────────────────────────────────────────────────────
-
-async function isOrgAdmin(db: Db, userId: string, orgId: string) {
-  const org = await db.query.organizations.findFirst({
+async function getOrgAdminUserId(db: Db, orgId: string) {
+  const row = await db.query.organizations.findFirst({
     where: eq(organizations.id, orgId),
     columns: { adminUserId: true }
   })
-  return org?.adminUserId === userId
+  return row?.adminUserId ?? null
 }
 
 async function getGeneratorOrgId(db: Db, generatorId: string) {
-  const gen = await db.query.generators.findFirst({
+  const row = await db.query.generators.findFirst({
     where: eq(generators.id, generatorId),
     columns: { organizationId: true }
   })
-  return gen?.organizationId ?? null
+  return row?.organizationId ?? null
+}
+
+async function isOrgAdmin(db: Db, userId: string, orgId: string) {
+  return policy.isOrgAdmin(userId, await getOrgAdminUserId(db, orgId))
 }
 
 async function isGeneratorOrgAdmin(
@@ -59,16 +61,14 @@ async function isGeneratorOrgAdmin(
   generatorId: string
 ) {
   const orgId = await getGeneratorOrgId(db, generatorId)
-  if (!orgId) return false
-  return isOrgAdmin(db, userId, orgId)
+  return orgId ? isOrgAdmin(db, userId, orgId) : false
 }
 
 async function canAccessGenerator(db: Db, userId: string, generatorId: string) {
   const orgId = await getGeneratorOrgId(db, generatorId)
   if (!orgId) return false
-
-  if (await isOrgAdmin(db, userId, orgId)) return true
-
+  const adminUserId = await getOrgAdminUserId(db, orgId)
+  if (policy.isOrgAdmin(userId, adminUserId)) return true
   const assignment = await db.query.generatorUserAssignments.findFirst({
     where: and(
       eq(generatorUserAssignments.generatorId, generatorId),
@@ -76,7 +76,7 @@ async function canAccessGenerator(db: Db, userId: string, generatorId: string) {
     ),
     columns: { id: true }
   })
-  return !!assignment
+  return policy.canAccessGenerator(userId, adminUserId, !!assignment)
 }
 
 /**
@@ -130,11 +130,11 @@ async function transferAssignmentsAndRemoveMember(
 
 // ── Per-table handlers ───────────────────────────────────────────────────────
 
-export async function handleUser(ctx: WriteContext): Promise<Result> {
+export async function handleUser(ctx: WriteContext): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
 
-  if (op !== 'update') return deny('Only updates allowed on user')
-  if (id !== userId) return deny('Cannot update another user')
+  if (op !== 'update') return fail('Only updates allowed on user')
+  if (id !== userId) return fail('Cannot update another user')
 
   const allowedFields: Record<string, unknown> = {}
   if (typeof data.name === 'string') allowedFields.name = data.name
@@ -147,9 +147,10 @@ export async function handleUser(ctx: WriteContext): Promise<Result> {
   return ok
 }
 
-export async function handleOrganizations(ctx: WriteContext): Promise<Result> {
+export async function handleOrganizations(
+  ctx: WriteContext
+): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof organizations>>(data)
     await db
@@ -161,7 +162,7 @@ export async function handleOrganizations(ctx: WriteContext): Promise<Result> {
 
   if (op === 'update') {
     if (!(await isOrgAdmin(db, userId, id)))
-      return deny('Only admin can update organization')
+      return fail('Only admin can update organization')
 
     const fields: Record<string, unknown> = {}
     if (typeof data.name === 'string') fields.name = data.name
@@ -174,19 +175,18 @@ export async function handleOrganizations(ctx: WriteContext): Promise<Result> {
 
   if (op === 'delete') {
     if (!(await isOrgAdmin(db, userId, id)))
-      return deny('Only admin can delete organization')
+      return fail('Only admin can delete organization')
     await db.delete(organizations).where(eq(organizations.id, id))
     return ok
   }
 
-  return deny('Invalid operation')
+  return fail('Invalid operation')
 }
 
 export async function handleOrganizationMembers(
   ctx: WriteContext
-): Promise<Result> {
+): Promise<MutationResult> {
   const { db, userId, userEmail, op, id, data } = ctx
-
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof organizationMembers>>(data)
     const orgId = values.organizationId as string
@@ -211,7 +211,7 @@ export async function handleOrganizationMembers(
         columns: { id: true }
       })
       if (!invitation)
-        return deny('No pending invitation for this organization')
+        return fail('No pending invitation for this organization')
 
       await db
         .insert(organizationMembers)
@@ -221,7 +221,7 @@ export async function handleOrganizationMembers(
       return ok
     }
 
-    return deny('Not authorized to add members')
+    return fail('Not authorized to add members')
   }
 
   if (op === 'delete') {
@@ -243,26 +243,27 @@ export async function handleOrganizationMembers(
         where: eq(organizations.id, member.organizationId),
         columns: { adminUserId: true }
       })
-      if (!org) return deny('Organization not found')
+      if (!org) return fail('Organization not found')
 
       await transferAssignmentsAndRemoveMember(db, org.adminUserId, member, id)
       return ok
     }
 
-    return deny('Not authorized to remove members')
+    return fail('Not authorized to remove members')
   }
 
-  return deny('Invalid operation on organization_members')
+  return fail('Invalid operation on organization_members')
 }
 
-export async function handleInvitations(ctx: WriteContext): Promise<Result> {
+export async function handleInvitations(
+  ctx: WriteContext
+): Promise<MutationResult> {
   const { db, userId, userEmail, op, id, data } = ctx
-
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof invitations>>(data)
     const orgId = values.organizationId as string
     if (!(await isOrgAdmin(db, userId, orgId)))
-      return deny('Only admin can create invitations')
+      return fail('Only admin can create invitations')
 
     await db
       .insert(invitations)
@@ -290,20 +291,21 @@ export async function handleInvitations(ctx: WriteContext): Promise<Result> {
       return ok
     }
 
-    return deny('Not authorized to delete this invitation')
+    return fail('Not authorized to delete this invitation')
   }
 
-  return deny('Invalid operation on invitations')
+  return fail('Invalid operation on invitations')
 }
 
-export async function handleGenerators(ctx: WriteContext): Promise<Result> {
+export async function handleGenerators(
+  ctx: WriteContext
+): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof generators>>(data)
     const orgId = values.organizationId as string
     if (!(await isOrgAdmin(db, userId, orgId)))
-      return deny('Only admin can create generators')
+      return fail('Only admin can create generators')
 
     await db
       .insert(generators)
@@ -314,7 +316,7 @@ export async function handleGenerators(ctx: WriteContext): Promise<Result> {
 
   if (op === 'update') {
     if (!(await isGeneratorOrgAdmin(db, userId, id)))
-      return deny('Only admin can update generators')
+      return fail('Only admin can update generators')
 
     const fields = transformSyncData<Partial<Insert<typeof generators>>>(data)
     if (Object.keys(fields).length > 0)
@@ -325,25 +327,24 @@ export async function handleGenerators(ctx: WriteContext): Promise<Result> {
 
   if (op === 'delete') {
     if (!(await isGeneratorOrgAdmin(db, userId, id)))
-      return deny('Only admin can delete generators')
+      return fail('Only admin can delete generators')
     await db.delete(generators).where(eq(generators.id, id))
     return ok
   }
 
-  return deny('Invalid operation')
+  return fail('Invalid operation')
 }
 
 export async function handleGeneratorUserAssignments(
   ctx: WriteContext
-): Promise<Result> {
+): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-
   if (op === 'insert') {
     const values =
       transformSyncData<Insert<typeof generatorUserAssignments>>(data)
     const generatorId = values.generatorId as string
     if (!(await isGeneratorOrgAdmin(db, userId, generatorId)))
-      return deny('Only admin can assign users to generators')
+      return fail('Only admin can assign users to generators')
 
     await db
       .insert(generatorUserAssignments)
@@ -360,7 +361,7 @@ export async function handleGeneratorUserAssignments(
     if (!assignment) return ok
 
     if (!(await isGeneratorOrgAdmin(db, userId, assignment.generatorId)))
-      return deny('Only admin can remove generator assignments')
+      return fail('Only admin can remove generator assignments')
 
     await db
       .delete(generatorUserAssignments)
@@ -368,19 +369,18 @@ export async function handleGeneratorUserAssignments(
     return ok
   }
 
-  return deny('Invalid operation on generator_user_assignments')
+  return fail('Invalid operation on generator_user_assignments')
 }
 
 export async function handleGeneratorSessions(
   ctx: WriteContext
-): Promise<Result> {
+): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof generatorSessions>>(data)
     const generatorId = values.generatorId as string
     if (!(await canAccessGenerator(db, userId, generatorId)))
-      return deny('Not authorized for this generator')
+      return fail('Not authorized for this generator')
 
     await db
       .insert(generatorSessions)
@@ -394,10 +394,10 @@ export async function handleGeneratorSessions(
       where: eq(generatorSessions.id, id),
       columns: { generatorId: true }
     })
-    if (!session) return deny('Session not found')
+    if (!session) return fail('Session not found')
 
     if (!(await canAccessGenerator(db, userId, session.generatorId)))
-      return deny('Not authorized for this generator')
+      return fail('Not authorized for this generator')
 
     // Only stoppedAt and stoppedByUserId are updatable; userId is server-enforced
     const fields: Partial<Insert<typeof generatorSessions>> = {}
@@ -426,28 +426,27 @@ export async function handleGeneratorSessions(
     const isAdmin = await isGeneratorOrgAdmin(db, userId, session.generatorId)
     if (!isAdmin) {
       if (!(await canAccessGenerator(db, userId, session.generatorId)))
-        return deny('Not authorized for this generator')
+        return fail('Not authorized for this generator')
       if (session.startedByUserId !== userId)
-        return deny('Can only delete your own sessions')
+        return fail('Can only delete your own sessions')
     }
 
     await db.delete(generatorSessions).where(eq(generatorSessions.id, id))
     return ok
   }
 
-  return deny('Invalid operation on generator_sessions')
+  return fail('Invalid operation on generator_sessions')
 }
 
 export async function handleMaintenanceTemplates(
   ctx: WriteContext
-): Promise<Result> {
+): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof maintenanceTemplates>>(data)
     const generatorId = values.generatorId as string
     if (!(await isGeneratorOrgAdmin(db, userId, generatorId)))
-      return deny('Only admin can create maintenance templates')
+      return fail('Only admin can create maintenance templates')
 
     await db
       .insert(maintenanceTemplates)
@@ -461,10 +460,10 @@ export async function handleMaintenanceTemplates(
       where: eq(maintenanceTemplates.id, id),
       columns: { generatorId: true }
     })
-    if (!template) return deny('Template not found')
+    if (!template) return fail('Template not found')
 
     if (!(await isGeneratorOrgAdmin(db, userId, template.generatorId)))
-      return deny('Only admin can update maintenance templates')
+      return fail('Only admin can update maintenance templates')
 
     const fields =
       transformSyncData<Partial<Insert<typeof maintenanceTemplates>>>(data)
@@ -485,25 +484,24 @@ export async function handleMaintenanceTemplates(
     if (!template) return ok
 
     if (!(await isGeneratorOrgAdmin(db, userId, template.generatorId)))
-      return deny('Only admin can delete maintenance templates')
+      return fail('Only admin can delete maintenance templates')
 
     await db.delete(maintenanceTemplates).where(eq(maintenanceTemplates.id, id))
     return ok
   }
 
-  return deny('Invalid operation')
+  return fail('Invalid operation')
 }
 
 export async function handleMaintenanceRecords(
   ctx: WriteContext
-): Promise<Result> {
+): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof maintenanceRecords>>(data)
     const generatorId = values.generatorId as string
     if (!(await canAccessGenerator(db, userId, generatorId)))
-      return deny('Not authorized for this generator')
+      return fail('Not authorized for this generator')
 
     await db
       .insert(maintenanceRecords)
@@ -517,10 +515,10 @@ export async function handleMaintenanceRecords(
       where: eq(maintenanceRecords.id, id),
       columns: { generatorId: true }
     })
-    if (!record) return deny('Record not found')
+    if (!record) return fail('Record not found')
 
     if (!(await canAccessGenerator(db, userId, record.generatorId)))
-      return deny('Not authorized for this generator')
+      return fail('Not authorized for this generator')
 
     // Only notes is updatable
     const fields: Partial<Insert<typeof maintenanceRecords>> = {}
@@ -546,14 +544,14 @@ export async function handleMaintenanceRecords(
     const isAdmin = await isGeneratorOrgAdmin(db, userId, record.generatorId)
     if (!isAdmin) {
       if (!(await canAccessGenerator(db, userId, record.generatorId)))
-        return deny('Not authorized for this generator')
+        return fail('Not authorized for this generator')
       if (record.performedByUserId !== userId)
-        return deny('Can only delete your own maintenance records')
+        return fail('Can only delete your own maintenance records')
     }
 
     await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, id))
     return ok
   }
 
-  return deny('Invalid operation on maintenance_records')
+  return fail('Invalid operation on maintenance_records')
 }

@@ -5,12 +5,9 @@ import Animated, { Keyframe } from 'react-native-reanimated'
 
 import { BlurDialogOverlay } from '@/components/blur-dialog-overlay'
 
-import {
-  acceptInvitation,
-  alertOnError,
-  declineInvitation
-} from '@/data/client/mutations'
+import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
 import { getAllOrganizations, getAllUsers } from '@/data/client/queries'
+import { alertOnError } from '@/lib/alerts'
 import { notifySuccess, notifyWarning } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useTranslation } from '@/lib/i18n'

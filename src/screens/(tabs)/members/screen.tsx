@@ -2,17 +2,14 @@ import { EmptyState } from '@/components/empty-state'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { SectionHeader } from '@/components/section-header'
 import { useTranslation } from '@/lib/i18n'
-import {
-  alertOnError,
-  cancelInvitation,
-  removeMember
-} from '@/data/client/mutations'
+import { cancelInvitation, removeMember } from '@/data/client/mutations'
 import {
   getAllUsers,
   getOrganization,
   getOrgInvitations,
   getOrgMembers
 } from '@/data/client/queries'
+import { alertOnError } from '@/lib/alerts'
 import { notifyWarning } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'

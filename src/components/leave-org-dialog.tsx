@@ -3,8 +3,9 @@ import { View } from 'react-native'
 
 import { BlurDialogOverlay } from '@/components/blur-dialog-overlay'
 
-import { alertOnError, leaveOrganization } from '@/data/client/mutations'
+import { leaveOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
+import { alertOnError } from '@/lib/alerts'
 import { notifyWarning } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useTranslation } from '@/lib/i18n'

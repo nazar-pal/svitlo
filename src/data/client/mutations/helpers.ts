@@ -1,38 +1,28 @@
 import { randomUUID } from 'expo-crypto'
-import { Alert } from 'react-native'
 
 import {
   getAssignmentForUserAndGenerator,
   getGeneratorOrgId,
   getOrganizationAdminUserId
 } from '@/data/client/queries'
-import { t } from '@/lib/i18n'
+import * as policy from '@/data/shared/authz/policy'
 
-export type MutationResult = { ok: true } | { ok: false; error: string }
-
-export const ok: MutationResult = { ok: true }
-
-export const fail = (error: string): MutationResult => ({ ok: false, error })
-
-export function alertOnError(
-  result: MutationResult
-): result is { ok: false; error: string } {
-  if (!result.ok) Alert.alert(t('common.error'), result.error)
-  return !result.ok
-}
+export { fail, ok, type MutationResult } from '@/data/shared/result'
 
 export const newId = () => randomUUID()
 
 export const nowISO = () => new Date().toISOString()
 
-// ── Shared authorization helpers ─────────────────────────────────────────────
+// ── Authorization ────────────────────────────────────────────────────────────
+// Thin wrappers that fetch from the local PowerSync DB and apply the shared
+// pure policy. Each call site stays target-appropriate (no `db` arg) while
+// the rule itself lives in src/data/shared/authz/policy.ts.
 
 export async function isOrgAdmin(
   userId: string,
   orgId: string
 ): Promise<boolean> {
-  const adminUserId = await getOrganizationAdminUserId(orgId)
-  return adminUserId === userId
+  return policy.isOrgAdmin(userId, await getOrganizationAdminUserId(orgId))
 }
 
 export async function isGeneratorOrgAdmin(
@@ -49,6 +39,8 @@ export async function canAccessGenerator(
 ): Promise<boolean> {
   const orgId = await getGeneratorOrgId(generatorId)
   if (!orgId) return false
-  if (await isOrgAdmin(userId, orgId)) return true
-  return (await getAssignmentForUserAndGenerator(userId, generatorId)) !== null
+  const adminUserId = await getOrganizationAdminUserId(orgId)
+  if (policy.isOrgAdmin(userId, adminUserId)) return true
+  const assignment = await getAssignmentForUserAndGenerator(userId, generatorId)
+  return policy.canAccessGenerator(userId, adminUserId, assignment !== null)
 }

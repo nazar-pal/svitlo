@@ -14,7 +14,6 @@ import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import {
-  alertOnError,
   assignUserToGenerator,
   deleteGenerator,
   unassignUserFromGenerator,
@@ -31,6 +30,7 @@ import {
   flattenZodErrors,
   updateGeneratorSchema
 } from '@/data/client/validation'
+import { alertOnError } from '@/lib/alerts'
 import { notifySuccess, notifyWarning } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useFormFields } from '@/lib/hooks/use-form-fields'
