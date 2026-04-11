@@ -12,14 +12,13 @@ import {
 } from './seed'
 
 const h = setupMutationHarness()
-
-import {
+const {
   startSession,
   stopSession,
   deleteSession,
   updateSession,
   logManualSession
-} from '../sessions'
+} = h.mutations.sessions
 
 beforeEach(() => {
   seedBaseScenario(h.db)

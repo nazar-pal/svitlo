@@ -17,15 +17,14 @@ import {
 } from './seed'
 
 const h = setupMutationHarness()
-
-import {
+const {
   createMaintenanceTemplate,
   updateMaintenanceTemplate,
   deleteMaintenanceTemplate,
   deleteMaintenanceRecord,
   updateMaintenanceRecord,
   recordMaintenance
-} from '../maintenance'
+} = h.mutations.maintenance
 
 beforeEach(() => {
   seedBaseScenario(h.db)

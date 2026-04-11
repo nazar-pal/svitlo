@@ -1,53 +1,56 @@
 import { and, eq } from 'drizzle-orm'
 
-import { assignmentLifecycleChecks } from '@/data/client/assignments'
 import { generatorUserAssignments } from '@/data/client/db-schema'
-import { db } from '@/lib/powersync/database'
+import { fail, ok, type MutationResult } from '@/data/shared/result'
 
-import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
+import type { MutationContext } from './context'
 
-export async function assignUserToGenerator(
-  adminUserId: string,
-  generatorId: string,
-  targetUserId: string
-): Promise<MutationResult> {
-  const result = await assignmentLifecycleChecks.assignUserToGenerator(
-    adminUserId,
-    generatorId,
-    targetUserId
-  )
-  if (!result.ok) return fail(result.code)
-
-  await db.insert(generatorUserAssignments).values({
-    id: newId(),
-    generatorId,
-    userId: targetUserId,
-    assignedAt: nowISO()
-  })
-
-  return ok
-}
-
-export async function unassignUserFromGenerator(
-  adminUserId: string,
-  generatorId: string,
-  targetUserId: string
-): Promise<MutationResult> {
-  const result = await assignmentLifecycleChecks.unassignUserFromGenerator(
-    adminUserId,
-    generatorId,
-    targetUserId
-  )
-  if (!result.ok) return fail(result.code)
-
-  await db
-    .delete(generatorUserAssignments)
-    .where(
-      and(
-        eq(generatorUserAssignments.generatorId, generatorId),
-        eq(generatorUserAssignments.userId, targetUserId)
+export function createAssignmentMutations(ctx: MutationContext) {
+  return {
+    async assignUserToGenerator(
+      adminUserId: string,
+      generatorId: string,
+      targetUserId: string
+    ): Promise<MutationResult> {
+      const result = await ctx.checks.assignments.assignUserToGenerator(
+        adminUserId,
+        generatorId,
+        targetUserId
       )
-    )
+      if (!result.ok) return fail(result.code)
 
-  return ok
+      await ctx.db.insert(generatorUserAssignments).values({
+        id: ctx.newId(),
+        generatorId,
+        userId: targetUserId,
+        assignedAt: ctx.now()
+      })
+
+      return ok
+    },
+
+    async unassignUserFromGenerator(
+      adminUserId: string,
+      generatorId: string,
+      targetUserId: string
+    ): Promise<MutationResult> {
+      const result = await ctx.checks.assignments.unassignUserFromGenerator(
+        adminUserId,
+        generatorId,
+        targetUserId
+      )
+      if (!result.ok) return fail(result.code)
+
+      await ctx.db
+        .delete(generatorUserAssignments)
+        .where(
+          and(
+            eq(generatorUserAssignments.generatorId, generatorId),
+            eq(generatorUserAssignments.userId, targetUserId)
+          )
+        )
+
+      return ok
+    }
+  }
 }

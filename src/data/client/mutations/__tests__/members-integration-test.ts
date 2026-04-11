@@ -7,8 +7,7 @@ import { setupMutationHarness } from './harness'
 import { IDS, seedBaseScenario, seedGenerator, seedAssignment } from './seed'
 
 const h = setupMutationHarness()
-
-import { removeMember, leaveOrganization } from '../members'
+const { removeMember, leaveOrganization } = h.mutations.members
 
 beforeEach(() => {
   seedBaseScenario(h.db)

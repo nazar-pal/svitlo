@@ -6,11 +6,8 @@ import { setupMutationHarness } from './harness'
 import { IDS, seedBaseScenario, seedGenerator, seedAssignment } from './seed'
 
 const h = setupMutationHarness()
-
-import {
-  assignUserToGenerator,
-  unassignUserFromGenerator
-} from '../assignments'
+const { assignUserToGenerator, unassignUserFromGenerator } =
+  h.mutations.assignments
 
 beforeEach(() => {
   seedBaseScenario(h.db)

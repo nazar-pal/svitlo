@@ -9,13 +9,12 @@ import { setupMutationHarness } from './harness'
 import { IDS, seedBaseScenario, seedInvitation } from './seed'
 
 const h = setupMutationHarness()
-
-import {
+const {
   acceptInvitation,
   cancelInvitation,
   createInvitation,
   declineInvitation
-} from '../invitations'
+} = h.mutations.invitations
 
 beforeEach(() => {
   seedBaseScenario(h.db)

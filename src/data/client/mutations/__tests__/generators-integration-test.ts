@@ -7,12 +7,8 @@ import { setupMutationHarness } from './harness'
 import { IDS, seedBaseScenario, seedGenerator } from './seed'
 
 const h = setupMutationHarness()
-
-import {
-  updateGenerator,
-  createGeneratorWithMaintenance,
-  deleteGenerator
-} from '../generators'
+const { updateGenerator, createGeneratorWithMaintenance, deleteGenerator } =
+  h.mutations.generators
 
 beforeEach(() => {
   seedBaseScenario(h.db)

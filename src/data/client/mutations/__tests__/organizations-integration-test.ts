@@ -28,12 +28,8 @@ import {
 } from './seed'
 
 const h = setupMutationHarness()
-
-import {
-  createOrganization,
-  deleteOrganization,
-  renameOrganization
-} from '../organizations'
+const { createOrganization, deleteOrganization, renameOrganization } =
+  h.mutations.organizations
 
 beforeEach(() => {
   seedBaseScenario(h.db)

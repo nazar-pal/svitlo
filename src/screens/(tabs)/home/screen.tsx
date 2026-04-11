@@ -11,7 +11,7 @@ import { scheduleOnRN } from 'react-native-worklets'
 
 import { storage } from '@/lib/storage'
 import { EmptyState } from '@/components/empty-state'
-import { deleteGenerator } from '@/data/client/mutations/generators'
+import { deleteGenerator } from '@/data/client/mutations'
 import { impactLight, notifyWarning } from '@/lib/haptics'
 import { useTranslation } from '@/lib/i18n'
 import { translateMutationError } from '@/lib/i18n/translate-mutation-error'
