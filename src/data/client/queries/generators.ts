@@ -83,6 +83,25 @@ export async function getGeneratorSessionById(
   return row ?? null
 }
 
+// Id-only projection for reactive existence checks. `useCanStartSession`
+// subscribes via useDrizzleQuery and only cares whether a row exists, so
+// there's no reason to pull full rows on every change.
+export function openSessionExistsForGeneratorQuery(
+  db: ClientDb,
+  generatorId: string
+) {
+  return db
+    .select({ id: generatorSessions.id })
+    .from(generatorSessions)
+    .where(
+      and(
+        eq(generatorSessions.generatorId, generatorId),
+        isNull(generatorSessions.stoppedAt)
+      )
+    )
+    .limit(1)
+}
+
 export async function getOpenSessionForGenerator(
   db: ClientDb,
   generatorId: string

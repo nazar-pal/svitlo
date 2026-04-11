@@ -248,6 +248,27 @@ describe('useCanUpdateSession', () => {
     expect(result.current).toEqual({ status: 'loading' })
   })
 
+  // Regression lock: when the session row doesn't exist, `useSessionPolicyContext`
+  // must short-circuit to a ready verdict instead of waiting on the authz
+  // subscription (which gets called with a null generatorId and stays loading
+  // forever). If that early return regresses, this test times out.
+  it('rejects with SESSION_NOT_FOUND when no row exists', async () => {
+    seedBaseScenario(mockDb)
+    seedGenerator(mockDb)
+
+    const { result } = renderHook(() =>
+      useCanUpdateSession(IDS.adminUser, 'does-not-exist', VALID_INPUT)
+    )
+
+    await waitFor(() => {
+      expect(result.current).toEqual({
+        status: 'ready',
+        ok: false,
+        code: 'SESSION_NOT_FOUND'
+      })
+    })
+  })
+
   it('rejects with CANNOT_EDIT_ACTIVE_SESSION on an open session', async () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)

@@ -3,11 +3,11 @@
 // arrive via `useDrizzleQuery` subscriptions instead of the async facts
 // provider. Lets UI disable affordances before the user taps them.
 
-import { and, eq, isNull } from 'drizzle-orm'
-
 import { getGeneratorAuthzFactsQuery } from '@/data/client/authz/provider'
-import { generatorSessions } from '@/data/client/db-schema'
-import { getGeneratorSession } from '@/data/client/queries'
+import {
+  getGeneratorSession,
+  openSessionExistsForGeneratorQuery
+} from '@/data/client/queries'
 import { policy as authzPolicy } from '@/data/shared/authz'
 import {
   logManualSessionPolicy,
@@ -72,16 +72,7 @@ export function useCanStartSession(
   const authz = useGeneratorAuthzFacts(userId, generatorId)
 
   const openQuery = generatorId
-    ? db
-        .select({ id: generatorSessions.id })
-        .from(generatorSessions)
-        .where(
-          and(
-            eq(generatorSessions.generatorId, generatorId),
-            isNull(generatorSessions.stoppedAt)
-          )
-        )
-        .limit(1)
+    ? openSessionExistsForGeneratorQuery(db, generatorId)
     : undefined
   const { data: openRows, isLoading: openLoading } = useDrizzleQuery(openQuery)
 
