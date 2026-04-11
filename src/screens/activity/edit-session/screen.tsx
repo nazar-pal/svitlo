@@ -9,6 +9,7 @@ import { HeaderSubmitButton } from '@/components/navigation/header-submit-button
 import { updateSession } from '@/data/client/mutations'
 import type { GeneratorSession } from '@/data/client/db-schema'
 import { getGenerator, getGeneratorSession } from '@/data/client/queries'
+import { useCanUpdateSession } from '@/data/client/sessions/policy-hooks'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
@@ -38,7 +39,7 @@ function EditForm({ userId, session }: EditFormProps) {
   )
   const generator = generatorData[0]
 
-  const { form, submit, formError } = useForm({
+  const { form, submit, formError, isSubmitting } = useForm({
     initial: {
       startedAt: new Date(session.startedAt),
       stoppedAt: session.stoppedAt ? new Date(session.stoppedAt) : new Date()
@@ -58,11 +59,20 @@ function EditForm({ userId, session }: EditFormProps) {
     onSuccess: () => router.back()
   })
 
+  const policy = useCanUpdateSession(userId, session.id, {
+    startedAt: form.values.startedAt.toISOString(),
+    stoppedAt: form.values.stoppedAt.toISOString()
+  })
+  const submitDisabled =
+    isSubmitting || policy.status === 'loading' || !policy.ok
+
   return (
     <>
       <Stack.Screen
         options={{
-          headerRight: () => <HeaderSubmitButton onPress={submit} />
+          headerRight: () => (
+            <HeaderSubmitButton onPress={submit} isDisabled={submitDisabled} />
+          )
         }}
       />
       <ScrollView

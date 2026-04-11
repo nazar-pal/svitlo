@@ -6,6 +6,10 @@ import { Pressable, Text, View } from 'react-native'
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator } from '@/data/client/db-schema'
 import { startSession, stopSession } from '@/data/client/mutations'
+import {
+  useCanStartSession,
+  useCanStopSession
+} from '@/data/client/sessions/policy-hooks'
 import { alertOnError, confirmRestingStart } from '@/lib/alerts'
 import {
   GENERATOR_STATUS_KEYS,
@@ -277,6 +281,21 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
 
   const { status, openSession, restEndsAt, consecutiveRunHours } = statusInfo
 
+  // Reactive authorization gates. Only the hook for the currently-relevant
+  // action subscribes — the other receives a null id and returns LOADING
+  // without opening a query. The mutation path's `alertOnError` stays as a
+  // backstop for the race where local state lags a revoked assignment.
+  const isRunning = status === 'running'
+  const canStart = useCanStartSession(userId, isRunning ? null : generator.id)
+  const canStop = useCanStopSession(
+    userId,
+    isRunning ? (openSession?.id ?? null) : null
+  )
+
+  const actionDisabled = isRunning
+    ? canStop.status === 'loading' || !canStop.ok
+    : canStart.status === 'loading' || !canStart.ok
+
   function maintenanceLabelText(info: NextMaintenanceCardInfo): string {
     if (info.urgency === 'overdue') return t('generator.overdue')
     return formatMaintenanceLabel(info)
@@ -336,13 +355,15 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
                 ? () => confirmRestingStart(handleStart)
                 : handleStart
           }
+          disabled={actionDisabled}
           accessibilityRole="button"
           accessibilityLabel={
             status === 'running'
               ? t('generator.stopGenerator')
               : t('generator.startGenerator')
           }
-          className="flex-1 items-center justify-center gap-5 active:opacity-80"
+          accessibilityState={{ disabled: actionDisabled }}
+          className="flex-1 items-center justify-center gap-5 active:opacity-80 disabled:opacity-50"
         >
           {status === 'running' ? (
             <RunningDisplay

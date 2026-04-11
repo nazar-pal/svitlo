@@ -9,6 +9,7 @@ import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { logManualSession } from '@/data/client/mutations'
 import { getGenerator } from '@/data/client/queries'
+import { useCanLogManualSession } from '@/data/client/sessions/policy-hooks'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
@@ -62,12 +63,20 @@ function LogSessionForm({
   const startedAtBinding = bind.value('startedAt')
   const stoppedAtBinding = bind.value('stoppedAt')
 
+  const policy = useCanLogManualSession(userId, {
+    generatorId,
+    startedAt: startedAtBinding.value.toISOString(),
+    stoppedAt: stoppedAtBinding.value.toISOString()
+  })
+  const submitDisabled =
+    isSubmitting || policy.status === 'loading' || !policy.ok
+
   return (
     <>
       <Stack.Screen
         options={{
           headerRight: () => (
-            <HeaderSubmitButton onPress={submit} isDisabled={isSubmitting} />
+            <HeaderSubmitButton onPress={submit} isDisabled={submitDisabled} />
           )
         }}
       />
