@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { setUIReady } from '@/lib/app-ready'
+import { useReadinessDispatch } from '@/lib/app-readiness/context'
 
 import {
   computeHomeReadiness,
@@ -16,6 +16,7 @@ const HOME_SETTLE_DELAY_MS = 150
 export function useHomeReadiness(input: HomeReadinessInput): boolean {
   const readiness = computeHomeReadiness(input)
   const [ready, setReady] = useState(false)
+  const dispatch = useReadinessDispatch()
 
   useEffect(() => {
     if (ready) return
@@ -24,17 +25,17 @@ export function useHomeReadiness(input: HomeReadinessInput): boolean {
       readiness.kind === 'ready-no-orgs'
     ) {
       setReady(true)
-      setUIReady()
+      dispatch({ type: 'home-settled' })
       return
     }
     if (readiness.kind === 'waiting-for-generators-settle') {
       const timer = setTimeout(() => {
         setReady(true)
-        setUIReady()
+        dispatch({ type: 'home-settled' })
       }, HOME_SETTLE_DELAY_MS)
       return () => clearTimeout(timer)
     }
-  }, [readiness.kind, ready])
+  }, [readiness.kind, ready, dispatch])
 
   return ready
 }

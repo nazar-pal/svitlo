@@ -1,119 +1,30 @@
-import * as Network from 'expo-network'
 import { Stack } from 'expo-router'
-import React, { useEffect, useRef, useState } from 'react'
-import { AppState } from 'react-native'
+import React, { useEffect } from 'react'
 
-import { setDatabaseReady, setUIReady } from '@/lib/app-ready'
+import { useReadinessDispatch } from '@/lib/app-readiness/context'
 
 import { AuthBootstrapScreen } from './auth-bootstrap-screen'
-import { authClient } from './auth-client'
-import { useLocalIdentity } from './local-identity-context'
-import { persistLocalIdentity } from './offline-identity'
-import {
-  SessionStatusProvider,
-  useSessionStatus
-} from './session-status-context'
+import { SessionStatusProvider } from './session-status-context'
+import { useRevalidateSession } from './use-revalidate-session'
 
 function AuthGateInner() {
-  const { data: session, isPending } = authClient.useSession()
-  const { identity, isLoading, applyIdentity } = useLocalIdentity()
-  const { setSessionStatus } = useSessionStatus()
-  const [isBootstrapped, setIsBootstrapped] = useState(false)
-  const revalidationInFlightRef = useRef(false)
+  const { isBootstrapping, identity, session } = useRevalidateSession()
+  const dispatch = useReadinessDispatch()
 
   const isAuthenticated = identity !== null
   const hasCompleteName = !session || Boolean(session.user?.name?.trim())
 
-  // Show the bootstrap spinner only on cold start when we have no stored identity
-  // and Better Auth is still resolving its cached session.
-  const showBootstrap = isLoading || (!identity && isPending)
+  // Incomplete profile is treated as "no identity yet" for readiness purposes:
+  // (complete-profile) never mounts PowerSync, so advancing into initializing-db
+  // would stall on the 15s deadline and surface the error screen.
+  const readyForProtectedTree = isAuthenticated && hasCompleteName
 
-  async function revalidate() {
-    if (revalidationInFlightRef.current || isPending) return
-    revalidationInFlightRef.current = true
-
-    try {
-      // Better Auth has a valid session in memory — persist the userId and done.
-      if (session?.user?.id) {
-        const next = await persistLocalIdentity(session.user.id)
-        applyIdentity(next)
-        setSessionStatus('valid')
-        return
-      }
-
-      // No cached session. If offline, trust the stored identity as-is.
-      const net = await Network.getNetworkStateAsync()
-      const isOnline =
-        Boolean(net.isConnected) && net.isInternetReachable !== false
-      if (!isOnline) return
-
-      // Online with no cached session — ask the server.
-      const result = await authClient.getSession()
-
-      if (result.data?.user?.id) {
-        const next = await persistLocalIdentity(result.data.user.id)
-        applyIdentity(next)
-        setSessionStatus('valid')
-      } else if (!result.error) {
-        // Server confirmed: no valid session. Mark as expired but do NOT clear
-        // the local identity — the user keeps full access to their local data.
-        setSessionStatus('expired')
-      }
-      // result.error means a network/server failure — retry once after a short
-      // delay to handle transient errors on reconnect.
-      if (result.error) scheduleRetry()
-    } finally {
-      revalidationInFlightRef.current = false
-      setIsBootstrapped(true)
-    }
-  }
-
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  function scheduleRetry() {
-    if (retryTimerRef.current) return
-    retryTimerRef.current = setTimeout(() => {
-      retryTimerRef.current = null
-      void revalidateRef.current()
-    }, 5_000)
-  }
-
-  const revalidateRef = useRef(revalidate)
-  revalidateRef.current = revalidate
-
-  // Re-run whenever the Better Auth session state changes.
   useEffect(() => {
-    void revalidateRef.current()
-  }, [isPending, session])
+    if (isBootstrapping) return
+    dispatch({ type: 'identity-resolved', hasIdentity: readyForProtectedTree })
+  }, [isBootstrapping, readyForProtectedTree, dispatch])
 
-  // Re-run when the app comes to the foreground or regains connectivity.
-  useEffect(() => {
-    const appState = AppState.addEventListener('change', state => {
-      if (state === 'active') void revalidateRef.current()
-    })
-    const network = Network.addNetworkStateListener(state => {
-      const isOnline =
-        Boolean(state.isConnected) && state.isInternetReachable !== false
-      if (isOnline) void revalidateRef.current()
-    })
-    return () => {
-      appState.remove()
-      network.remove()
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
-    }
-  }, [])
-
-  // Signal app readiness for the unauthenticated path where PowerSyncProvider
-  // never mounts. For authenticated users, PowerSync context signals
-  // setDatabaseReady() and the home screen signals setUIReady().
-  useEffect(() => {
-    if ((!showBootstrap || isBootstrapped) && !isAuthenticated) {
-      setDatabaseReady()
-      setUIReady()
-    }
-  }, [showBootstrap, isBootstrapped, isAuthenticated])
-
-  if (showBootstrap && !isBootstrapped) {
+  if (isBootstrapping) {
     return <AuthBootstrapScreen />
   }
 

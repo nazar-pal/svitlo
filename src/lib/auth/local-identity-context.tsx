@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState
 } from 'react'
 
@@ -27,15 +28,18 @@ export function LocalIdentityProvider({
 }) {
   const [identity, setIdentity] = useState<LocalIdentity | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  // If the mount read of SecureStore races with a revalidation that already
+  // called applyIdentity(), the stale read must not clobber the fresh value.
+  const hasAppliedRef = useRef(false)
 
   useEffect(() => {
     getLocalIdentity()
       .then(result => {
-        setIdentity(result)
+        if (!hasAppliedRef.current) setIdentity(result)
       })
       .catch(() => {
         // SecureStore failed — treat as no stored identity so the user can sign in.
-        setIdentity(null)
+        if (!hasAppliedRef.current) setIdentity(null)
       })
       .finally(() => {
         setIsLoading(false)
@@ -43,6 +47,7 @@ export function LocalIdentityProvider({
   }, [])
 
   const applyIdentity = useCallback((next: LocalIdentity | null) => {
+    hasAppliedRef.current = true
     setIdentity(next)
   }, [])
 

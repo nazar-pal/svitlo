@@ -13,10 +13,9 @@ import React, {
 } from 'react'
 import { ActivityIndicator, Text, View } from 'react-native'
 
-import { setDatabaseReady, setUIReady } from '@/lib/app-ready'
-import { useLocalIdentity } from '@/lib/auth/local-identity-context'
+import { useReadinessDispatch } from '@/lib/app-readiness/context'
 import { useSessionStatus } from '@/lib/auth/session-status-context'
-import { disconnectAndSignOut } from '@/lib/auth/sign-out'
+import { useEmergencySignOut } from '@/lib/auth/use-emergency-sign-out'
 
 import { createPowerSyncConnector } from './connector'
 import { powersync } from './database'
@@ -37,6 +36,7 @@ export function PowerSyncProvider({
   children: React.ReactNode
 }) {
   const { sessionStatus, setSessionStatus } = useSessionStatus()
+  const dispatch = useReadinessDispatch()
   const [isReady, setIsReady] = useState(false)
   const connectorRef = useRef<PowerSyncBackendConnector | null>(null)
   const connectedRef = useRef(false)
@@ -51,17 +51,22 @@ export function PowerSyncProvider({
     connectedRef.current = false
   }
 
-  // Open the SQLite database and register status listener on mount
+  // Open the SQLite database and register status listener on mount.
+  // retry-db-init unmounts this provider via ReadinessGate and remounts it,
+  // so this effect is what retries powersync.init() after a prior failure.
   useEffect(() => {
     powersync
       .init()
       .then(() => {
         setIsReady(true)
-        setDatabaseReady()
+        dispatch({ type: 'db-init-succeeded' })
       })
       .catch(error => {
         console.error(error)
-        setDatabaseReady()
+        dispatch({
+          type: 'db-init-failed',
+          message: error instanceof Error ? error.message : String(error)
+        })
       })
 
     // TODO: Report these errors to Sentry when it's set up instead of console.error
@@ -83,7 +88,7 @@ export function PowerSyncProvider({
     })
 
     return dispose
-  }, [])
+  }, [dispatch])
 
   // Connect when session is valid, disconnect otherwise
   useEffect(() => {
@@ -119,13 +124,16 @@ export function PowerSyncProvider({
 function SyncGate({ children }: { children: React.ReactNode }) {
   const status = useStatus()
   const { isReady } = usePowerSync()
+  const dispatch = useReadinessDispatch()
 
-  // On first launch (never synced): once DB is ready, signal UI ready so the splash
-  // hides and the user sees sync progress. On subsequent launches isReady and hasSynced
-  // become true simultaneously (init reads persisted metadata), so this doesn't fire.
+  // The splash itself is hidden earlier: the readiness reducer marks
+  // splashHidden on entering the first-sync phase (dispatched from db-init-
+  // succeeded above), so the user sees InitialSyncScreen progress on first
+  // launch. This dispatch advances past first-sync once the initial sync
+  // actually completes, unlocking rendering-home and then ready.
   useEffect(() => {
-    if (isReady && !status.hasSynced) setUIReady()
-  }, [isReady, status.hasSynced])
+    if (isReady && status.hasSynced) dispatch({ type: 'first-sync-completed' })
+  }, [isReady, status.hasSynced, dispatch])
 
   // hasSynced persists in SQLite — after first sync, subsequent launches skip this gate.
   // Priorities still help: PowerSync syncs user/org data (p1) before generators (p2) and
@@ -141,7 +149,7 @@ function InitialSyncScreen({
 }: {
   progress: { downloadedFraction: number } | null
 }) {
-  const { applyIdentity } = useLocalIdentity()
+  const handleEmergencySignOut = useEmergencySignOut()
   const [showEscape, setShowEscape] = useState(false)
 
   useEffect(() => {
@@ -152,14 +160,6 @@ function InitialSyncScreen({
   const percentage = progress
     ? Math.round(progress.downloadedFraction * 100)
     : null
-
-  async function handleEmergencySignOut() {
-    try {
-      await disconnectAndSignOut()
-    } finally {
-      applyIdentity(null)
-    }
-  }
 
   return (
     <View className="bg-background flex-1 items-center justify-center gap-4 px-8">

@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
-import { appReadyPromise } from '@/lib/app-ready'
+import { useReadinessState } from '@/lib/app-readiness/context'
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90
 const DURATION = 600
@@ -64,28 +64,28 @@ const glowSource = Skia.RuntimeEffect.Make(`
 `)!
 
 export function AnimatedSplashOverlay() {
+  const { splashHidden } = useReadinessState()
   const [visible, setVisible] = useState(true)
   const opacity = useSharedValue(1)
   const iconOpacity = useSharedValue(1)
   const iconScale = useSharedValue(1)
 
   useEffect(() => {
-    appReadyPromise.then(() => {
-      SplashScreen.hideAsync()
-      iconScale.value = withTiming(0.6, {
-        duration: DURATION * 0.6,
-        easing: Easing.in(Easing.ease)
-      })
-      iconOpacity.value = withTiming(0, { duration: DURATION * 0.5 })
-      opacity.value = withDelay(
-        DURATION * 0.15,
-        withTiming(0, { duration: DURATION * 0.6 }, finished => {
-          'worklet'
-          if (finished) scheduleOnRN(setVisible, false)
-        })
-      )
+    if (!splashHidden) return
+    SplashScreen.hideAsync()
+    iconScale.value = withTiming(0.6, {
+      duration: DURATION * 0.6,
+      easing: Easing.in(Easing.ease)
     })
-  }, [opacity, iconOpacity, iconScale])
+    iconOpacity.value = withTiming(0, { duration: DURATION * 0.5 })
+    opacity.value = withDelay(
+      DURATION * 0.15,
+      withTiming(0, { duration: DURATION * 0.6 }, finished => {
+        'worklet'
+        if (finished) scheduleOnRN(setVisible, false)
+      })
+    )
+  }, [splashHidden, opacity, iconOpacity, iconScale])
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value

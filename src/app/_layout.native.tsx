@@ -6,8 +6,14 @@ import '@/lib/hide-dev-fab'
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon'
 import { UpdateChecker } from '@/components/update-checker'
+import {
+  AppReadinessProvider,
+  ReadinessGate
+} from '@/lib/app-readiness/context'
 import { AuthGate } from '@/lib/auth/auth-gate'
 import { LocalIdentityProvider } from '@/lib/auth/local-identity-context'
+import { defaultSessionRuntime } from '@/lib/auth/session-runtime-default'
+import { SessionRuntimeProvider } from '@/lib/auth/session-runtime'
 import '@/lib/i18n'
 import {
   DarkTheme,
@@ -38,11 +44,17 @@ export default function RootLayout() {
         <HeroUINativeProvider>
           <ThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
             <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-            <AnimatedSplashOverlay />
-            <UpdateChecker />
-            <LocalIdentityProvider>
-              <AuthGate />
-            </LocalIdentityProvider>
+            <AppReadinessProvider>
+              <AnimatedSplashOverlay />
+              <UpdateChecker />
+              <SessionRuntimeProvider runtime={defaultSessionRuntime}>
+                <LocalIdentityProvider>
+                  <ReadinessGate>
+                    <AuthGate />
+                  </ReadinessGate>
+                </LocalIdentityProvider>
+              </SessionRuntimeProvider>
+            </AppReadinessProvider>
           </ThemeProvider>
         </HeroUINativeProvider>
       </KeyboardProvider>
