@@ -13,33 +13,35 @@ import {
   seedGenerator
 } from '@/data/client/mutations/__tests__/seed'
 
-let mockTestDb: Awaited<ReturnType<typeof createTestDatabase>>
+// Stub out the production PowerSync database module so jest does not try to
+// load the native op-sqlite binary. Methods on the singleton `clientAuthzProvider`
+// would hit `db: null`, but the tests below go through the factory directly
+// with the in-memory test db, so nothing ever touches the stub.
+jest.mock('@/lib/powersync/database', () => ({ db: null, powersync: null }))
+
+import { createClientAuthzProvider } from '../provider'
+
+let testDb: Awaited<ReturnType<typeof createTestDatabase>>
+let authzProvider: ReturnType<typeof createClientAuthzProvider>
 
 beforeAll(async () => {
-  mockTestDb = await createTestDatabase()
+  testDb = await createTestDatabase()
+  authzProvider = createClientAuthzProvider(testDb.db)
 })
-
-jest.mock('@/lib/powersync/database', () => ({
-  get db() {
-    return mockTestDb.db
-  }
-}))
-
-import { clientAuthzProvider } from '../provider'
 
 beforeEach(() => {
-  resetDatabase(mockTestDb.sqlite)
-  seedBaseScenario(mockTestDb.db)
-  seedGenerator(mockTestDb.db)
+  resetDatabase(testDb.sqlite)
+  seedBaseScenario(testDb.db)
+  seedGenerator(testDb.db)
 })
 
-afterAll(() => closeDatabase(mockTestDb.sqlite))
+afterAll(() => closeDatabase(testDb.sqlite))
 
 // Remove the organization row while keeping the generator in place, so we can
 // exercise the LEFT JOIN "orphan generator" code path without fighting the
 // Drizzle foreign-key-agnostic client schema.
 function dropOrgRow() {
-  mockTestDb.db.delete(organizations).where(eq(organizations.id, IDS.org)).run()
+  testDb.db.delete(organizations).where(eq(organizations.id, IDS.org)).run()
 }
 
 // These tests cover the SQLite-specific concerns the dialect-independent
@@ -48,19 +50,19 @@ function dropOrgRow() {
 
 describe('getOrgFacts', () => {
   it('returns facts for an existing organization', async () => {
-    expect(await clientAuthzProvider.getOrgFacts(IDS.org)).toEqual({
+    expect(await authzProvider.getOrgFacts(IDS.org)).toEqual({
       adminUserId: IDS.adminUser
     })
   })
 
   it('returns null when the organization does not exist', async () => {
-    expect(await clientAuthzProvider.getOrgFacts('ghost-org')).toBeNull()
+    expect(await authzProvider.getOrgFacts('ghost-org')).toBeNull()
   })
 })
 
 describe('getGeneratorFacts', () => {
   it('coerces the EXISTS subquery to a real boolean (no assignment)', async () => {
-    const facts = await clientAuthzProvider.getGeneratorFacts(
+    const facts = await authzProvider.getGeneratorFacts(
       IDS.memberUser,
       IDS.generator
     )
@@ -71,8 +73,8 @@ describe('getGeneratorFacts', () => {
   })
 
   it('coerces the EXISTS subquery to a real boolean (with assignment)', async () => {
-    seedAssignment(mockTestDb.db)
-    const facts = await clientAuthzProvider.getGeneratorFacts(
+    seedAssignment(testDb.db)
+    const facts = await authzProvider.getGeneratorFacts(
       IDS.memberUser,
       IDS.generator
     )
@@ -84,7 +86,7 @@ describe('getGeneratorFacts', () => {
 
   it('returns orgAdminUserId: null when the generator is orphaned (LEFT JOIN)', async () => {
     dropOrgRow()
-    const facts = await clientAuthzProvider.getGeneratorFacts(
+    const facts = await authzProvider.getGeneratorFacts(
       IDS.memberUser,
       IDS.generator
     )
@@ -96,7 +98,7 @@ describe('getGeneratorFacts', () => {
 
   it('returns null when the generator does not exist', async () => {
     expect(
-      await clientAuthzProvider.getGeneratorFacts(IDS.adminUser, 'ghost-gen')
+      await authzProvider.getGeneratorFacts(IDS.adminUser, 'ghost-gen')
     ).toBeNull()
   })
 })
