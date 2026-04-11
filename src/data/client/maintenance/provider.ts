@@ -4,7 +4,7 @@ import {
   getMaintenanceTemplateById
 } from '@/data/client/queries/maintenance'
 import type { MaintenanceFactsProvider } from '@/data/shared/maintenance'
-import { db as productionDb, type ClientDb } from '@/lib/powersync/database'
+import type { ClientDb } from '@/lib/powersync/database'
 
 // Client adapter: implements MaintenanceFactsProvider against PowerSync
 // SQLite via the existing query helpers.
@@ -36,16 +36,4 @@ export function createClientMaintenanceFactsProvider(
       }
     }
   }
-}
-
-// Singleton wrapper: see note in organizations/provider.ts.
-export const clientMaintenanceFactsProvider: MaintenanceFactsProvider = {
-  generatorExists: generatorId =>
-    createClientMaintenanceFactsProvider(productionDb).generatorExists(
-      generatorId
-    ),
-  findTemplate: templateId =>
-    createClientMaintenanceFactsProvider(productionDb).findTemplate(templateId),
-  findRecord: recordId =>
-    createClientMaintenanceFactsProvider(productionDb).findRecord(recordId)
 }

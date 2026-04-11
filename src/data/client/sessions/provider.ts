@@ -4,7 +4,7 @@ import {
   getOpenSessionForGenerator
 } from '@/data/client/queries'
 import type { SessionFactsProvider } from '@/data/shared/sessions'
-import { db as productionDb, type ClientDb } from '@/lib/powersync/database'
+import type { ClientDb } from '@/lib/powersync/database'
 
 // Client adapter: implements SessionFactsProvider against PowerSync SQLite
 // via the existing query helpers.
@@ -30,16 +30,4 @@ export function createClientSessionFactsProvider(
       return (await getOpenSessionForGenerator(db, generatorId)) !== null
     }
   }
-}
-
-// Singleton wrapper: see note in organizations/provider.ts.
-export const clientSessionFactsProvider: SessionFactsProvider = {
-  findSession: sessionId =>
-    createClientSessionFactsProvider(productionDb).findSession(sessionId),
-  generatorExists: generatorId =>
-    createClientSessionFactsProvider(productionDb).generatorExists(generatorId),
-  hasOpenSessionForGenerator: generatorId =>
-    createClientSessionFactsProvider(productionDb).hasOpenSessionForGenerator(
-      generatorId
-    )
 }

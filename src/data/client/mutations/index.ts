@@ -11,7 +11,7 @@ import { createMemberMutations } from './members'
 import { createOrganizationMutations } from './organizations'
 import { createSessionMutations } from './sessions'
 
-export const defaultMutationContext: MutationContext = {
+const defaultMutationContext: MutationContext = {
   db,
   powersync,
   checks: buildClientChecks(db),

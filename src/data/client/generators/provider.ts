@@ -1,6 +1,6 @@
 import { getGeneratorById } from '@/data/client/queries'
 import type { GeneratorFactsProvider } from '@/data/shared/generators'
-import { db as productionDb, type ClientDb } from '@/lib/powersync/database'
+import type { ClientDb } from '@/lib/powersync/database'
 
 // Client adapter: implements GeneratorFactsProvider against PowerSync SQLite
 // via the existing query helpers.
@@ -14,10 +14,4 @@ export function createClientGeneratorFactsProvider(
       return { organizationId: row.organizationId }
     }
   }
-}
-
-// Singleton wrapper: see note in organizations/provider.ts.
-export const clientGeneratorFactsProvider: GeneratorFactsProvider = {
-  findGenerator: generatorId =>
-    createClientGeneratorFactsProvider(productionDb).findGenerator(generatorId)
 }

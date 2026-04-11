@@ -10,7 +10,7 @@ import type {
   GeneratorAuthzFacts,
   OrgAuthzFacts
 } from '@/data/shared/authz'
-import { db as productionDb, type ClientDb } from '@/lib/powersync/database'
+import type { ClientDb } from '@/lib/powersync/database'
 
 // Client adapter: implements AuthzFactsProvider against PowerSync SQLite via
 // Drizzle. The EXISTS subquery returns 0/1 on SQLite, so we coerce to a real
@@ -56,18 +56,4 @@ export function createClientAuthzProvider(db: ClientDb): AuthzFactsProvider {
       }
     }
   }
-}
-
-// Singleton wrapper used by the rest of the client layer today. Accesses
-// `productionDb` lazily inside each method so that jest.mock consumers (which
-// replace `@/lib/powersync/database` with a getter) don't blow up at module
-// load before their mock backing is initialised. Will be removed once the
-// remaining `<xxx>/index.ts` bundles switch to the factory in a later commit.
-export const clientAuthzProvider: AuthzFactsProvider = {
-  getOrgFacts: orgId => createClientAuthzProvider(productionDb).getOrgFacts(orgId),
-  getGeneratorFacts: (userId, generatorId) =>
-    createClientAuthzProvider(productionDb).getGeneratorFacts(
-      userId,
-      generatorId
-    )
 }

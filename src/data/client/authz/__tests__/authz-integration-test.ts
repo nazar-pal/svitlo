@@ -14,9 +14,8 @@ import {
 } from '@/data/client/mutations/__tests__/seed'
 
 // Stub out the production PowerSync database module so jest does not try to
-// load the native op-sqlite binary. Methods on the singleton `clientAuthzProvider`
-// would hit `db: null`, but the tests below go through the factory directly
-// with the in-memory test db, so nothing ever touches the stub.
+// load the native op-sqlite binary. The tests below go through the factory
+// directly with the in-memory test db, so nothing ever reads the stub.
 jest.mock('@/lib/powersync/database', () => ({ db: null, powersync: null }))
 
 import { createClientAuthzProvider } from '../provider'

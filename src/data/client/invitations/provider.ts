@@ -4,7 +4,7 @@ import {
   getOrgMemberById
 } from '@/data/client/queries'
 import type { InvitationFactsProvider } from '@/data/shared/invitations'
-import { db as productionDb, type ClientDb } from '@/lib/powersync/database'
+import type { ClientDb } from '@/lib/powersync/database'
 
 // Client adapter: implements InvitationFactsProvider against PowerSync
 // SQLite via the existing query helpers.
@@ -38,22 +38,4 @@ export function createClientInvitationFactsProvider(
       return (await getOrgMemberById(db, userId, organizationId)) !== null
     }
   }
-}
-
-// Singleton wrapper: see note in organizations/provider.ts.
-export const clientInvitationFactsProvider: InvitationFactsProvider = {
-  findInvitationById: invitationId =>
-    createClientInvitationFactsProvider(productionDb).findInvitationById(
-      invitationId
-    ),
-  findInvitationByOrgAndEmail: (organizationId, inviteeEmail) =>
-    createClientInvitationFactsProvider(productionDb).findInvitationByOrgAndEmail(
-      organizationId,
-      inviteeEmail
-    ),
-  hasMembership: (userId, organizationId) =>
-    createClientInvitationFactsProvider(productionDb).hasMembership(
-      userId,
-      organizationId
-    )
 }

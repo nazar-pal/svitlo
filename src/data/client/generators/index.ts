@@ -1,7 +1,4 @@
-import {
-  clientAuthzProvider,
-  createClientAuthzProvider
-} from '@/data/client/authz/provider'
+import { createClientAuthzProvider } from '@/data/client/authz/provider'
 import { createAuthzChecks, type AuthzChecks } from '@/data/shared/authz'
 import {
   createGeneratorLifecycleChecks,
@@ -9,10 +6,7 @@ import {
 } from '@/data/shared/generators'
 import type { ClientDb } from '@/lib/powersync/database'
 
-import {
-  clientGeneratorFactsProvider,
-  createClientGeneratorFactsProvider
-} from './provider'
+import { createClientGeneratorFactsProvider } from './provider'
 
 export function createClientGeneratorLifecycleChecks(
   db: ClientDb,
@@ -23,11 +17,3 @@ export function createClientGeneratorLifecycleChecks(
     authz
   )
 }
-
-// Singleton wrapper: see note in organizations/index.ts.
-const authz = createAuthzChecks(clientAuthzProvider)
-
-export const generatorLifecycleChecks = createGeneratorLifecycleChecks(
-  clientGeneratorFactsProvider,
-  authz
-)

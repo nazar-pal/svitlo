@@ -4,7 +4,7 @@ import {
   getOrgMembershipById
 } from '@/data/client/queries'
 import type { MemberFactsProvider } from '@/data/shared/members'
-import { db as productionDb, type ClientDb } from '@/lib/powersync/database'
+import type { ClientDb } from '@/lib/powersync/database'
 
 // Client adapter: implements MemberFactsProvider against PowerSync SQLite
 // via the existing query helpers.
@@ -38,17 +38,4 @@ export function createClientMemberFactsProvider(
       return { adminUserId }
     }
   }
-}
-
-// Singleton wrapper: see note in organizations/provider.ts.
-export const clientMemberFactsProvider: MemberFactsProvider = {
-  findMembershipById: memberId =>
-    createClientMemberFactsProvider(productionDb).findMembershipById(memberId),
-  findMembershipByUserAndOrg: (userId, organizationId) =>
-    createClientMemberFactsProvider(productionDb).findMembershipByUserAndOrg(
-      userId,
-      organizationId
-    ),
-  findOrgAdmin: organizationId =>
-    createClientMemberFactsProvider(productionDb).findOrgAdmin(organizationId)
 }

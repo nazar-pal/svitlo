@@ -1,7 +1,4 @@
-import {
-  clientAuthzProvider,
-  createClientAuthzProvider
-} from '@/data/client/authz/provider'
+import { createClientAuthzProvider } from '@/data/client/authz/provider'
 import { createAuthzChecks, type AuthzChecks } from '@/data/shared/authz'
 import {
   createInvitationLifecycleChecks,
@@ -9,10 +6,7 @@ import {
 } from '@/data/shared/invitations'
 import type { ClientDb } from '@/lib/powersync/database'
 
-import {
-  clientInvitationFactsProvider,
-  createClientInvitationFactsProvider
-} from './provider'
+import { createClientInvitationFactsProvider } from './provider'
 
 export function createClientInvitationLifecycleChecks(
   db: ClientDb,
@@ -23,11 +17,3 @@ export function createClientInvitationLifecycleChecks(
     authz
   )
 }
-
-// Singleton wrapper: see note in organizations/index.ts.
-const authz = createAuthzChecks(clientAuthzProvider)
-
-export const invitationLifecycleChecks = createInvitationLifecycleChecks(
-  clientInvitationFactsProvider,
-  authz
-)
