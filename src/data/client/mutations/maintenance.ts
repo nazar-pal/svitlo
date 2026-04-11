@@ -1,14 +1,10 @@
 import { eq } from 'drizzle-orm'
 
-import { canAccessGenerator, isGeneratorOrgAdmin } from '@/data/client/authz'
 import {
   maintenanceRecords,
   maintenanceTemplates
 } from '@/data/client/db-schema'
-import {
-  getMaintenanceRecordById,
-  getMaintenanceTemplateById
-} from '@/data/client/queries'
+import { maintenanceLifecycleChecks } from '@/data/client/maintenance'
 import {
   insertMaintenanceRecordSchema,
   insertMaintenanceTemplateSchema,
@@ -29,8 +25,10 @@ export async function createMaintenanceTemplate(
   const parsed = insertMaintenanceTemplateSchema.safeParse(input)
   if (!parsed.success) return failFromZod(parsed.error)
 
-  if (!(await isGeneratorOrgAdmin(userId, parsed.data.generatorId)))
-    return fail('ONLY_ADMIN_CAN_CREATE_TEMPLATES')
+  const result = await maintenanceLifecycleChecks.createTemplate(userId, {
+    generatorId: parsed.data.generatorId
+  })
+  if (!result.ok) return fail(result.code)
 
   await db.insert(maintenanceTemplates).values({
     id: newId(),
@@ -55,32 +53,16 @@ export async function updateMaintenanceTemplate(
   const parsed = updateMaintenanceTemplateSchema.safeParse(input)
   if (!parsed.success) return failFromZod(parsed.error)
 
-  const existing = await getMaintenanceTemplateById(templateId)
-  if (!existing) return fail('TEMPLATE_NOT_FOUND')
-
-  if (!(await isGeneratorOrgAdmin(userId, existing.generatorId)))
-    return fail('ONLY_ADMIN_CAN_UPDATE_TEMPLATES')
-
-  // When updating triggerType, validate that the required companion fields
-  // will be present after the update. If they're not in the update payload,
-  // check the existing template values.
-  if (parsed.data.triggerType) {
-    const mergedHours =
-      parsed.data.triggerHoursInterval ?? existing.triggerHoursInterval
-    const mergedDays =
-      parsed.data.triggerCalendarDays ?? existing.triggerCalendarDays
-
-    const needsHours =
-      parsed.data.triggerType === 'hours' ||
-      parsed.data.triggerType === 'whichever_first'
-    const needsDays =
-      parsed.data.triggerType === 'calendar' ||
-      parsed.data.triggerType === 'whichever_first'
-
-    if (needsHours && mergedHours == null)
-      return fail('HOURS_INTERVAL_REQUIRED')
-    if (needsDays && mergedDays == null) return fail('CALENDAR_DAYS_REQUIRED')
-  }
+  const result = await maintenanceLifecycleChecks.updateTemplate(
+    userId,
+    templateId,
+    {
+      triggerType: parsed.data.triggerType,
+      triggerHoursInterval: parsed.data.triggerHoursInterval,
+      triggerCalendarDays: parsed.data.triggerCalendarDays
+    }
+  )
+  if (!result.ok) return fail(result.code)
 
   const { isOneTime, ...rest } = parsed.data
   await db
@@ -98,11 +80,11 @@ export async function deleteMaintenanceTemplate(
   userId: string,
   templateId: string
 ): Promise<MutationResult> {
-  const template = await getMaintenanceTemplateById(templateId)
-  if (!template) return fail('TEMPLATE_NOT_FOUND')
-
-  if (!(await isGeneratorOrgAdmin(userId, template.generatorId)))
-    return fail('ONLY_ADMIN_CAN_DELETE_TEMPLATES')
+  const result = await maintenanceLifecycleChecks.deleteTemplate(
+    userId,
+    templateId
+  )
+  if (!result.ok) return fail(result.code)
 
   await db
     .delete(maintenanceTemplates)
@@ -117,11 +99,8 @@ export async function deleteMaintenanceRecord(
   userId: string,
   recordId: string
 ): Promise<MutationResult> {
-  const record = await getMaintenanceRecordById(recordId)
-  if (!record) return fail('RECORD_NOT_FOUND')
-
-  if (!(await canAccessGenerator(userId, record.generatorId)))
-    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
+  const result = await maintenanceLifecycleChecks.deleteRecord(userId, recordId)
+  if (!result.ok) return fail(result.code)
 
   await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, recordId))
 
@@ -135,14 +114,13 @@ export async function updateMaintenanceRecord(
   recordId: string,
   input: { performedAt: string; notes: string | null }
 ): Promise<MutationResult> {
-  const record = await getMaintenanceRecordById(recordId)
-  if (!record) return fail('RECORD_NOT_FOUND')
-
-  if (!(await canAccessGenerator(userId, record.generatorId)))
-    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
-
-  if (new Date(input.performedAt) > new Date())
-    return fail('PERFORMED_TIME_IN_FUTURE')
+  const result = await maintenanceLifecycleChecks.updateRecord(
+    userId,
+    recordId,
+    { performedAt: input.performedAt },
+    new Date()
+  )
+  if (!result.ok) return fail(result.code)
 
   await db
     .update(maintenanceRecords)
@@ -162,14 +140,11 @@ export async function recordMaintenance(
   const parsed = insertMaintenanceRecordSchema.safeParse(input)
   if (!parsed.success) return failFromZod(parsed.error)
 
-  if (!(await canAccessGenerator(userId, parsed.data.generatorId)))
-    return fail('NOT_AUTHORIZED_FOR_GENERATOR')
-
-  // Verify template exists and belongs to the generator
-  const template = await getMaintenanceTemplateById(parsed.data.templateId)
-  if (!template) return fail('MAINTENANCE_TEMPLATE_NOT_FOUND')
-  if (template.generatorId !== parsed.data.generatorId)
-    return fail('TEMPLATE_NOT_FOR_GENERATOR')
+  const result = await maintenanceLifecycleChecks.recordMaintenance(userId, {
+    generatorId: parsed.data.generatorId,
+    templateId: parsed.data.templateId
+  })
+  if (!result.ok) return fail(result.code)
 
   await db.insert(maintenanceRecords).values({
     id: newId(),

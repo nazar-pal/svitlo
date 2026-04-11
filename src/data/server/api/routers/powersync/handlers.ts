@@ -5,6 +5,7 @@ import {
   updateGeneratorSchema
 } from '@/data/client/validation'
 import type { db } from '@/data/server'
+import { createServerAssignmentChecks } from '@/data/server/assignments'
 import { createServerAuthz } from '@/data/server/authz'
 import {
   user as userTable,
@@ -19,6 +20,7 @@ import {
 } from '@/data/server/db-schema'
 import { createServerGeneratorChecks } from '@/data/server/generators'
 import { createServerInvitationChecks } from '@/data/server/invitations'
+import { createServerMaintenanceChecks } from '@/data/server/maintenance'
 import { createServerMemberChecks } from '@/data/server/members'
 import { createServerSessionChecks } from '@/data/server/sessions'
 import type { MemberRef } from '@/data/shared/members'
@@ -368,14 +370,29 @@ export async function handleGeneratorUserAssignments(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-  const authz = createServerAuthz(db)
+  const checks = createServerAssignmentChecks(db)
 
   if (op === 'insert') {
     const values =
       transformSyncData<Insert<typeof generatorUserAssignments>>(data)
     const generatorId = values.generatorId as string
-    if (!(await authz.isGeneratorOrgAdmin(userId, generatorId)))
-      return fail('Only admin can assign users to generators')
+    const targetUserId = (values.userId as string | undefined) ?? userId
+
+    const result = await checks.assignUserToGenerator(
+      userId,
+      generatorId,
+      targetUserId
+    )
+    if (!result.ok) {
+      // Lost-ack replay: a retried insert with the same generator+user pair
+      // trips `USER_ALREADY_ASSIGNED`. `onConflictDoNothing` below handles
+      // the row-id collision; we still need the policy-level one because
+      // the unique index is on (generator_id, user_id), not id. Treat the
+      // replay as already-applied so the sync queue advances — matching the
+      // session insert's `GENERATOR_ALREADY_ACTIVE → ok` principle.
+      if (result.code === 'USER_ALREADY_ASSIGNED') return ok
+      return fail(result.code)
+    }
 
     await db
       .insert(generatorUserAssignments)
@@ -385,14 +402,29 @@ export async function handleGeneratorUserAssignments(
   }
 
   if (op === 'delete') {
+    // Lookup the row up front so we can pass the target user id to the
+    // shared check. The shared policy works in (caller, generator, target)
+    // terms, but the server's delete wire shape only carries the assignment
+    // row id — hence the one-off fetch.
     const assignment = await db.query.generatorUserAssignments.findFirst({
       where: eq(generatorUserAssignments.id, id),
-      columns: { generatorId: true }
+      columns: { generatorId: true, userId: true }
     })
+    // Lost-ack replay: if the row is already gone, return ok so the sync
+    // queue advances past the already-applied delete.
     if (!assignment) return ok
 
-    if (!(await authz.isGeneratorOrgAdmin(userId, assignment.generatorId)))
-      return fail('Only admin can remove generator assignments')
+    const result = await checks.unassignUserFromGenerator(
+      userId,
+      assignment.generatorId,
+      assignment.userId
+    )
+    if (!result.ok) {
+      // Same lost-ack handling for the "row existed but was unassigned
+      // between the fetch and the check" race.
+      if (result.code === 'USER_NOT_ASSIGNED') return ok
+      return fail(result.code)
+    }
 
     await db
       .delete(generatorUserAssignments)
@@ -528,13 +560,14 @@ export async function handleMaintenanceTemplates(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-  const authz = createServerAuthz(db)
+  const checks = createServerMaintenanceChecks(db)
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof maintenanceTemplates>>(data)
     const generatorId = values.generatorId as string
-    if (!(await authz.isGeneratorOrgAdmin(userId, generatorId)))
-      return fail('Only admin can create maintenance templates')
+
+    const result = await checks.createTemplate(userId, { generatorId })
+    if (!result.ok) return fail(result.code)
 
     await db
       .insert(maintenanceTemplates)
@@ -544,17 +577,19 @@ export async function handleMaintenanceTemplates(
   }
 
   if (op === 'update') {
-    const template = await db.query.maintenanceTemplates.findFirst({
-      where: eq(maintenanceTemplates.id, id),
-      columns: { generatorId: true }
-    })
-    if (!template) return fail('Template not found')
-
-    if (!(await authz.isGeneratorOrgAdmin(userId, template.generatorId)))
-      return fail('Only admin can update maintenance templates')
-
     const fields =
       transformSyncData<Partial<Insert<typeof maintenanceTemplates>>>(data)
+
+    // The shared check fetches the template and runs the companion-field
+    // merging itself — pass only the trigger-related keys through so it can
+    // make the merge decision. Unknown keys are dropped.
+    const result = await checks.updateTemplate(userId, id, {
+      triggerType: fields.triggerType,
+      triggerHoursInterval: fields.triggerHoursInterval,
+      triggerCalendarDays: fields.triggerCalendarDays
+    })
+    if (!result.ok) return fail(result.code)
+
     if (Object.keys(fields).length > 0)
       await db
         .update(maintenanceTemplates)
@@ -565,14 +600,14 @@ export async function handleMaintenanceTemplates(
   }
 
   if (op === 'delete') {
-    const template = await db.query.maintenanceTemplates.findFirst({
-      where: eq(maintenanceTemplates.id, id),
-      columns: { generatorId: true }
-    })
-    if (!template) return ok
-
-    if (!(await authz.isGeneratorOrgAdmin(userId, template.generatorId)))
-      return fail('Only admin can delete maintenance templates')
+    const result = await checks.deleteTemplate(userId, id)
+    if (!result.ok) {
+      // Lost-ack replay: PowerSync resends the same delete whose ack was
+      // lost. Mirror `handleGeneratorSessions`'s `SESSION_NOT_FOUND → ok`
+      // principle so the sync queue advances past an already-applied delete.
+      if (result.code === 'TEMPLATE_NOT_FOUND') return ok
+      return fail(result.code)
+    }
 
     await db.delete(maintenanceTemplates).where(eq(maintenanceTemplates.id, id))
     return ok
@@ -585,13 +620,18 @@ export async function handleMaintenanceRecords(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-  const authz = createServerAuthz(db)
+  const checks = createServerMaintenanceChecks(db)
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof maintenanceRecords>>(data)
     const generatorId = values.generatorId as string
-    if (!(await authz.canAccessGenerator(userId, generatorId)))
-      return fail('Not authorized for this generator')
+    const templateId = values.templateId as string
+
+    const result = await checks.recordMaintenance(userId, {
+      generatorId,
+      templateId
+    })
+    if (!result.ok) return fail(result.code)
 
     await db
       .insert(maintenanceRecords)
@@ -600,15 +640,47 @@ export async function handleMaintenanceRecords(
     return ok
   }
 
-  if (op === 'update') {
-    const record = await db.query.maintenanceRecords.findFirst({
-      where: eq(maintenanceRecords.id, id),
-      columns: { generatorId: true }
-    })
-    if (!record) return fail('Record not found')
+  if (op === 'delete') {
+    const result = await checks.deleteRecord(userId, id)
+    if (!result.ok) {
+      // Lost-ack replay: PowerSync resends the same delete whose ack was
+      // lost. Mirror `handleGeneratorSessions`'s `SESSION_NOT_FOUND → ok`
+      // principle so the sync queue advances past an already-applied delete.
+      if (result.code === 'RECORD_NOT_FOUND') return ok
+      return fail(result.code)
+    }
 
-    if (!(await authz.canAccessGenerator(userId, record.generatorId)))
-      return fail('Not authorized for this generator')
+    // Server-only extra: non-admins may only delete their own records. The
+    // shared policy allows any user with generator access, matching client
+    // behaviour; the server layers an ownership rule on top as defence in
+    // depth for the sync protocol. Reuse the record the policy already
+    // fetched — no second `findRecord` round trip. Same pattern as the
+    // session delete handler above.
+    const authz = createServerAuthz(db)
+    const isAdmin = await authz.isGeneratorOrgAdmin(
+      userId,
+      result.record.generatorId
+    )
+    if (!isAdmin && result.record.performedByUserId !== userId)
+      return fail('Can only delete your own maintenance records')
+
+    await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, id))
+    return ok
+  }
+
+  if (op === 'update') {
+    // Notes-only update path. The shared `deleteMaintenanceRecordPolicy`
+    // encodes exactly the rule we need here ("row must exist, caller must
+    // have generator access") — we reuse `checks.deleteRecord` as the rule
+    // gate even though this is an update, because the server's wire shape
+    // for record updates never carries `performedAt`, so the richer
+    // `updateRecord` path (which enforces the future-date check) does not
+    // apply. Routing through the shared check keeps the rules in one place.
+    const result = await checks.deleteRecord(userId, id)
+    if (!result.ok) {
+      if (result.code === 'RECORD_NOT_FOUND') return fail('Record not found')
+      return fail(result.code)
+    }
 
     // Only notes is updatable
     const fields: Partial<Insert<typeof maintenanceRecords>> = {}
@@ -621,25 +693,6 @@ export async function handleMaintenanceRecords(
         .set(fields)
         .where(eq(maintenanceRecords.id, id))
 
-    return ok
-  }
-
-  if (op === 'delete') {
-    const record = await db.query.maintenanceRecords.findFirst({
-      where: eq(maintenanceRecords.id, id),
-      columns: { generatorId: true, performedByUserId: true }
-    })
-    if (!record) return ok
-
-    const isAdmin = await authz.isGeneratorOrgAdmin(userId, record.generatorId)
-    if (!isAdmin) {
-      if (!(await authz.canAccessGenerator(userId, record.generatorId)))
-        return fail('Not authorized for this generator')
-      if (record.performedByUserId !== userId)
-        return fail('Can only delete your own maintenance records')
-    }
-
-    await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, id))
     return ok
   }
 

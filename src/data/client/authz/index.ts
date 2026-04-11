@@ -4,4 +4,4 @@ import { clientAuthzProvider } from './provider'
 
 const checks = createAuthzChecks(clientAuthzProvider)
 
-export const { isOrgAdmin, isGeneratorOrgAdmin, canAccessGenerator } = checks
+export const { isOrgAdmin } = checks

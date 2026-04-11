@@ -1,12 +1,7 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
-import { isOrgAdmin } from '@/data/client/authz'
+import { assignmentLifecycleChecks } from '@/data/client/assignments'
 import { generatorUserAssignments } from '@/data/client/db-schema'
-import {
-  getAssignmentForUserAndGenerator,
-  getGeneratorOrgId,
-  getOrgMemberById
-} from '@/data/client/queries'
 import { db } from '@/lib/powersync/database'
 
 import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
@@ -16,23 +11,12 @@ export async function assignUserToGenerator(
   generatorId: string,
   targetUserId: string
 ): Promise<MutationResult> {
-  const orgId = await getGeneratorOrgId(generatorId)
-  if (!orgId) return fail('GENERATOR_NOT_FOUND')
-
-  if (!(await isOrgAdmin(adminUserId, orgId)))
-    return fail('ONLY_ADMIN_CAN_ASSIGN_USERS')
-
-  // Check target is a member of the org (not needed for admin)
-  if (targetUserId !== adminUserId) {
-    const member = await getOrgMemberById(targetUserId, orgId)
-    if (!member) return fail('USER_NOT_ORG_MEMBER')
-  }
-
-  const existing = await getAssignmentForUserAndGenerator(
-    targetUserId,
-    generatorId
+  const result = await assignmentLifecycleChecks.assignUserToGenerator(
+    adminUserId,
+    generatorId,
+    targetUserId
   )
-  if (existing) return fail('USER_ALREADY_ASSIGNED')
+  if (!result.ok) return fail(result.code)
 
   await db.insert(generatorUserAssignments).values({
     id: newId(),
@@ -49,21 +33,21 @@ export async function unassignUserFromGenerator(
   generatorId: string,
   targetUserId: string
 ): Promise<MutationResult> {
-  const orgId = await getGeneratorOrgId(generatorId)
-  if (!orgId) return fail('GENERATOR_NOT_FOUND')
-
-  if (!(await isOrgAdmin(adminUserId, orgId)))
-    return fail('ONLY_ADMIN_CAN_UNASSIGN_USERS')
-
-  const assignment = await getAssignmentForUserAndGenerator(
-    targetUserId,
-    generatorId
+  const result = await assignmentLifecycleChecks.unassignUserFromGenerator(
+    adminUserId,
+    generatorId,
+    targetUserId
   )
-  if (!assignment) return fail('USER_NOT_ASSIGNED')
+  if (!result.ok) return fail(result.code)
 
   await db
     .delete(generatorUserAssignments)
-    .where(eq(generatorUserAssignments.id, assignment.id))
+    .where(
+      and(
+        eq(generatorUserAssignments.generatorId, generatorId),
+        eq(generatorUserAssignments.userId, targetUserId)
+      )
+    )
 
   return ok
 }
