@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { generatorSessions } from '@/data/client/db-schema/generators'
 
-import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
+import { setupMutationHarness } from './harness'
 import {
   IDS,
   seedBaseScenario,
@@ -11,29 +11,7 @@ import {
   seedStoppedSession
 } from './seed'
 
-let mockTestDb: Awaited<ReturnType<typeof createTestDatabase>>
-
-beforeAll(async () => {
-  mockTestDb = await createTestDatabase()
-})
-
-jest.mock('@/lib/powersync/database', () => ({
-  get db() {
-    return mockTestDb.db
-  },
-  get powersync() {
-    return mockTestDb.powersync
-  }
-}))
-
-let mockIdCounter = 0
-jest.mock('../helpers', () => ({
-  ...jest.requireActual('../helpers'),
-  newId: jest.fn(() => `id-${++mockIdCounter}`)
-}))
-
-jest.mock('expo-crypto', () => ({ randomUUID: () => 'mock-uuid' }))
-jest.mock('react-native', () => ({ Alert: { alert: jest.fn() } }))
+const h = setupMutationHarness()
 
 import {
   startSession,
@@ -44,13 +22,9 @@ import {
 } from '../sessions'
 
 beforeEach(() => {
-  resetDatabase(mockTestDb.sqlite)
-  mockIdCounter = 0
-  seedBaseScenario(mockTestDb.db)
-  seedGenerator(mockTestDb.db)
+  seedBaseScenario(h.db)
+  seedGenerator(h.db)
 })
-
-afterAll(() => closeDatabase(mockTestDb.sqlite))
 
 // Boundary-only tests for the PowerSync SQLite adapter layer. Full
 // enumeration of rule branches (missing generator, already stopped, time
@@ -67,7 +41,7 @@ describe('startSession', () => {
     const result = await startSession(IDS.adminUser, IDS.generator)
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.generatorId, IDS.generator))
@@ -81,7 +55,7 @@ describe('startSession', () => {
     const result = await startSession(IDS.outsiderUser, IDS.generator)
     expect(result.ok).toBe(false)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.generatorId, IDS.generator))
@@ -92,11 +66,11 @@ describe('startSession', () => {
 
 describe('stopSession', () => {
   it('updates stoppedAt and stoppedByUserId on success', async () => {
-    seedActiveSession(mockTestDb.db)
+    seedActiveSession(h.db)
     const result = await stopSession(IDS.adminUser, IDS.session.active)
     expect(result.ok).toBe(true)
 
-    const [session] = mockTestDb.db
+    const [session] = h.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.id, IDS.session.active))
@@ -106,11 +80,11 @@ describe('stopSession', () => {
   })
 
   it('rejects outsider and leaves the session intact', async () => {
-    seedActiveSession(mockTestDb.db)
+    seedActiveSession(h.db)
     const result = await stopSession(IDS.outsiderUser, IDS.session.active)
     expect(result.ok).toBe(false)
 
-    const [session] = mockTestDb.db
+    const [session] = h.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.id, IDS.session.active))
@@ -121,11 +95,11 @@ describe('stopSession', () => {
 
 describe('deleteSession', () => {
   it('removes the row on success', async () => {
-    seedStoppedSession(mockTestDb.db)
+    seedStoppedSession(h.db)
     const result = await deleteSession(IDS.adminUser, IDS.session.stopped)
     expect(result.ok).toBe(true)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.id, IDS.session.stopped))
@@ -134,11 +108,11 @@ describe('deleteSession', () => {
   })
 
   it('rejects outsider and leaves the session intact', async () => {
-    seedStoppedSession(mockTestDb.db)
+    seedStoppedSession(h.db)
     const result = await deleteSession(IDS.outsiderUser, IDS.session.stopped)
     expect(result.ok).toBe(false)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.id, IDS.session.stopped))
@@ -149,14 +123,14 @@ describe('deleteSession', () => {
 
 describe('updateSession', () => {
   it('updates startedAt and stoppedAt on success', async () => {
-    seedStoppedSession(mockTestDb.db)
+    seedStoppedSession(h.db)
     const result = await updateSession(IDS.adminUser, IDS.session.stopped, {
       startedAt: '2026-01-15T08:00:00Z',
       stoppedAt: '2026-01-15T10:00:00Z'
     })
     expect(result.ok).toBe(true)
 
-    const [session] = mockTestDb.db
+    const [session] = h.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.id, IDS.session.stopped))
@@ -166,14 +140,14 @@ describe('updateSession', () => {
   })
 
   it('rejects outsider and leaves the session intact', async () => {
-    seedStoppedSession(mockTestDb.db)
+    seedStoppedSession(h.db)
     const result = await updateSession(IDS.outsiderUser, IDS.session.stopped, {
       startedAt: '2026-01-15T08:00:00Z',
       stoppedAt: '2026-01-15T09:00:00Z'
     })
     expect(result.ok).toBe(false)
 
-    const [session] = mockTestDb.db
+    const [session] = h.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.id, IDS.session.stopped))
@@ -192,7 +166,7 @@ describe('logManualSession', () => {
     })
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.generatorId, IDS.generator))
@@ -212,7 +186,7 @@ describe('logManualSession', () => {
     })
     expect(result.ok).toBe(false)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(generatorSessions)
       .where(eq(generatorSessions.generatorId, IDS.generator))

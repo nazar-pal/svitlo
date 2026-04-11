@@ -6,7 +6,7 @@ import {
   maintenanceTemplates
 } from '@/data/client/db-schema/maintenance'
 
-import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
+import { setupMutationHarness } from './harness'
 import {
   IDS,
   seedBaseScenario,
@@ -16,29 +16,7 @@ import {
   seedMaintenanceRecord
 } from './seed'
 
-let mockTestDb: Awaited<ReturnType<typeof createTestDatabase>>
-
-beforeAll(async () => {
-  mockTestDb = await createTestDatabase()
-})
-
-jest.mock('@/lib/powersync/database', () => ({
-  get db() {
-    return mockTestDb.db
-  },
-  get powersync() {
-    return mockTestDb.powersync
-  }
-}))
-
-let mockIdCounter = 0
-jest.mock('../helpers', () => ({
-  ...jest.requireActual('../helpers'),
-  newId: jest.fn(() => `id-${++mockIdCounter}`)
-}))
-
-jest.mock('expo-crypto', () => ({ randomUUID: () => 'mock-uuid' }))
-jest.mock('react-native', () => ({ Alert: { alert: jest.fn() } }))
+const h = setupMutationHarness()
 
 import {
   createMaintenanceTemplate,
@@ -50,13 +28,9 @@ import {
 } from '../maintenance'
 
 beforeEach(() => {
-  resetDatabase(mockTestDb.sqlite)
-  mockIdCounter = 0
-  seedBaseScenario(mockTestDb.db)
-  seedGenerator(mockTestDb.db)
+  seedBaseScenario(h.db)
+  seedGenerator(h.db)
 })
-
-afterAll(() => closeDatabase(mockTestDb.sqlite))
 
 // ── createMaintenanceTemplate ───────────────────────────────────────────────
 
@@ -70,7 +44,7 @@ describe('createMaintenanceTemplate', () => {
     })
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(maintenanceTemplates)
       .where(eq(maintenanceTemplates.generatorId, IDS.generator))
@@ -130,7 +104,7 @@ describe('createMaintenanceTemplate', () => {
     })
     expect(result.ok).toBe(false)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(maintenanceTemplates)
       .where(eq(maintenanceTemplates.generatorId, IDS.generator))
@@ -143,7 +117,7 @@ describe('createMaintenanceTemplate', () => {
 
 describe('updateMaintenanceTemplate', () => {
   beforeEach(() => {
-    seedMaintenanceTemplate(mockTestDb.db)
+    seedMaintenanceTemplate(h.db)
   })
 
   it('admin updates template fields', async () => {
@@ -154,7 +128,7 @@ describe('updateMaintenanceTemplate', () => {
     )
     expect(result.ok).toBe(true)
 
-    const [template] = mockTestDb.db
+    const [template] = h.db
       .select()
       .from(maintenanceTemplates)
       .where(eq(maintenanceTemplates.id, IDS.template))
@@ -213,7 +187,7 @@ describe('updateMaintenanceTemplate', () => {
     )
     expect(result.ok).toBe(false)
 
-    const [template] = mockTestDb.db
+    const [template] = h.db
       .select()
       .from(maintenanceTemplates)
       .where(eq(maintenanceTemplates.id, IDS.template))
@@ -226,14 +200,14 @@ describe('updateMaintenanceTemplate', () => {
 
 describe('deleteMaintenanceTemplate', () => {
   beforeEach(() => {
-    seedMaintenanceTemplate(mockTestDb.db)
+    seedMaintenanceTemplate(h.db)
   })
 
   it('admin deletes a template', async () => {
     const result = await deleteMaintenanceTemplate(IDS.adminUser, IDS.template)
     expect(result.ok).toBe(true)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(maintenanceTemplates)
       .where(eq(maintenanceTemplates.id, IDS.template))
@@ -245,7 +219,7 @@ describe('deleteMaintenanceTemplate', () => {
     const result = await deleteMaintenanceTemplate(IDS.memberUser, IDS.template)
     expect(result.ok).toBe(false)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(maintenanceTemplates)
       .where(eq(maintenanceTemplates.id, IDS.template))
@@ -263,7 +237,7 @@ describe('deleteMaintenanceTemplate', () => {
 
 describe('recordMaintenance', () => {
   beforeEach(() => {
-    seedMaintenanceTemplate(mockTestDb.db)
+    seedMaintenanceTemplate(h.db)
   })
 
   it('admin records maintenance', async () => {
@@ -273,7 +247,7 @@ describe('recordMaintenance', () => {
     })
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(maintenanceRecords)
       .where(eq(maintenanceRecords.templateId, IDS.template))
@@ -283,7 +257,7 @@ describe('recordMaintenance', () => {
   })
 
   it('assigned member records maintenance', async () => {
-    seedAssignment(mockTestDb.db)
+    seedAssignment(h.db)
     const result = await recordMaintenance(IDS.memberUser, {
       templateId: IDS.template,
       generatorId: IDS.generator
@@ -299,7 +273,7 @@ describe('recordMaintenance', () => {
     })
     expect(result.ok).toBe(true)
 
-    const [record] = mockTestDb.db
+    const [record] = h.db
       .select()
       .from(maintenanceRecords)
       .where(eq(maintenanceRecords.templateId, IDS.template))
@@ -317,7 +291,7 @@ describe('recordMaintenance', () => {
 
   it('fails when template does not belong to generator', async () => {
     // Create a second generator with its own template
-    mockTestDb.db
+    h.db
       .insert(generators)
       .values({
         id: 'gen-2',
@@ -330,7 +304,7 @@ describe('recordMaintenance', () => {
         createdAt: '2026-01-15T12:00:00Z'
       })
       .run()
-    mockTestDb.db
+    h.db
       .insert(maintenanceTemplates)
       .values({
         id: 'tmpl-2',
@@ -357,7 +331,7 @@ describe('recordMaintenance', () => {
     })
     expect(result.ok).toBe(false)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(maintenanceRecords)
       .where(eq(maintenanceRecords.generatorId, IDS.generator))
@@ -370,15 +344,15 @@ describe('recordMaintenance', () => {
 
 describe('deleteMaintenanceRecord', () => {
   beforeEach(() => {
-    seedMaintenanceTemplate(mockTestDb.db)
-    seedMaintenanceRecord(mockTestDb.db)
+    seedMaintenanceTemplate(h.db)
+    seedMaintenanceRecord(h.db)
   })
 
   it('admin deletes a record', async () => {
     const result = await deleteMaintenanceRecord(IDS.adminUser, IDS.record)
     expect(result.ok).toBe(true)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(maintenanceRecords)
       .where(eq(maintenanceRecords.id, IDS.record))
@@ -387,7 +361,7 @@ describe('deleteMaintenanceRecord', () => {
   })
 
   it('assigned member deletes a record', async () => {
-    seedAssignment(mockTestDb.db)
+    seedAssignment(h.db)
     const result = await deleteMaintenanceRecord(IDS.memberUser, IDS.record)
     expect(result.ok).toBe(true)
   })
@@ -396,7 +370,7 @@ describe('deleteMaintenanceRecord', () => {
     const result = await deleteMaintenanceRecord(IDS.outsiderUser, IDS.record)
     expect(result.ok).toBe(false)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(maintenanceRecords)
       .where(eq(maintenanceRecords.id, IDS.record))
@@ -414,8 +388,8 @@ describe('deleteMaintenanceRecord', () => {
 
 describe('updateMaintenanceRecord', () => {
   beforeEach(() => {
-    seedMaintenanceTemplate(mockTestDb.db)
-    seedMaintenanceRecord(mockTestDb.db)
+    seedMaintenanceTemplate(h.db)
+    seedMaintenanceRecord(h.db)
   })
 
   it('admin updates a record', async () => {
@@ -425,7 +399,7 @@ describe('updateMaintenanceRecord', () => {
     })
     expect(result.ok).toBe(true)
 
-    const [record] = mockTestDb.db
+    const [record] = h.db
       .select()
       .from(maintenanceRecords)
       .where(eq(maintenanceRecords.id, IDS.record))
@@ -435,7 +409,7 @@ describe('updateMaintenanceRecord', () => {
   })
 
   it('assigned member updates a record', async () => {
-    seedAssignment(mockTestDb.db)
+    seedAssignment(h.db)
     const result = await updateMaintenanceRecord(IDS.memberUser, IDS.record, {
       performedAt: '2026-01-10T08:00:00Z',
       notes: null
@@ -466,7 +440,7 @@ describe('updateMaintenanceRecord', () => {
     })
     expect(result.ok).toBe(false)
 
-    const [record] = mockTestDb.db
+    const [record] = h.db
       .select()
       .from(maintenanceRecords)
       .where(eq(maintenanceRecords.id, IDS.record))

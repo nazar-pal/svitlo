@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
-import { useReadinessState } from '@/lib/app-readiness/context'
+import { useStartupState } from '@/lib/app-startup/coordinator'
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90
 const DURATION = 600
@@ -64,7 +64,7 @@ const glowSource = Skia.RuntimeEffect.Make(`
 `)!
 
 export function AnimatedSplashOverlay() {
-  const { splashHidden } = useReadinessState()
+  const { splashHidden } = useStartupState()
   const [visible, setVisible] = useState(true)
   const opacity = useSharedValue(1)
   const iconOpacity = useSharedValue(1)

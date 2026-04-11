@@ -4,15 +4,15 @@ import { Text, View } from 'react-native'
 
 import { useEmergencySignOut } from '@/lib/auth/use-emergency-sign-out'
 
-interface ReadinessErrorScreenProps {
+interface StartupErrorScreenProps {
   message: string | undefined
   onRetry: () => void
 }
 
-export function ReadinessErrorScreen({
+export function StartupErrorScreen({
   message,
   onRetry
-}: ReadinessErrorScreenProps) {
+}: StartupErrorScreenProps) {
   const handleSignOut = useEmergencySignOut()
 
   return (

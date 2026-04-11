@@ -31,7 +31,7 @@ jest.mock('@/lib/auth/sign-out', () => ({
 import { useLocalIdentity } from '@/lib/auth/local-identity-context'
 import { disconnectAndSignOut } from '@/lib/auth/sign-out'
 
-import { ReadinessErrorScreen } from '../error-screen'
+import { StartupErrorScreen } from '../error-screen'
 
 const useLocalIdentityMock = useLocalIdentity as jest.Mock
 const disconnectAndSignOutMock = disconnectAndSignOut as jest.Mock
@@ -49,10 +49,10 @@ beforeEach(() => {
   disconnectAndSignOutMock.mockResolvedValue(undefined)
 })
 
-describe('ReadinessErrorScreen', () => {
+describe('StartupErrorScreen', () => {
   it('renders the provided message', () => {
     const { getByText } = render(
-      <ReadinessErrorScreen message="Disk is corrupted" onRetry={() => {}} />
+      <StartupErrorScreen message="Disk is corrupted" onRetry={() => {}} />
     )
     expect(getByText('Disk is corrupted')).toBeTruthy()
     expect(getByText('Something went wrong')).toBeTruthy()
@@ -60,7 +60,7 @@ describe('ReadinessErrorScreen', () => {
 
   it('falls back to a generic message when message is undefined', () => {
     const { getByText } = render(
-      <ReadinessErrorScreen message={undefined} onRetry={() => {}} />
+      <StartupErrorScreen message={undefined} onRetry={() => {}} />
     )
     expect(getByText('Unable to open your local database.')).toBeTruthy()
   })
@@ -68,7 +68,7 @@ describe('ReadinessErrorScreen', () => {
   it('Try Again calls onRetry', () => {
     const onRetry = jest.fn()
     const { getByText } = render(
-      <ReadinessErrorScreen message="boom" onRetry={onRetry} />
+      <StartupErrorScreen message="boom" onRetry={onRetry} />
     )
     fireEvent.press(getByText('Try Again'))
     expect(onRetry).toHaveBeenCalledTimes(1)
@@ -76,7 +76,7 @@ describe('ReadinessErrorScreen', () => {
 
   it('Emergency Sign Out calls disconnectAndSignOut then applyIdentity(null)', async () => {
     const { getByText } = render(
-      <ReadinessErrorScreen message="boom" onRetry={() => {}} />
+      <StartupErrorScreen message="boom" onRetry={() => {}} />
     )
     fireEvent.press(getByText('Emergency Sign Out'))
 

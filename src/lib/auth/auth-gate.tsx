@@ -1,28 +1,15 @@
 import { Stack } from 'expo-router'
-import React, { useEffect } from 'react'
-
-import { useReadinessDispatch } from '@/lib/app-readiness/context'
+import React from 'react'
 
 import { AuthBootstrapScreen } from './auth-bootstrap-screen'
-import { SessionStatusProvider } from './session-status-context'
+import { isProfileComplete } from './session-runtime'
 import { useRevalidateSession } from './use-revalidate-session'
 
-function AuthGateInner() {
+export function AuthGate() {
   const { isBootstrapping, identity, session } = useRevalidateSession()
-  const dispatch = useReadinessDispatch()
 
   const isAuthenticated = identity !== null
-  const hasCompleteName = !session || Boolean(session.user?.name?.trim())
-
-  // Incomplete profile is treated as "no identity yet" for readiness purposes:
-  // (complete-profile) never mounts PowerSync, so advancing into initializing-db
-  // would stall on the 15s deadline and surface the error screen.
-  const readyForProtectedTree = isAuthenticated && hasCompleteName
-
-  useEffect(() => {
-    if (isBootstrapping) return
-    dispatch({ type: 'identity-resolved', hasIdentity: readyForProtectedTree })
-  }, [isBootstrapping, readyForProtectedTree, dispatch])
+  const hasCompleteName = isProfileComplete(session)
 
   if (isBootstrapping) {
     return <AuthBootstrapScreen />
@@ -40,13 +27,5 @@ function AuthGateInner() {
         <Stack.Screen name="(protected)" />
       </Stack.Protected>
     </Stack>
-  )
-}
-
-export function AuthGate() {
-  return (
-    <SessionStatusProvider>
-      <AuthGateInner />
-    </SessionStatusProvider>
   )
 }

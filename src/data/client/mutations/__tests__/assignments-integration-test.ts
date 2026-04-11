@@ -2,32 +2,10 @@ import { and, eq } from 'drizzle-orm'
 
 import { generatorUserAssignments } from '@/data/client/db-schema/generators'
 
-import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
+import { setupMutationHarness } from './harness'
 import { IDS, seedBaseScenario, seedGenerator, seedAssignment } from './seed'
 
-let mockTestDb: Awaited<ReturnType<typeof createTestDatabase>>
-
-beforeAll(async () => {
-  mockTestDb = await createTestDatabase()
-})
-
-jest.mock('@/lib/powersync/database', () => ({
-  get db() {
-    return mockTestDb.db
-  },
-  get powersync() {
-    return mockTestDb.powersync
-  }
-}))
-
-let mockIdCounter = 0
-jest.mock('../helpers', () => ({
-  ...jest.requireActual('../helpers'),
-  newId: jest.fn(() => `id-${++mockIdCounter}`)
-}))
-
-jest.mock('expo-crypto', () => ({ randomUUID: () => 'mock-uuid' }))
-jest.mock('react-native', () => ({ Alert: { alert: jest.fn() } }))
+const h = setupMutationHarness()
 
 import {
   assignUserToGenerator,
@@ -35,13 +13,9 @@ import {
 } from '../assignments'
 
 beforeEach(() => {
-  resetDatabase(mockTestDb.sqlite)
-  mockIdCounter = 0
-  seedBaseScenario(mockTestDb.db)
-  seedGenerator(mockTestDb.db)
+  seedBaseScenario(h.db)
+  seedGenerator(h.db)
 })
-
-afterAll(() => closeDatabase(mockTestDb.sqlite))
 
 // ── assignUserToGenerator ───────────────────────────────────────────────────
 
@@ -54,7 +28,7 @@ describe('assignUserToGenerator', () => {
     )
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(generatorUserAssignments)
       .where(eq(generatorUserAssignments.generatorId, IDS.generator))
@@ -80,7 +54,7 @@ describe('assignUserToGenerator', () => {
     )
     expect(result.ok).toBe(false)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(generatorUserAssignments)
       .where(eq(generatorUserAssignments.generatorId, IDS.generator))
@@ -98,7 +72,7 @@ describe('assignUserToGenerator', () => {
   })
 
   it('fails when user already assigned', async () => {
-    seedAssignment(mockTestDb.db)
+    seedAssignment(h.db)
     const result = await assignUserToGenerator(
       IDS.adminUser,
       IDS.generator,
@@ -121,7 +95,7 @@ describe('assignUserToGenerator', () => {
 
 describe('unassignUserFromGenerator', () => {
   it('admin unassigns a member', async () => {
-    seedAssignment(mockTestDb.db)
+    seedAssignment(h.db)
     const result = await unassignUserFromGenerator(
       IDS.adminUser,
       IDS.generator,
@@ -129,7 +103,7 @@ describe('unassignUserFromGenerator', () => {
     )
     expect(result.ok).toBe(true)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(generatorUserAssignments)
       .where(
@@ -161,7 +135,7 @@ describe('unassignUserFromGenerator', () => {
   })
 
   it('rejects non-admin and leaves the assignment intact', async () => {
-    seedAssignment(mockTestDb.db)
+    seedAssignment(h.db)
     const result = await unassignUserFromGenerator(
       IDS.memberUser,
       IDS.generator,
@@ -169,7 +143,7 @@ describe('unassignUserFromGenerator', () => {
     )
     expect(result.ok).toBe(false)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(generatorUserAssignments)
       .where(

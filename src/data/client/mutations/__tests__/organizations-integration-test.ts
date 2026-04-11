@@ -15,7 +15,7 @@ import {
   organizations
 } from '@/data/client/db-schema/organizations'
 
-import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
+import { setupMutationHarness } from './harness'
 import {
   IDS,
   seedBaseScenario,
@@ -27,29 +27,7 @@ import {
   seedMaintenanceRecord
 } from './seed'
 
-let mockTestDb: Awaited<ReturnType<typeof createTestDatabase>>
-
-beforeAll(async () => {
-  mockTestDb = await createTestDatabase()
-})
-
-jest.mock('@/lib/powersync/database', () => ({
-  get db() {
-    return mockTestDb.db
-  },
-  get powersync() {
-    return mockTestDb.powersync
-  }
-}))
-
-let mockIdCounter = 0
-jest.mock('../helpers', () => ({
-  ...jest.requireActual('../helpers'),
-  newId: jest.fn(() => `id-${++mockIdCounter}`)
-}))
-
-jest.mock('expo-crypto', () => ({ randomUUID: () => 'mock-uuid' }))
-jest.mock('react-native', () => ({ Alert: { alert: jest.fn() } }))
+const h = setupMutationHarness()
 
 import {
   createOrganization,
@@ -58,12 +36,8 @@ import {
 } from '../organizations'
 
 beforeEach(() => {
-  resetDatabase(mockTestDb.sqlite)
-  mockIdCounter = 0
-  seedBaseScenario(mockTestDb.db)
+  seedBaseScenario(h.db)
 })
-
-afterAll(() => closeDatabase(mockTestDb.sqlite))
 
 // ── createOrganization ──────────────────────────────────────────────────────
 
@@ -74,7 +48,7 @@ describe('createOrganization', () => {
     })
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(organizations)
       .where(eq(organizations.name, 'New Org'))
@@ -103,7 +77,7 @@ describe('renameOrganization', () => {
     })
     expect(result.ok).toBe(true)
 
-    const [org] = mockTestDb.db
+    const [org] = h.db
       .select()
       .from(organizations)
       .where(eq(organizations.id, IDS.org))
@@ -124,7 +98,7 @@ describe('renameOrganization', () => {
     })
     expect(result.ok).toBe(false)
 
-    const [org] = mockTestDb.db
+    const [org] = h.db
       .select()
       .from(organizations)
       .where(eq(organizations.id, IDS.org))
@@ -148,18 +122,18 @@ describe('renameOrganization', () => {
 describe('deleteOrganization', () => {
   it('admin deletes org and all related data is cascaded', async () => {
     // Seed all related data
-    seedGenerator(mockTestDb.db)
-    seedAssignment(mockTestDb.db)
-    seedActiveSession(mockTestDb.db)
-    seedInvitation(mockTestDb.db)
-    seedMaintenanceTemplate(mockTestDb.db)
-    seedMaintenanceRecord(mockTestDb.db)
+    seedGenerator(h.db)
+    seedAssignment(h.db)
+    seedActiveSession(h.db)
+    seedInvitation(h.db)
+    seedMaintenanceTemplate(h.db)
+    seedMaintenanceRecord(h.db)
 
     const result = await deleteOrganization(IDS.adminUser, IDS.org)
     expect(result.ok).toBe(true)
 
     // All tables should be empty for this org
-    const [org] = mockTestDb.db
+    const [org] = h.db
       .select()
       .from(organizations)
       .where(eq(organizations.id, IDS.org))
@@ -167,7 +141,7 @@ describe('deleteOrganization', () => {
     expect(org).toBeUndefined()
 
     expect(
-      mockTestDb.db
+      h.db
         .select()
         .from(organizationMembers)
         .where(eq(organizationMembers.organizationId, IDS.org))
@@ -175,7 +149,7 @@ describe('deleteOrganization', () => {
     ).toHaveLength(0)
 
     expect(
-      mockTestDb.db
+      h.db
         .select()
         .from(invitations)
         .where(eq(invitations.organizationId, IDS.org))
@@ -183,7 +157,7 @@ describe('deleteOrganization', () => {
     ).toHaveLength(0)
 
     expect(
-      mockTestDb.db
+      h.db
         .select()
         .from(generators)
         .where(eq(generators.organizationId, IDS.org))
@@ -191,7 +165,7 @@ describe('deleteOrganization', () => {
     ).toHaveLength(0)
 
     expect(
-      mockTestDb.db
+      h.db
         .select()
         .from(generatorUserAssignments)
         .where(eq(generatorUserAssignments.generatorId, IDS.generator))
@@ -199,7 +173,7 @@ describe('deleteOrganization', () => {
     ).toHaveLength(0)
 
     expect(
-      mockTestDb.db
+      h.db
         .select()
         .from(generatorSessions)
         .where(eq(generatorSessions.generatorId, IDS.generator))
@@ -207,7 +181,7 @@ describe('deleteOrganization', () => {
     ).toHaveLength(0)
 
     expect(
-      mockTestDb.db
+      h.db
         .select()
         .from(maintenanceTemplates)
         .where(eq(maintenanceTemplates.generatorId, IDS.generator))
@@ -215,7 +189,7 @@ describe('deleteOrganization', () => {
     ).toHaveLength(0)
 
     expect(
-      mockTestDb.db
+      h.db
         .select()
         .from(maintenanceRecords)
         .where(eq(maintenanceRecords.generatorId, IDS.generator))
@@ -227,7 +201,7 @@ describe('deleteOrganization', () => {
     const result = await deleteOrganization(IDS.memberUser, IDS.org)
     expect(result.ok).toBe(false)
 
-    const [org] = mockTestDb.db
+    const [org] = h.db
       .select()
       .from(organizations)
       .where(eq(organizations.id, IDS.org))

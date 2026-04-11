@@ -3,43 +3,17 @@ import { and, eq } from 'drizzle-orm'
 import { generatorUserAssignments } from '@/data/client/db-schema/generators'
 import { organizationMembers } from '@/data/client/db-schema/organizations'
 
-import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
+import { setupMutationHarness } from './harness'
 import { IDS, seedBaseScenario, seedGenerator, seedAssignment } from './seed'
 
-let mockTestDb: Awaited<ReturnType<typeof createTestDatabase>>
-
-beforeAll(async () => {
-  mockTestDb = await createTestDatabase()
-})
-
-jest.mock('@/lib/powersync/database', () => ({
-  get db() {
-    return mockTestDb.db
-  },
-  get powersync() {
-    return mockTestDb.powersync
-  }
-}))
-
-let mockIdCounter = 0
-jest.mock('../helpers', () => ({
-  ...jest.requireActual('../helpers'),
-  newId: jest.fn(() => `id-${++mockIdCounter}`)
-}))
-
-jest.mock('expo-crypto', () => ({ randomUUID: () => 'mock-uuid' }))
-jest.mock('react-native', () => ({ Alert: { alert: jest.fn() } }))
+const h = setupMutationHarness()
 
 import { removeMember, leaveOrganization } from '../members'
 
 beforeEach(() => {
-  resetDatabase(mockTestDb.sqlite)
-  mockIdCounter = 0
-  seedBaseScenario(mockTestDb.db)
-  seedGenerator(mockTestDb.db)
+  seedBaseScenario(h.db)
+  seedGenerator(h.db)
 })
-
-afterAll(() => closeDatabase(mockTestDb.sqlite))
 
 // ── removeMember ────────────────────────────────────────────────────────────
 
@@ -48,7 +22,7 @@ describe('removeMember', () => {
     const result = await removeMember(IDS.adminUser, IDS.membership)
     expect(result.ok).toBe(true)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(organizationMembers)
       .where(eq(organizationMembers.id, IDS.membership))
@@ -57,12 +31,12 @@ describe('removeMember', () => {
   })
 
   it('reassigns member generator assignments to admin', async () => {
-    seedAssignment(mockTestDb.db) // memberUser assigned to generator
+    seedAssignment(h.db) // memberUser assigned to generator
     const result = await removeMember(IDS.adminUser, IDS.membership)
     expect(result.ok).toBe(true)
 
     // Member assignment deleted
-    const [memberAssignment] = mockTestDb.db
+    const [memberAssignment] = h.db
       .select()
       .from(generatorUserAssignments)
       .where(eq(generatorUserAssignments.userId, IDS.memberUser))
@@ -70,7 +44,7 @@ describe('removeMember', () => {
     expect(memberAssignment).toBeUndefined()
 
     // Admin now assigned to generator
-    const [adminAssignment] = mockTestDb.db
+    const [adminAssignment] = h.db
       .select()
       .from(generatorUserAssignments)
       .where(
@@ -85,8 +59,8 @@ describe('removeMember', () => {
 
   it('does not create duplicate admin assignment if admin already assigned', async () => {
     // Assign both member and admin to the generator
-    seedAssignment(mockTestDb.db) // memberUser
-    mockTestDb.db
+    seedAssignment(h.db) // memberUser
+    h.db
       .insert(generatorUserAssignments)
       .values({
         id: 'assign-admin',
@@ -100,7 +74,7 @@ describe('removeMember', () => {
     expect(result.ok).toBe(true)
 
     // Should be exactly 1 assignment for admin (no duplicate)
-    const adminAssignments = mockTestDb.db
+    const adminAssignments = h.db
       .select()
       .from(generatorUserAssignments)
       .where(
@@ -122,7 +96,7 @@ describe('removeMember', () => {
     const result = await removeMember(IDS.memberUser, IDS.membership)
     expect(result.ok).toBe(false)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(organizationMembers)
       .where(eq(organizationMembers.id, IDS.membership))
@@ -138,7 +112,7 @@ describe('leaveOrganization', () => {
     const result = await leaveOrganization(IDS.memberUser, IDS.org)
     expect(result.ok).toBe(true)
 
-    const [row] = mockTestDb.db
+    const [row] = h.db
       .select()
       .from(organizationMembers)
       .where(
@@ -152,12 +126,12 @@ describe('leaveOrganization', () => {
   })
 
   it('reassigns member generator assignments to admin on leave', async () => {
-    seedAssignment(mockTestDb.db)
+    seedAssignment(h.db)
     const result = await leaveOrganization(IDS.memberUser, IDS.org)
     expect(result.ok).toBe(true)
 
     // Admin now assigned
-    const [adminAssignment] = mockTestDb.db
+    const [adminAssignment] = h.db
       .select()
       .from(generatorUserAssignments)
       .where(

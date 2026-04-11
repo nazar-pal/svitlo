@@ -5,32 +5,10 @@ import {
   organizationMembers
 } from '@/data/client/db-schema/organizations'
 
-import { createTestDatabase, resetDatabase, closeDatabase } from './test-db'
+import { setupMutationHarness } from './harness'
 import { IDS, seedBaseScenario, seedInvitation } from './seed'
 
-let mockTestDb: Awaited<ReturnType<typeof createTestDatabase>>
-
-beforeAll(async () => {
-  mockTestDb = await createTestDatabase()
-})
-
-jest.mock('@/lib/powersync/database', () => ({
-  get db() {
-    return mockTestDb.db
-  },
-  get powersync() {
-    return mockTestDb.powersync
-  }
-}))
-
-let mockIdCounter = 0
-jest.mock('../helpers', () => ({
-  ...jest.requireActual('../helpers'),
-  newId: jest.fn(() => `id-${++mockIdCounter}`)
-}))
-
-jest.mock('expo-crypto', () => ({ randomUUID: () => 'mock-uuid' }))
-jest.mock('react-native', () => ({ Alert: { alert: jest.fn() } }))
+const h = setupMutationHarness()
 
 import {
   acceptInvitation,
@@ -40,12 +18,8 @@ import {
 } from '../invitations'
 
 beforeEach(() => {
-  resetDatabase(mockTestDb.sqlite)
-  mockIdCounter = 0
-  seedBaseScenario(mockTestDb.db)
+  seedBaseScenario(h.db)
 })
-
-afterAll(() => closeDatabase(mockTestDb.sqlite))
 
 // ── createInvitation ────────────────────────────────────────────────────────
 
@@ -57,7 +31,7 @@ describe('createInvitation', () => {
     })
     expect(result.ok).toBe(true)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(invitations)
       .where(eq(invitations.inviteeEmail, 'new@test.com'))
@@ -66,7 +40,7 @@ describe('createInvitation', () => {
   })
 
   it('fails with duplicate invitation', async () => {
-    seedInvitation(mockTestDb.db, 'dup@test.com')
+    seedInvitation(h.db, 'dup@test.com')
     const result = await createInvitation(IDS.adminUser, {
       organizationId: IDS.org,
       inviteeEmail: 'dup@test.com'
@@ -89,7 +63,7 @@ describe('createInvitation', () => {
     })
     expect(result.ok).toBe(false)
 
-    const rows = mockTestDb.db
+    const rows = h.db
       .select()
       .from(invitations)
       .where(eq(invitations.organizationId, IDS.org))
@@ -102,7 +76,7 @@ describe('createInvitation', () => {
 
 describe('acceptInvitation', () => {
   it('accepts invitation, adds member, deletes invitation', async () => {
-    seedInvitation(mockTestDb.db, 'outsider@test.com')
+    seedInvitation(h.db, 'outsider@test.com')
     const result = await acceptInvitation(
       IDS.outsiderUser,
       'outsider@test.com',
@@ -111,7 +85,7 @@ describe('acceptInvitation', () => {
     expect(result.ok).toBe(true)
 
     // Membership created
-    const [member] = mockTestDb.db
+    const [member] = h.db
       .select()
       .from(organizationMembers)
       .where(eq(organizationMembers.userId, IDS.outsiderUser))
@@ -119,7 +93,7 @@ describe('acceptInvitation', () => {
     expect(member).toBeDefined()
 
     // Invitation deleted
-    const [inv] = mockTestDb.db
+    const [inv] = h.db
       .select()
       .from(invitations)
       .where(eq(invitations.id, IDS.invitation))
@@ -128,7 +102,7 @@ describe('acceptInvitation', () => {
   })
 
   it('accepts with case-insensitive email matching', async () => {
-    seedInvitation(mockTestDb.db, 'Outsider@Test.COM')
+    seedInvitation(h.db, 'Outsider@Test.COM')
     const result = await acceptInvitation(
       IDS.outsiderUser,
       'outsider@test.com',
@@ -147,7 +121,7 @@ describe('acceptInvitation', () => {
   })
 
   it('fails when email does not match', async () => {
-    seedInvitation(mockTestDb.db, 'someone@test.com')
+    seedInvitation(h.db, 'someone@test.com')
     const result = await acceptInvitation(
       IDS.outsiderUser,
       'wrong@test.com',
@@ -157,7 +131,7 @@ describe('acceptInvitation', () => {
   })
 
   it('fails when user is already a member', async () => {
-    seedInvitation(mockTestDb.db, 'member@test.com')
+    seedInvitation(h.db, 'member@test.com')
     const result = await acceptInvitation(
       IDS.memberUser,
       'member@test.com',
@@ -171,11 +145,11 @@ describe('acceptInvitation', () => {
 
 describe('declineInvitation', () => {
   it('declines invitation, invitation deleted', async () => {
-    seedInvitation(mockTestDb.db, 'outsider@test.com')
+    seedInvitation(h.db, 'outsider@test.com')
     const result = await declineInvitation('outsider@test.com', IDS.invitation)
     expect(result.ok).toBe(true)
 
-    const [inv] = mockTestDb.db
+    const [inv] = h.db
       .select()
       .from(invitations)
       .where(eq(invitations.id, IDS.invitation))
@@ -189,7 +163,7 @@ describe('declineInvitation', () => {
   })
 
   it('fails when email does not match', async () => {
-    seedInvitation(mockTestDb.db, 'someone@test.com')
+    seedInvitation(h.db, 'someone@test.com')
     const result = await declineInvitation('wrong@test.com', IDS.invitation)
     expect(result.ok).toBe(false)
   })
@@ -199,11 +173,11 @@ describe('declineInvitation', () => {
 
 describe('cancelInvitation', () => {
   it('admin cancels invitation', async () => {
-    seedInvitation(mockTestDb.db)
+    seedInvitation(h.db)
     const result = await cancelInvitation(IDS.adminUser, IDS.invitation)
     expect(result.ok).toBe(true)
 
-    const [inv] = mockTestDb.db
+    const [inv] = h.db
       .select()
       .from(invitations)
       .where(eq(invitations.id, IDS.invitation))
@@ -217,11 +191,11 @@ describe('cancelInvitation', () => {
   })
 
   it('rejects non-admin and leaves the invitation intact', async () => {
-    seedInvitation(mockTestDb.db)
+    seedInvitation(h.db)
     const result = await cancelInvitation(IDS.memberUser, IDS.invitation)
     expect(result.ok).toBe(false)
 
-    const [inv] = mockTestDb.db
+    const [inv] = h.db
       .select()
       .from(invitations)
       .where(eq(invitations.id, IDS.invitation))
