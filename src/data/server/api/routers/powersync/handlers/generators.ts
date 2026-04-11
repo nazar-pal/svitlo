@@ -5,7 +5,6 @@ import {
   updateGeneratorSchema
 } from '@/data/client/validation'
 import { generators } from '@/data/server/db-schema'
-import { createServerGeneratorChecks } from '@/data/server/generators'
 
 import { replayShieldNotFound } from './replay'
 import { transformSyncData } from '../transform'
@@ -13,7 +12,7 @@ import { fail, ok, type Insert, type TableHandler } from './types'
 
 export const handleGenerators: TableHandler = async ctx => {
   const { db, userId, op, id, data } = ctx
-  const checks = createServerGeneratorChecks(db)
+  const checks = ctx.checks.generators
 
   if (op === 'insert') {
     // Transform the snake_case wire shape into camelCase + proper types,

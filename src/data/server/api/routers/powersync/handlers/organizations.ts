@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 
 import { organizations } from '@/data/server/db-schema'
-import { createServerOrganizationChecks } from '@/data/server/organizations'
 
 import { replayShieldNotFound } from './replay'
 import { transformSyncData } from '../transform'
@@ -9,7 +8,7 @@ import { fail, ok, type Insert, type TableHandler } from './types'
 
 export const handleOrganizations: TableHandler = async ctx => {
   const { db, userId, op, id, data } = ctx
-  const checks = createServerOrganizationChecks(db)
+  const checks = ctx.checks.organizations
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof organizations>>(data)

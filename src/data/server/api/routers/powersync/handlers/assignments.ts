@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 
 import { generatorUserAssignments } from '@/data/server/db-schema'
-import { createServerAssignmentChecks } from '@/data/server/assignments'
 
 import { replayShieldAlreadyExists, replayShieldNotFound } from './replay'
 import { transformSyncData } from '../transform'
@@ -9,7 +8,7 @@ import { fail, ok, type Insert, type TableHandler } from './types'
 
 export const handleGeneratorUserAssignments: TableHandler = async ctx => {
   const { db, userId, op, id, data } = ctx
-  const checks = createServerAssignmentChecks(db)
+  const checks = ctx.checks.assignments
 
   if (op === 'insert') {
     const values =

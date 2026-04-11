@@ -6,6 +6,7 @@ import { env } from '@/env'
 
 import { protectedProcedure } from '../../orpc'
 import { tableHandlers, type WriteContext } from './handlers'
+import { buildServerChecks } from './handlers/checks'
 
 const SECRET = new TextEncoder().encode(env.POWERSYNC_PRIVATE_KEY)
 
@@ -70,7 +71,8 @@ export const powersyncRouter = {
         op: input.op,
         id: input.id,
         data: input.data ?? {},
-        now: () => new Date()
+        now: () => new Date(),
+        checks: buildServerChecks(context.db)
       }
 
       try {

@@ -1,4 +1,5 @@
 import type { WriteContext } from '../../handlers'
+import { buildServerChecks } from '../../handlers/checks'
 
 import { IDS, seedBaseScenario } from '../seed-server'
 import {
@@ -41,14 +42,16 @@ export function setupServerHandlersFixture() {
       return assertReady()
     },
     makeCtx(overrides: Partial<WriteContext> = {}): WriteContext {
+      const readyDb = assertReady().db as unknown as WriteContext['db']
       return {
-        db: assertReady().db as unknown as WriteContext['db'],
+        db: readyDb,
         userId: IDS.admin,
         userEmail: 'admin@test.com',
         op: 'insert',
         id: crypto.randomUUID(),
         data: {},
         now: () => new Date(),
+        checks: buildServerChecks(readyDb),
         ...overrides
       }
     }

@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 
 import { invitations } from '@/data/server/db-schema'
-import { createServerInvitationChecks } from '@/data/server/invitations'
 
 import { replayShieldAlreadyExists, replayShieldNotFound } from './replay'
 import { transformSyncData } from '../transform'
@@ -9,7 +8,7 @@ import { fail, ok, type Insert, type TableHandler } from './types'
 
 export const handleInvitations: TableHandler = async ctx => {
   const { db, userId, userEmail, op, id, data } = ctx
-  const checks = createServerInvitationChecks(db)
+  const checks = ctx.checks.invitations
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof invitations>>(data)

@@ -7,7 +7,6 @@ import {
   organizationMembers
 } from '@/data/server/db-schema'
 import { createServerAuthz } from '@/data/server/authz'
-import { createServerMemberChecks } from '@/data/server/members'
 import type { MemberRef } from '@/data/shared/members'
 
 import { replayShieldNotFound } from './replay'
@@ -105,7 +104,7 @@ export const handleOrganizationMembers: TableHandler = async ctx => {
   }
 
   if (op === 'delete') {
-    const checks = createServerMemberChecks(db)
+    const checks = ctx.checks.members
 
     // Try the admin-removes-member path first. If the caller is the org
     // admin, this resolves straight away with the member + adminUserId the

@@ -1,18 +1,15 @@
-import type { PowerSyncDatabase } from '@powersync/react-native'
-
-import { createClientAssignmentFactsProvider } from '@/data/client/assignments/provider'
-import { createClientAuthzProvider } from '@/data/client/authz/provider'
-import { createClientGeneratorFactsProvider } from '@/data/client/generators/provider'
-import { createClientInvitationFactsProvider } from '@/data/client/invitations/provider'
-import { createClientMaintenanceFactsProvider } from '@/data/client/maintenance/provider'
-import { createClientMemberFactsProvider } from '@/data/client/members/provider'
-import { createClientOrganizationFactsProvider } from '@/data/client/organizations/provider'
-import { createClientSessionFactsProvider } from '@/data/client/sessions/provider'
+import { createServerAssignmentFactsProvider } from '@/data/server/assignments/provider'
+import { createServerAuthz } from '@/data/server/authz'
+import { createServerGeneratorFactsProvider } from '@/data/server/generators/provider'
+import { createServerInvitationFactsProvider } from '@/data/server/invitations/provider'
+import { createServerMaintenanceFactsProvider } from '@/data/server/maintenance/provider'
+import { createServerMemberFactsProvider } from '@/data/server/members/provider'
+import { createServerOrganizationFactsProvider } from '@/data/server/organizations/provider'
+import { createServerSessionFactsProvider } from '@/data/server/sessions/provider'
 import {
   createAssignmentLifecycleChecks,
   type AssignmentLifecycleChecks
 } from '@/data/shared/assignments'
-import { createAuthzChecks } from '@/data/shared/authz'
 import {
   createGeneratorLifecycleChecks,
   type GeneratorLifecycleChecks
@@ -37,9 +34,10 @@ import {
   createSessionLifecycleChecks,
   type SessionLifecycleChecks
 } from '@/data/shared/sessions'
-import type { ClientDb } from '@/lib/powersync/database'
 
-export interface ClientLifecycleChecks {
+import type { Db } from './types'
+
+export interface ServerLifecycleChecks {
   readonly organizations: OrganizationLifecycleChecks
   readonly generators: GeneratorLifecycleChecks
   readonly invitations: InvitationLifecycleChecks
@@ -49,43 +47,35 @@ export interface ClientLifecycleChecks {
   readonly assignments: AssignmentLifecycleChecks
 }
 
-export interface MutationContext {
-  readonly db: ClientDb
-  readonly powersync: PowerSyncDatabase
-  readonly checks: ClientLifecycleChecks
-  readonly newId: () => string
-  readonly now: () => Date
-}
-
-export function buildClientChecks(db: ClientDb): ClientLifecycleChecks {
-  const authz = createAuthzChecks(createClientAuthzProvider(db))
+export function buildServerChecks(db: Db): ServerLifecycleChecks {
+  const authz = createServerAuthz(db)
   return {
     organizations: createOrganizationLifecycleChecks(
-      createClientOrganizationFactsProvider(db),
+      createServerOrganizationFactsProvider(db),
       authz
     ),
     generators: createGeneratorLifecycleChecks(
-      createClientGeneratorFactsProvider(db),
+      createServerGeneratorFactsProvider(db),
       authz
     ),
     invitations: createInvitationLifecycleChecks(
-      createClientInvitationFactsProvider(db),
+      createServerInvitationFactsProvider(db),
       authz
     ),
     sessions: createSessionLifecycleChecks(
-      createClientSessionFactsProvider(db),
+      createServerSessionFactsProvider(db),
       authz
     ),
     maintenance: createMaintenanceLifecycleChecks(
-      createClientMaintenanceFactsProvider(db),
+      createServerMaintenanceFactsProvider(db),
       authz
     ),
     members: createMemberLifecycleChecks(
-      createClientMemberFactsProvider(db),
+      createServerMemberFactsProvider(db),
       authz
     ),
     assignments: createAssignmentLifecycleChecks(
-      createClientAssignmentFactsProvider(db),
+      createServerAssignmentFactsProvider(db),
       authz
     )
   }

@@ -2,7 +2,6 @@ import { eq } from 'drizzle-orm'
 
 import { generatorSessions } from '@/data/server/db-schema'
 import { createServerAuthz } from '@/data/server/authz'
-import { createServerSessionChecks } from '@/data/server/sessions'
 
 import { replayShieldNotFound } from './replay'
 import { transformSyncData } from '../transform'
@@ -10,7 +9,7 @@ import { fail, ok, type Insert, type TableHandler } from './types'
 
 export const handleGeneratorSessions: TableHandler = async ctx => {
   const { db, userId, op, id, data } = ctx
-  const checks = createServerSessionChecks(db)
+  const checks = ctx.checks.sessions
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof generatorSessions>>(data)
