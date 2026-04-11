@@ -8,14 +8,14 @@ import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { signInSchema } from '@/data/client/validation'
 import { authClient } from '@/lib/auth/auth-client'
-import { useLocalIdentity } from '@/lib/auth/local-identity-context'
+import { useAuthSession } from '@/lib/auth/session'
 import { useAppleSignIn } from '@/lib/auth/use-apple-sign-in'
 import { useTranslation } from '@/lib/i18n'
 
 export default function ReAuthScreen() {
   const router = useRouter()
   const { t } = useTranslation()
-  const { identity } = useLocalIdentity()
+  const { identity } = useAuthSession()
 
   const [showEmailForm, setShowEmailForm] = useState(false)
   const [email, setEmail] = useState('')

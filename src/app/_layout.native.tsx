@@ -11,13 +11,9 @@ import { UpdateChecker } from '@/components/update-checker'
 import { createDefaultPowerSyncRuntime } from '@/lib/app-startup/runtime'
 import { StartupCoordinator } from '@/lib/app-startup/coordinator'
 import { AuthGate } from '@/lib/auth/auth-gate'
-import { LocalIdentityProvider } from '@/lib/auth/local-identity-context'
+import { AuthSessionProvider, useAuthSession } from '@/lib/auth/session'
 import { defaultSessionRuntime } from '@/lib/auth/session-runtime-default'
 import { SessionRuntimeProvider } from '@/lib/auth/session-runtime'
-import {
-  SessionStatusProvider,
-  useSessionStatus
-} from '@/lib/auth/session-status-context'
 import { powersync } from '@/lib/powersync/database'
 import '@/lib/i18n'
 import {
@@ -27,7 +23,7 @@ import {
 } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
 import { HeroUINativeProvider, useThemeColor } from 'heroui-native'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { useUniwind } from 'uniwind'
@@ -51,15 +47,13 @@ export default function RootLayout() {
             <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
             <NativePowerSyncContext.Provider value={powersync}>
               <SessionRuntimeProvider runtime={defaultSessionRuntime}>
-                <LocalIdentityProvider>
-                  <SessionStatusProvider>
-                    <StartupCoordinatorBridge>
-                      <AnimatedSplashOverlay />
-                      <UpdateChecker />
-                      <AuthGate />
-                    </StartupCoordinatorBridge>
-                  </SessionStatusProvider>
-                </LocalIdentityProvider>
+                <AuthSessionProvider>
+                  <StartupCoordinatorBridge>
+                    <AnimatedSplashOverlay />
+                    <UpdateChecker />
+                    <AuthGate />
+                  </StartupCoordinatorBridge>
+                </AuthSessionProvider>
               </SessionRuntimeProvider>
             </NativePowerSyncContext.Provider>
           </ThemeProvider>
@@ -69,18 +63,21 @@ export default function RootLayout() {
   )
 }
 
-// Bridge ties the default runtime's onAuthExpired to the session-status
-// context. Must mount inside SessionStatusProvider to call useSessionStatus.
-// The runtime is built once via useState's lazy initializer — it closes over
-// module-scoped PowerSync state (listener-registered, connected flags), so a
-// new instance per render would double-register listeners and break connect
-// idempotency. setSessionStatus is ref-stable, so the captured closure stays
-// valid for the component's lifetime.
+// Bridge ties the default runtime's onAuthExpired callback to the
+// AuthSession reducer. The runtime is built once via useState's lazy
+// initializer — it closes over module-scoped PowerSync state
+// (listener-registered, connected flags), so a new instance per render
+// would double-register listeners and break connect idempotency. The
+// markExpired wrapper is re-created on each state change, so route the
+// callback through a ref so the captured closure keeps firing the latest
+// dispatch for the component's lifetime.
 function StartupCoordinatorBridge({ children }: { children: React.ReactNode }) {
-  const { setSessionStatus } = useSessionStatus()
+  const { markExpired } = useAuthSession()
+  const markExpiredRef = useRef(markExpired)
+  markExpiredRef.current = markExpired
   const [runtime] = useState(() =>
     createDefaultPowerSyncRuntime({
-      onAuthExpired: () => setSessionStatus('expired')
+      onAuthExpired: () => markExpiredRef.current()
     })
   )
   return <StartupCoordinator runtime={runtime}>{children}</StartupCoordinator>

@@ -2,7 +2,7 @@ import { Button } from 'heroui-native'
 import React from 'react'
 import { Text, View } from 'react-native'
 
-import { useEmergencySignOut } from '@/lib/auth/use-emergency-sign-out'
+import { useAuthSession } from '@/lib/auth/session'
 
 interface StartupErrorScreenProps {
   message: string | undefined
@@ -13,7 +13,7 @@ export function StartupErrorScreen({
   message,
   onRetry
 }: StartupErrorScreenProps) {
-  const handleSignOut = useEmergencySignOut()
+  const { emergencySignOut } = useAuthSession()
 
   return (
     <View className="bg-background flex-1 items-center justify-center gap-4 px-8">
@@ -25,7 +25,7 @@ export function StartupErrorScreen({
       </Text>
       <View className="mt-4 w-full gap-2">
         <Button onPress={onRetry}>Try Again</Button>
-        <Button variant="ghost" onPress={handleSignOut}>
+        <Button variant="ghost" onPress={emergencySignOut}>
           Emergency Sign Out
         </Button>
       </View>

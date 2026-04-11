@@ -4,7 +4,7 @@ import React from 'react'
 
 import { ModalCloseButton } from '@/components/navigation/modal-close-button'
 import { ReAuthBanner } from '@/components/re-auth-banner'
-import { useLocalIdentity } from '@/lib/auth/local-identity-context'
+import { useAuthSession } from '@/lib/auth/session'
 import { useTranslation } from '@/lib/i18n'
 import { SelectedOrgProvider } from '@/lib/organization/use-selected-org'
 import { PowerSyncProvider } from '@/lib/powersync'
@@ -39,7 +39,7 @@ const halfSheetOptions = {
 } satisfies StackScreenProps['options']
 
 export default function ProtectedLayout() {
-  const { identity } = useLocalIdentity()
+  const { identity } = useAuthSession()
   const { t } = useTranslation()
 
   if (!identity) return null

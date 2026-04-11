@@ -20,33 +20,30 @@ jest.mock('heroui-native', () => {
   return { Button }
 })
 
-jest.mock('@/lib/auth/local-identity-context', () => ({
-  useLocalIdentity: jest.fn()
+jest.mock('@/lib/auth/session', () => ({
+  useAuthSession: jest.fn()
 }))
 
-jest.mock('@/lib/auth/sign-out', () => ({
-  disconnectAndSignOut: jest.fn()
-}))
-
-import { useLocalIdentity } from '@/lib/auth/local-identity-context'
-import { disconnectAndSignOut } from '@/lib/auth/sign-out'
+import { useAuthSession } from '@/lib/auth/session'
 
 import { StartupErrorScreen } from '../error-screen'
 
-const useLocalIdentityMock = useLocalIdentity as jest.Mock
-const disconnectAndSignOutMock = disconnectAndSignOut as jest.Mock
+const useAuthSessionMock = useAuthSession as jest.Mock
 
-let applyIdentity: jest.Mock
+let emergencySignOut: jest.Mock
 
 beforeEach(() => {
   jest.clearAllMocks()
-  applyIdentity = jest.fn()
-  useLocalIdentityMock.mockReturnValue({
+  emergencySignOut = jest.fn(async () => {})
+  useAuthSessionMock.mockReturnValue({
+    phase: 'anonymous',
     identity: null,
-    isLoading: false,
-    applyIdentity
+    session: null,
+    status: 'unknown',
+    markExpired: jest.fn(),
+    signOut: jest.fn(),
+    emergencySignOut
   })
-  disconnectAndSignOutMock.mockResolvedValue(undefined)
 })
 
 describe('StartupErrorScreen', () => {
@@ -74,15 +71,12 @@ describe('StartupErrorScreen', () => {
     expect(onRetry).toHaveBeenCalledTimes(1)
   })
 
-  it('Emergency Sign Out calls disconnectAndSignOut then applyIdentity(null)', async () => {
+  it('Emergency Sign Out calls emergencySignOut()', async () => {
     const { getByText } = render(
       <StartupErrorScreen message="boom" onRetry={() => {}} />
     )
     fireEvent.press(getByText('Emergency Sign Out'))
 
-    await waitFor(() =>
-      expect(disconnectAndSignOutMock).toHaveBeenCalledTimes(1)
-    )
-    await waitFor(() => expect(applyIdentity).toHaveBeenCalledWith(null))
+    await waitFor(() => expect(emergencySignOut).toHaveBeenCalledTimes(1))
   })
 })

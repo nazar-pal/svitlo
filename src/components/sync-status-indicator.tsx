@@ -3,7 +3,7 @@ import { SymbolView } from 'expo-symbols'
 import { Spinner, useThemeColor } from 'heroui-native'
 import { Text, View } from 'react-native'
 
-import { useSessionStatus } from '@/lib/auth/session-status-context'
+import { useAuthSession } from '@/lib/auth/session'
 import { useTranslation } from '@/lib/i18n'
 import { useSyncRejections } from '@/lib/powersync/sync-rejections'
 
@@ -53,7 +53,7 @@ const stateDisplay = {
 function useSyncState() {
   const { t } = useTranslation()
   const status = useStatus()
-  const { sessionStatus } = useSessionStatus()
+  const { status: sessionStatus } = useAuthSession()
   const rejections = useSyncRejections()
 
   const { key, loading } = deriveSyncState({

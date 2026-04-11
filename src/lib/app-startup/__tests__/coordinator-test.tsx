@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
-import React from 'react'
+import React, { useSyncExternalStore } from 'react'
 import { View } from 'react-native'
 
 // Mutable mock state for useStatus — must be `mock`-prefixed so
@@ -48,45 +48,27 @@ jest.mock('heroui-native', () => {
   return { Button }
 })
 
-jest.mock('@/lib/auth/offline-identity', () => ({
-  getLocalIdentity: jest.fn(() => Promise.resolve(null)),
-  persistLocalIdentity: jest.fn(async (userId: string) => ({
-    version: 1,
-    userId
-  }))
+jest.mock('@/lib/powersync/database', () => ({
+  powersync: {
+    getAll: jest.fn(async () => [{ count: 0 }]),
+    disconnectAndClear: jest.fn(async () => {})
+  }
 }))
 
 jest.mock('@/lib/auth/sign-out', () => ({
   disconnectAndSignOut: jest.fn(async () => {})
 }))
 
-jest.mock('@/lib/auth/session-runtime', () => {
-  const actual = jest.requireActual('@/lib/auth/session-runtime')
-  return {
-    ...actual,
-    useSessionRuntime: () => ({
-      useSession: () => ({
-        data: { user: { id: 'user-1', name: 'Alice' } },
-        isPending: false
-      }),
-      getSession: jest.fn(),
-      isOnline: jest.fn(() => Promise.resolve(true)),
-      onConnectivityChange: () => () => {},
-      onForeground: () => () => {}
-    })
-  }
-})
-
-import {
-  LocalIdentityProvider,
-  useLocalIdentity
-} from '@/lib/auth/local-identity-context'
-import { getLocalIdentity } from '@/lib/auth/offline-identity'
-import {
-  SessionStatusProvider,
-  useSessionStatus,
-  type SessionStatus
-} from '@/lib/auth/session-status-context'
+import type { LocalIdentity } from '@/lib/auth/offline-identity'
+import { AuthSessionProvider, useAuthSession } from '@/lib/auth/session'
+import type { IdentityStorage } from '@/lib/auth/session'
+import type {
+  BetterAuthSession,
+  SessionFetchResult,
+  SessionRuntime,
+  SessionSnapshot
+} from '@/lib/auth/session-runtime'
+import { SessionRuntimeProvider } from '@/lib/auth/session-runtime'
 
 import {
   StartupCoordinator,
@@ -94,8 +76,6 @@ import {
   type StartupPhase
 } from '../coordinator'
 import type { PowerSyncRuntime } from '../runtime'
-
-const getLocalIdentityMock = getLocalIdentity as jest.Mock
 
 interface FakeRuntimeHandle {
   runtime: PowerSyncRuntime
@@ -153,40 +133,119 @@ function createFakePowerSyncRuntime(): FakeRuntimeHandle {
   }
 }
 
+interface FakeSessionRuntimeHandle {
+  runtime: SessionRuntime
+  setSession: (next: SessionSnapshot) => void
+}
+
+function createFakeSessionRuntime(
+  initial: SessionSnapshot
+): FakeSessionRuntimeHandle {
+  let snapshot = initial
+  const listeners = new Set<() => void>()
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener)
+    return () => {
+      listeners.delete(listener)
+    }
+  }
+  const runtime: SessionRuntime = {
+    useSession: () => useSyncExternalStore(subscribe, () => snapshot),
+    getSession: jest.fn<Promise<SessionFetchResult>, []>(() =>
+      Promise.resolve({ data: null, error: null })
+    ),
+    isOnline: jest.fn<Promise<boolean>, []>(() => Promise.resolve(true)),
+    onConnectivityChange: () => () => {},
+    onForeground: () => () => {}
+  }
+  return {
+    runtime,
+    setSession: next => {
+      snapshot = next
+      listeners.forEach(fn => fn())
+    }
+  }
+}
+
+function createFakeStorage(initial: LocalIdentity | null): IdentityStorage {
+  let seed = initial
+  return {
+    read: async () => seed,
+    write: async userId => {
+      seed = { version: 1, userId }
+      return seed
+    },
+    clear: async () => {
+      seed = null
+    }
+  }
+}
+
+const validSession = (
+  id: string,
+  name: string = 'Alice'
+): SessionSnapshot['data'] =>
+  ({ user: { id, name } }) as unknown as BetterAuthSession
+
 interface ProbeValue {
   phase: StartupPhase
   splashHidden: boolean
-  applyIdentity: (identity: { version: 1; userId: string } | null) => void
-  setSessionStatus: (status: SessionStatus) => void
+  signOut: () => Promise<void>
+  markExpired: () => void
+  setSession: (next: SessionSnapshot) => void
 }
 
 const probeRef: { current: ProbeValue | null } = { current: null }
 
-function Probe() {
+function Probe({
+  setSession
+}: {
+  setSession: (next: SessionSnapshot) => void
+}) {
   const state = useStartupState()
-  const { applyIdentity } = useLocalIdentity()
-  const { setSessionStatus } = useSessionStatus()
+  const auth = useAuthSession()
   probeRef.current = {
     phase: state.phase,
     splashHidden: state.splashHidden,
-    applyIdentity,
-    setSessionStatus
+    signOut: auth.signOut,
+    markExpired: auth.markExpired,
+    setSession
   }
   return null
 }
 
-function renderCoordinator(handle: FakeRuntimeHandle) {
+interface RenderOptions {
+  initialSession?: SessionSnapshot
+  initialIdentity?: LocalIdentity | null
+}
+
+function renderCoordinator(
+  handle: FakeRuntimeHandle,
+  options: RenderOptions = {}
+) {
   probeRef.current = null
-  return render(
-    <LocalIdentityProvider>
-      <SessionStatusProvider>
+  const sessionRuntime = createFakeSessionRuntime(
+    options.initialSession ?? {
+      data: validSession('user-1'),
+      isPending: false
+    }
+  )
+  const storage = createFakeStorage(
+    options.initialIdentity === undefined
+      ? { version: 1, userId: 'user-1' }
+      : options.initialIdentity
+  )
+  const result = render(
+    <SessionRuntimeProvider runtime={sessionRuntime.runtime}>
+      <AuthSessionProvider storage={storage}>
         <StartupCoordinator runtime={handle.runtime}>
-          <Probe />
+          <Probe setSession={sessionRuntime.setSession} />
           <View testID="children" />
         </StartupCoordinator>
-      </SessionStatusProvider>
-    </LocalIdentityProvider>
+      </AuthSessionProvider>
+    </SessionRuntimeProvider>
   )
+  return { ...result, sessionRuntime }
 }
 
 function probe(): ProbeValue {
@@ -196,7 +255,6 @@ function probe(): ProbeValue {
 
 beforeEach(() => {
   jest.clearAllMocks()
-  getLocalIdentityMock.mockResolvedValue({ version: 1, userId: 'user-1' })
   mockPowerSyncStatus.snapshot = { hasSynced: false, downloadProgress: null }
   mockPowerSyncStatus.listeners.clear()
   // Suppress expected console.error from the init rejection path —
@@ -209,7 +267,7 @@ describe('StartupCoordinator', () => {
     const fake = createFakePowerSyncRuntime()
     renderCoordinator(fake)
 
-    // Wait until LocalIdentityProvider finishes its async mount effect and
+    // Wait until AuthSessionProvider finishes its async mount effect and
     // the coordinator advances into initializing-db.
     await waitFor(() => expect(probe().phase).toBe('initializing-db'))
     expect(fake.initMock).toHaveBeenCalledTimes(1)
@@ -219,10 +277,8 @@ describe('StartupCoordinator', () => {
     })
     expect(probe().phase).toBe('first-sync')
 
-    // Valid session triggers connect once we reach first-sync.
-    await act(async () => {
-      probe().setSessionStatus('valid')
-    })
+    // Valid session triggers connect once we reach first-sync. Revalidation
+    // already set sessionStatus to 'valid' from the fake session snapshot.
     expect(fake.connectMock).toHaveBeenCalledTimes(1)
 
     await act(async () => {
@@ -252,8 +308,11 @@ describe('StartupCoordinator', () => {
       const fake = createFakePowerSyncRuntime()
       renderCoordinator(fake)
 
-      // LocalIdentityProvider's async effect still needs to resolve —
+      // AuthSessionProvider's async effect still needs to resolve —
       // flushing microtasks inside an act() unblocks it.
+      await act(async () => {
+        await Promise.resolve()
+      })
       await act(async () => {
         await Promise.resolve()
       })
@@ -278,23 +337,31 @@ describe('StartupCoordinator', () => {
       await act(async () => {
         await Promise.resolve()
       })
+      await act(async () => {
+        await Promise.resolve()
+      })
       expect(probe().phase).toBe('initializing-db')
 
-      // Burn 10s off T1's 15s budget, then drop identity. The init-effect
-      // cleanup must clear T1 — otherwise it will still fire 5s later.
+      // Burn 10s off T1's 15s budget, then drop identity via sign-out. The
+      // init-effect cleanup must clear T1 — otherwise it will still fire
+      // 5s later.
       await act(async () => {
         jest.advanceTimersByTime(10_000)
       })
       await act(async () => {
-        probe().applyIdentity(null)
+        await probe().signOut()
       })
       expect(probe().phase).toBe('unauthenticated')
 
-      // Re-auth: new initializing-db + fresh timer T2 with a full 15s budget.
+      // Re-auth: push a fresh session snapshot to trigger new identity and
+      // a new initializing-db with a fresh T2.
       await act(async () => {
-        probe().applyIdentity({ version: 1, userId: 'user-1' })
+        probe().setSession({
+          data: validSession('user-1'),
+          isPending: false
+        })
       })
-      expect(probe().phase).toBe('initializing-db')
+      await waitFor(() => expect(probe().phase).toBe('initializing-db'))
       expect(fake.initMock).toHaveBeenCalledTimes(2)
 
       // Advance 5s — enough for a leaked T1 to fire (T1 started at t=0,
@@ -340,7 +407,7 @@ describe('StartupCoordinator', () => {
     expect(fake.initMock).toHaveBeenCalledTimes(1)
 
     await act(async () => {
-      probe().applyIdentity(null)
+      await probe().signOut()
     })
     expect(probe().phase).toBe('unauthenticated')
 
@@ -362,13 +429,12 @@ describe('StartupCoordinator', () => {
       fake.resolveInit()
     })
     await act(async () => {
-      probe().setSessionStatus('valid')
       fake.setHasSynced(true)
     })
     await waitFor(() => expect(probe().phase).toBe('ready'))
 
     await act(async () => {
-      probe().applyIdentity(null)
+      await probe().signOut()
     })
     expect(probe().phase).toBe('unauthenticated')
   })
@@ -382,14 +448,11 @@ describe('StartupCoordinator', () => {
       fake.resolveInit()
     })
 
-    await act(async () => {
-      probe().setSessionStatus('valid')
-    })
     expect(fake.connectMock).toHaveBeenCalledTimes(1)
     expect(fake.disconnectMock).not.toHaveBeenCalled()
 
     await act(async () => {
-      probe().setSessionStatus('expired')
+      probe().markExpired()
     })
     expect(fake.disconnectMock).toHaveBeenCalled()
   })
@@ -403,18 +466,18 @@ describe('StartupCoordinator', () => {
       fake.resolveInit()
     })
     expect(fake.initMock).toHaveBeenCalledTimes(1)
-
-    await act(async () => {
-      probe().setSessionStatus('valid')
-    })
     expect(fake.connectMock).toHaveBeenCalledTimes(1)
 
     // Session expires (e.g., token blip), then returns.
     await act(async () => {
-      probe().setSessionStatus('expired')
+      probe().markExpired()
     })
+    // Push a fresh valid session to restore status=valid.
     await act(async () => {
-      probe().setSessionStatus('valid')
+      probe().setSession({
+        data: validSession('user-1'),
+        isPending: false
+      })
     })
 
     // Phase remains first-sync. init() was only ever called once.
@@ -438,7 +501,6 @@ describe('StartupCoordinator', () => {
     expect(probe().splashHidden).toBe(true)
 
     await act(async () => {
-      probe().setSessionStatus('valid')
       fake.setHasSynced(true)
     })
     await waitFor(() => expect(probe().phase).toBe('ready'))

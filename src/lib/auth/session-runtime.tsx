@@ -4,14 +4,6 @@ import type { authClient } from './auth-client'
 
 export type BetterAuthSession = ReturnType<typeof authClient.useSession>['data']
 
-// A profile is "complete" when there's no live session (offline-with-stored-
-// identity flows trust the previous state) or the session's user.name is set.
-// Both AuthGate and StartupCoordinator route on this — keep them aligned by
-// reading from the same Better Auth session via this single helper.
-export function isProfileComplete(session: BetterAuthSession): boolean {
-  return !session || Boolean(session.user?.name?.trim())
-}
-
 export interface SessionSnapshot {
   data: BetterAuthSession
   isPending: boolean

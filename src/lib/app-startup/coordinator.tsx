@@ -2,12 +2,7 @@ import { useStatus } from '@powersync/react-native'
 import React, { createContext, useContext, useEffect, useReducer } from 'react'
 import { StyleSheet, View } from 'react-native'
 
-import { useLocalIdentity } from '@/lib/auth/local-identity-context'
-import {
-  isProfileComplete,
-  useSessionRuntime
-} from '@/lib/auth/session-runtime'
-import { useSessionStatus } from '@/lib/auth/session-status-context'
+import { useAuthSession } from '@/lib/auth/session'
 
 import { StartupErrorScreen } from './error-screen'
 import { InitialSyncScreen } from './initial-sync-screen'
@@ -118,25 +113,23 @@ export function StartupCoordinator({
   children
 }: StartupCoordinatorProps) {
   const [state, dispatch] = useReducer(reduce, initialState)
-  const { identity, isLoading: isIdentityLoading } = useLocalIdentity()
-  const { sessionStatus } = useSessionStatus()
-  const sessionRuntime = useSessionRuntime()
-  const { data: session } = sessionRuntime.useSession()
+  const { phase, status: sessionStatus } = useAuthSession()
   const status = useStatus()
 
-  const readyForProtectedTree = identity !== null && isProfileComplete(session)
+  const isLoadingAuth = phase === 'loading'
+  const readyForProtectedTree = phase === 'authenticated'
   const hasSynced = status.hasSynced ?? false
   const downloadProgress = status.downloadProgress ?? null
 
-  // Observe identity to advance past cold-start and react to sign-out.
+  // Observe auth phase to advance past cold-start and react to sign-out.
   useEffect(() => {
-    if (isIdentityLoading) return
+    if (isLoadingAuth) return
     if (!readyForProtectedTree) {
       dispatch({ type: 'IDENTITY_LOST' })
       return
     }
     dispatch({ type: 'INIT_REQUESTED' })
-  }, [isIdentityLoading, readyForProtectedTree])
+  }, [isLoadingAuth, readyForProtectedTree])
 
   // Run powersync.init() when entering initializing-db. Retry from
   // db-failed reduces back to initializing-db which re-runs this effect.

@@ -27,8 +27,7 @@ import { SectionHeader } from '@/components/section-header'
 import { SyncStatusIndicator } from '@/components/sync-status-indicator'
 import { SafeAreaView } from '@/components/uniwind'
 import { getAllOrganizations, getAllUsers } from '@/data/client/queries'
-import { useSessionStatus } from '@/lib/auth/session-status-context'
-import { useSignOut } from '@/lib/auth/use-sign-out'
+import { useAuthSession } from '@/lib/auth/session'
 import { selection } from '@/lib/haptics'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { usePendingInvitations } from '@/lib/hooks/use-pending-invitations'
@@ -51,8 +50,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
   const router = useRouter()
   const { navigation } = props
   const localUser = useLocalUser()
-  const handleSignOut = useSignOut()
-  const { sessionStatus } = useSessionStatus()
+  const { status: sessionStatus, signOut } = useAuthSession()
   const { userOrgs, isAdmin } = useUserOrgs()
   const { selectedOrgId, setSelectedOrgId } = useSelectedOrg()
   const foregroundColor = useThemeColor('foreground')
@@ -291,7 +289,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
         <Button
           testID="drawer-sign-out"
           variant="danger-soft"
-          onPress={handleSignOut}
+          onPress={signOut}
         >
           {t('common.signOut')}
         </Button>

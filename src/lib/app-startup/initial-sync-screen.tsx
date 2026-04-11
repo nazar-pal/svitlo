@@ -2,7 +2,7 @@ import { Button } from 'heroui-native'
 import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Text, View } from 'react-native'
 
-import { useEmergencySignOut } from '@/lib/auth/use-emergency-sign-out'
+import { useAuthSession } from '@/lib/auth/session'
 
 interface InitialSyncScreenProps {
   progress: { downloadedFraction: number } | null
@@ -14,7 +14,7 @@ interface InitialSyncScreenProps {
 const EMERGENCY_SIGN_OUT_DELAY_MS = 15_000
 
 export function InitialSyncScreen({ progress }: InitialSyncScreenProps) {
-  const handleEmergencySignOut = useEmergencySignOut()
+  const { emergencySignOut } = useAuthSession()
   const [showEmergencySignOut, setShowEmergencySignOut] = useState(false)
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export function InitialSyncScreen({ progress }: InitialSyncScreenProps) {
           <Text className="text-muted text-center text-xs">
             Taking longer than expected?
           </Text>
-          <Button variant="ghost" size="sm" onPress={handleEmergencySignOut}>
+          <Button variant="ghost" size="sm" onPress={emergencySignOut}>
             Sign Out
           </Button>
         </View>

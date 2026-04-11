@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { useSessionStatus } from '@/lib/auth/session-status-context'
+import { useAuthSession } from '@/lib/auth/session'
 import { useTranslation } from '@/lib/i18n'
 
 function usePendingChangesCount(): number {
@@ -17,7 +17,7 @@ function usePendingChangesCount(): number {
 
 export function ReAuthBanner() {
   const { t } = useTranslation()
-  const { sessionStatus } = useSessionStatus()
+  const { status: sessionStatus } = useAuthSession()
   const router = useRouter()
   const [dismissed, setDismissed] = useState(false)
   const insets = useSafeAreaInsets()
