@@ -4,12 +4,13 @@ import {
   getOrgMembershipById
 } from '@/data/client/queries'
 import type { MemberFactsProvider } from '@/data/shared/members'
+import { db } from '@/lib/powersync/database'
 
 // Client adapter: implements MemberFactsProvider against PowerSync SQLite
 // via the existing query helpers.
 export const clientMemberFactsProvider: MemberFactsProvider = {
   async findMembershipById(memberId) {
-    const row = await getOrgMembershipById(memberId)
+    const row = await getOrgMembershipById(db, memberId)
     if (!row) return null
     return {
       id: row.id,
@@ -19,7 +20,7 @@ export const clientMemberFactsProvider: MemberFactsProvider = {
   },
 
   async findMembershipByUserAndOrg(userId, organizationId) {
-    const row = await getOrgMemberById(userId, organizationId)
+    const row = await getOrgMemberById(db, userId, organizationId)
     if (!row) return null
     return {
       id: row.id,
@@ -29,7 +30,7 @@ export const clientMemberFactsProvider: MemberFactsProvider = {
   },
 
   async findOrgAdmin(organizationId) {
-    const adminUserId = await getOrganizationAdminUserId(organizationId)
+    const adminUserId = await getOrganizationAdminUserId(db, organizationId)
     if (!adminUserId) return null
     return { adminUserId }
   }

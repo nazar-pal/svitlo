@@ -6,7 +6,7 @@ import {
   type MaintenanceRecord,
   type MaintenanceTemplate
 } from '../db-schema'
-import { db } from '@/lib/powersync/database'
+import { db, type ClientDb } from '@/lib/powersync/database'
 
 // ── Builder form (for useDrizzleQuery) ──────────────────────────────────────
 
@@ -60,6 +60,7 @@ export function getAllMaintenanceRecords() {
 // ── Row form (awaited, for mutations) ───────────────────────────────────────
 
 export async function getMaintenanceTemplateById(
+  db: ClientDb,
   id: string
 ): Promise<MaintenanceTemplate | null> {
   const [row] = await db
@@ -71,6 +72,7 @@ export async function getMaintenanceTemplateById(
 }
 
 export async function getMaintenanceRecordById(
+  db: ClientDb,
   id: string
 ): Promise<MaintenanceRecord | null> {
   const [row] = await db

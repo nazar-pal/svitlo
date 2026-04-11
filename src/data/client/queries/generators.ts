@@ -8,7 +8,7 @@ import {
   type GeneratorSession,
   type GeneratorUserAssignment
 } from '../db-schema'
-import { db } from '@/lib/powersync/database'
+import { db, type ClientDb } from '@/lib/powersync/database'
 
 // ── Builder form (for useDrizzleQuery) ──────────────────────────────────────
 
@@ -59,7 +59,10 @@ export function getUserAssignments(userId: string) {
 
 // ── Row form (awaited, for mutations) ───────────────────────────────────────
 
-export async function getGeneratorById(id: string): Promise<Generator | null> {
+export async function getGeneratorById(
+  db: ClientDb,
+  id: string
+): Promise<Generator | null> {
   const [row] = await db
     .select()
     .from(generators)
@@ -69,6 +72,7 @@ export async function getGeneratorById(id: string): Promise<Generator | null> {
 }
 
 export async function getGeneratorSessionById(
+  db: ClientDb,
   id: string
 ): Promise<GeneratorSession | null> {
   const [row] = await db
@@ -80,6 +84,7 @@ export async function getGeneratorSessionById(
 }
 
 export async function getOpenSessionForGenerator(
+  db: ClientDb,
   generatorId: string
 ): Promise<GeneratorSession | null> {
   const [row] = await db
@@ -96,6 +101,7 @@ export async function getOpenSessionForGenerator(
 }
 
 export async function getGeneratorOrgId(
+  db: ClientDb,
   generatorId: string
 ): Promise<string | null> {
   const [row] = await db
@@ -107,6 +113,7 @@ export async function getGeneratorOrgId(
 }
 
 export async function getAssignmentForUserAndGenerator(
+  db: ClientDb,
   userId: string,
   generatorId: string
 ): Promise<GeneratorUserAssignment | null> {

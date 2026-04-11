@@ -8,7 +8,7 @@ import {
   type Organization,
   type OrganizationMember
 } from '../db-schema'
-import { db } from '@/lib/powersync/database'
+import { db, type ClientDb } from '@/lib/powersync/database'
 
 // ── Builder form (for useDrizzleQuery) ──────────────────────────────────────
 
@@ -51,6 +51,7 @@ export function getInvitationsByEmail(email: string) {
 // ── Row form (awaited, for mutations) ───────────────────────────────────────
 
 export async function getOrganizationById(
+  db: ClientDb,
   id: string
 ): Promise<Organization | null> {
   const [row] = await db
@@ -62,6 +63,7 @@ export async function getOrganizationById(
 }
 
 export async function getOrganizationAdminUserId(
+  db: ClientDb,
   id: string
 ): Promise<string | null> {
   const [row] = await db
@@ -73,6 +75,7 @@ export async function getOrganizationAdminUserId(
 }
 
 export async function getOrgMemberById(
+  db: ClientDb,
   userId: string,
   organizationId: string
 ): Promise<OrganizationMember | null> {
@@ -90,6 +93,7 @@ export async function getOrgMemberById(
 }
 
 export async function getOrgMembershipById(
+  db: ClientDb,
   id: string
 ): Promise<OrganizationMember | null> {
   const [row] = await db
@@ -101,6 +105,7 @@ export async function getOrgMembershipById(
 }
 
 export async function getInvitationById(
+  db: ClientDb,
   id: string
 ): Promise<Invitation | null> {
   const [row] = await db
@@ -112,6 +117,7 @@ export async function getInvitationById(
 }
 
 export async function getInvitationByOrgAndEmail(
+  db: ClientDb,
   organizationId: string,
   inviteeEmail: string
 ): Promise<Invitation | null> {
