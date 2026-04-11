@@ -19,7 +19,7 @@ export function createSessionMutations(ctx: MutationContext) {
         generatorId,
         startedByUserId: userId,
         stoppedByUserId: null,
-        startedAt: ctx.now(),
+        startedAt: ctx.now().toISOString(),
         stoppedAt: null
       })
 
@@ -50,7 +50,7 @@ export function createSessionMutations(ctx: MutationContext) {
       await ctx.db
         .update(generatorSessions)
         .set({
-          stoppedAt: ctx.now(),
+          stoppedAt: ctx.now().toISOString(),
           stoppedByUserId: userId
         })
         .where(eq(generatorSessions.id, sessionId))
@@ -67,7 +67,7 @@ export function createSessionMutations(ctx: MutationContext) {
         userId,
         sessionId,
         input,
-        new Date()
+        ctx.now()
       )
       if (!result.ok) return fail(result.code)
 
@@ -89,7 +89,7 @@ export function createSessionMutations(ctx: MutationContext) {
       const result = await ctx.checks.sessions.logManualSession(
         userId,
         input,
-        new Date()
+        ctx.now()
       )
       if (!result.ok) return fail(result.code)
 

@@ -31,11 +31,13 @@ export interface MutationHarness {
   readonly db: TestDb['db']
   readonly ctx: MutationContext
   readonly mutations: BuiltMutations
+  setNow(date: Date): void
 }
 
 interface HarnessState {
   testDb: TestDb | null
   idCounter: number
+  now: Date
   built: MutationHarness | null
 }
 
@@ -45,7 +47,7 @@ function buildHarness(state: HarnessState, t: TestDb): MutationHarness {
     powersync: t.powersync as unknown as MutationContext['powersync'],
     checks: buildClientChecks(t.db),
     newId: () => `id-${++state.idCounter}`,
-    now: () => new Date().toISOString()
+    now: () => state.now
   }
   return {
     db: t.db,
@@ -58,6 +60,9 @@ function buildHarness(state: HarnessState, t: TestDb): MutationHarness {
       maintenance: createMaintenanceMutations(ctx),
       members: createMemberMutations(ctx),
       assignments: createAssignmentMutations(ctx)
+    },
+    setNow: (date: Date) => {
+      state.now = date
     }
   }
 }
@@ -94,13 +99,20 @@ function makeHarnessProxy(state: HarnessState): MutationHarness {
   return new Proxy({} as MutationHarness, {
     get(_target, prop) {
       if (prop === 'mutations') return mutationsProxy
+      if (prop === 'setNow')
+        return (date: Date) => requireBuilt(state).setNow(date)
       return requireBuilt(state)[prop as keyof MutationHarness]
     }
   })
 }
 
 export function setupMutationHarness(): MutationHarness {
-  const state: HarnessState = { testDb: null, idCounter: 0, built: null }
+  const state: HarnessState = {
+    testDb: null,
+    idCounter: 0,
+    now: new Date(),
+    built: null
+  }
 
   beforeAll(async () => {
     state.testDb = await createTestDatabase()
@@ -111,6 +123,7 @@ export function setupMutationHarness(): MutationHarness {
     if (!state.testDb) throw new Error('harness accessed before beforeAll')
     resetDatabase(state.testDb.sqlite)
     state.idCounter = 0
+    state.now = new Date()
   })
 
   afterAll(() => {

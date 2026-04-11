@@ -25,7 +25,7 @@ export function createOrganizationMutations(ctx: MutationContext) {
         id: ctx.newId(),
         name: parsed.data.name,
         adminUserId: userId,
-        createdAt: ctx.now()
+        createdAt: ctx.now().toISOString()
       })
 
       return ok

@@ -16,7 +16,7 @@ const defaultMutationContext: MutationContext = {
   powersync,
   checks: buildClientChecks(db),
   newId: () => randomUUID(),
-  now: () => new Date().toISOString()
+  now: () => new Date()
 }
 
 const organizations = createOrganizationMutations(defaultMutationContext)

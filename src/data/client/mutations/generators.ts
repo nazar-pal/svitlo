@@ -53,7 +53,7 @@ export function createGeneratorMutations(ctx: MutationContext) {
       if (!check.ok) return fail(check.code)
 
       const generatorId = ctx.newId()
-      const now = ctx.now()
+      const now = ctx.now().toISOString()
 
       for (const mi of maintenanceInputs) {
         const mParsed = insertMaintenanceTemplateSchema.safeParse({

@@ -48,6 +48,7 @@ export function setupServerHandlersFixture() {
         op: 'insert',
         id: crypto.randomUUID(),
         data: {},
+        now: () => new Date(),
         ...overrides
       }
     }

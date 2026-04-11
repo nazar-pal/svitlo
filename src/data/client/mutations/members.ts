@@ -51,7 +51,7 @@ export function createMemberMutations(ctx: MutationContext) {
         if (!existing) {
           await tx.execute(
             'INSERT INTO generator_user_assignments (id, generator_id, user_id, assigned_at) VALUES (?, ?, ?, ?)',
-            [ctx.newId(), a.generatorId, adminUserId, ctx.now()]
+            [ctx.newId(), a.generatorId, adminUserId, ctx.now().toISOString()]
           )
         }
       }

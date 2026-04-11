@@ -69,7 +69,8 @@ export const powersyncRouter = {
         userEmail: context.session.user.email,
         op: input.op,
         id: input.id,
-        data: input.data ?? {}
+        data: input.data ?? {},
+        now: () => new Date()
       }
 
       try {

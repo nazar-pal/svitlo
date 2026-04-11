@@ -23,7 +23,8 @@ import { fail, ok, type Db, type Insert, type TableHandler } from './types'
 async function transferAssignmentsAndRemoveMember(
   db: Db,
   adminUserId: string,
-  member: MemberRef
+  member: MemberRef,
+  now: Date
 ) {
   const assignments = await db
     .select({ generatorId: generatorUserAssignments.generatorId })
@@ -54,7 +55,7 @@ async function transferAssignmentsAndRemoveMember(
       .values({
         generatorId: a.generatorId,
         userId: adminUserId,
-        assignedAt: new Date()
+        assignedAt: now
       })
       .onConflictDoNothing()
   }
@@ -117,7 +118,8 @@ export const handleOrganizationMembers: TableHandler = async ctx => {
       await transferAssignmentsAndRemoveMember(
         db,
         remove.data.adminUserId,
-        remove.data.member
+        remove.data.member,
+        ctx.now()
       )
       return ok
     }
@@ -139,7 +141,8 @@ export const handleOrganizationMembers: TableHandler = async ctx => {
     await transferAssignmentsAndRemoveMember(
       db,
       leave.adminUserId,
-      leave.member
+      leave.member,
+      ctx.now()
     )
     return ok
   }

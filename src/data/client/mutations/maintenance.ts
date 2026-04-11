@@ -40,7 +40,7 @@ export function createMaintenanceMutations(ctx: MutationContext) {
         triggerHoursInterval: parsed.data.triggerHoursInterval ?? null,
         triggerCalendarDays: parsed.data.triggerCalendarDays ?? null,
         isOneTime: parsed.data.isOneTime ? 1 : 0,
-        createdAt: ctx.now()
+        createdAt: ctx.now().toISOString()
       })
 
       return ok
@@ -123,7 +123,7 @@ export function createMaintenanceMutations(ctx: MutationContext) {
         userId,
         recordId,
         { performedAt: input.performedAt },
-        new Date()
+        ctx.now()
       )
       if (!result.ok) return fail(result.code)
 
@@ -156,7 +156,7 @@ export function createMaintenanceMutations(ctx: MutationContext) {
         templateId: parsed.data.templateId,
         generatorId: parsed.data.generatorId,
         performedByUserId: userId,
-        performedAt: parsed.data.performedAt ?? ctx.now(),
+        performedAt: parsed.data.performedAt ?? ctx.now().toISOString(),
         notes: parsed.data.notes ?? null
       })
 

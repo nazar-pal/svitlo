@@ -61,7 +61,7 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
         userId,
         id,
         { startedAt, stoppedAt },
-        new Date()
+        ctx.now()
       )
       if (!result.ok) return fail(result.code)
 

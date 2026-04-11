@@ -31,7 +31,7 @@ export function createInvitationMutations(ctx: MutationContext) {
         organizationId: parsed.data.organizationId,
         inviteeEmail: parsed.data.inviteeEmail,
         invitedByUserId: userId,
-        createdAt: ctx.now()
+        createdAt: ctx.now().toISOString()
       })
 
       return ok
@@ -52,7 +52,12 @@ export function createInvitationMutations(ctx: MutationContext) {
       await ctx.powersync.writeTransaction(async tx => {
         await tx.execute(
           'INSERT INTO organization_members (id, organization_id, user_id, joined_at) VALUES (?, ?, ?, ?)',
-          [ctx.newId(), check.invitation.organizationId, userId, ctx.now()]
+          [
+            ctx.newId(),
+            check.invitation.organizationId,
+            userId,
+            ctx.now().toISOString()
+          ]
         )
         await tx.execute('DELETE FROM invitations WHERE id = ?', [invitationId])
       })

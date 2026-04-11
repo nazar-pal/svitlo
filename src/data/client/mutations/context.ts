@@ -33,7 +33,7 @@ export interface MutationContext {
   readonly powersync: PowerSyncDatabase
   readonly checks: ClientLifecycleChecks
   readonly newId: () => string
-  readonly now: () => string
+  readonly now: () => Date
 }
 
 export function buildClientChecks(db: ClientDb): ClientLifecycleChecks {

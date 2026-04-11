@@ -23,7 +23,7 @@ export function createAssignmentMutations(ctx: MutationContext) {
         id: ctx.newId(),
         generatorId,
         userId: targetUserId,
-        assignedAt: ctx.now()
+        assignedAt: ctx.now().toISOString()
       })
 
       return ok

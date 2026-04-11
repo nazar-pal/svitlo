@@ -21,6 +21,7 @@ export interface WriteContext {
   op: 'insert' | 'update' | 'delete'
   id: string
   data: Record<string, unknown>
+  now: () => Date
 }
 
 export type TableHandler = (ctx: WriteContext) => Promise<MutationResult>

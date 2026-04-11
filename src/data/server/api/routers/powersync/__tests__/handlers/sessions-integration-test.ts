@@ -328,14 +328,16 @@ describe('handleGeneratorSessions', () => {
     await seedSession(fixture.testDb.db, IDS.admin, {
       stoppedAt: new Date('2026-01-15T13:00:00Z')
     })
+    const frozen = new Date('2026-01-15T12:00:00Z')
     const result = await handleGeneratorSessions(
       fixture.makeCtx({
         op: 'update',
         id: IDS.session,
         data: {
           started_at: '2026-01-15T10:00:00Z',
-          stopped_at: '2099-01-15T11:00:00Z'
-        }
+          stopped_at: '2026-01-15T14:00:00Z'
+        },
+        now: () => frozen
       })
     )
     expect(result.ok).toBe(false)
