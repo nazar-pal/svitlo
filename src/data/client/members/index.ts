@@ -12,8 +12,5 @@ export function createClientMemberLifecycleChecks(
   db: ClientDb,
   authz: AuthzChecks = createAuthzChecks(createClientAuthzProvider(db))
 ): MemberLifecycleChecks {
-  return createMemberLifecycleChecks(
-    createClientMemberFactsProvider(db),
-    authz
-  )
+  return createMemberLifecycleChecks(createClientMemberFactsProvider(db), authz)
 }

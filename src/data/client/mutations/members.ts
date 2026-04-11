@@ -67,10 +67,7 @@ export function createMemberMutations(ctx: MutationContext) {
       adminUserId: string,
       memberId: string
     ): Promise<MutationResult> {
-      const check = await ctx.checks.members.removeMember(
-        adminUserId,
-        memberId
-      )
+      const check = await ctx.checks.members.removeMember(adminUserId, memberId)
       if (!check.ok) return fail(check.code)
       await transferAssignmentsAndRemove(check.member, check.adminUserId)
       return ok

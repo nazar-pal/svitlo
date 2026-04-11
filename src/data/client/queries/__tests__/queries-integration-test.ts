@@ -146,11 +146,7 @@ describe('getOrganizationAdminUserId', () => {
 
 describe('getOrgMemberById', () => {
   it('returns the membership row when user is a member', async () => {
-    const row = await getOrgMemberById(
-      mockTestDb.db,
-      IDS.memberUser,
-      IDS.org
-    )
+    const row = await getOrgMemberById(mockTestDb.db, IDS.memberUser, IDS.org)
     expect(row?.userId).toBe(IDS.memberUser)
     expect(row?.organizationId).toBe(IDS.org)
   })

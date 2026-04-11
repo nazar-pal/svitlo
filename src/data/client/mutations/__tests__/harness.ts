@@ -72,27 +72,24 @@ function requireBuilt(state: HarnessState): MutationHarness {
 // nested access returns another Proxy, and only the final method INVOCATION
 // resolves the real harness.
 function makeHarnessProxy(state: HarnessState): MutationHarness {
-  const mutationsProxy = new Proxy(
-    {} as BuiltMutations,
-    {
-      get(_target, domain: string) {
-        return new Proxy(
-          {},
-          {
-            get(_, method: string) {
-              return (...args: unknown[]) => {
-                const built = requireBuilt(state)
-                const bundle = built.mutations[
-                  domain as keyof BuiltMutations
-                ] as Record<string, (...a: unknown[]) => unknown>
-                return bundle[method](...args)
-              }
+  const mutationsProxy = new Proxy({} as BuiltMutations, {
+    get(_target, domain: string) {
+      return new Proxy(
+        {},
+        {
+          get(_, method: string) {
+            return (...args: unknown[]) => {
+              const built = requireBuilt(state)
+              const bundle = built.mutations[
+                domain as keyof BuiltMutations
+              ] as Record<string, (...a: unknown[]) => unknown>
+              return bundle[method](...args)
             }
           }
-        )
-      }
+        }
+      )
     }
-  )
+  })
 
   return new Proxy({} as MutationHarness, {
     get(_target, prop) {
