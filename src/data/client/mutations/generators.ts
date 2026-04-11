@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { generators } from '@/data/client/db-schema'
+import { generators, maintenanceTemplates } from '@/data/client/db-schema'
 import {
   insertGeneratorSchema,
   insertMaintenanceTemplateSchema,
@@ -66,41 +66,35 @@ export function createGeneratorMutations(ctx: MutationContext) {
           })
       }
 
-      await ctx.powersync.writeTransaction(async tx => {
-        await tx.execute(
-          'INSERT INTO generators (id, organization_id, title, model, description, max_consecutive_run_hours, required_rest_hours, run_warning_threshold_pct, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [
-            generatorId,
-            parsed.data.organizationId,
-            parsed.data.title,
-            parsed.data.model,
-            parsed.data.description ?? null,
-            parsed.data.maxConsecutiveRunHours,
-            parsed.data.requiredRestHours,
-            parsed.data.runWarningThresholdPct,
-            now
-          ]
-        )
+      await ctx.writeTx(async tx => {
+        await tx.insert(generators).values({
+          id: generatorId,
+          organizationId: parsed.data.organizationId,
+          title: parsed.data.title,
+          model: parsed.data.model,
+          description: parsed.data.description ?? null,
+          maxConsecutiveRunHours: parsed.data.maxConsecutiveRunHours,
+          requiredRestHours: parsed.data.requiredRestHours,
+          runWarningThresholdPct: parsed.data.runWarningThresholdPct,
+          createdAt: now
+        })
 
         for (const mi of maintenanceInputs) {
           const mParsed = insertMaintenanceTemplateSchema.parse({
             ...mi,
             generatorId
           })
-          await tx.execute(
-            'INSERT INTO maintenance_templates (id, generator_id, task_name, description, trigger_type, trigger_hours_interval, trigger_calendar_days, is_one_time, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-              ctx.newId(),
-              generatorId,
-              mParsed.taskName,
-              mParsed.description ?? null,
-              mParsed.triggerType,
-              mParsed.triggerHoursInterval ?? null,
-              mParsed.triggerCalendarDays ?? null,
-              mParsed.isOneTime ? 1 : 0,
-              now
-            ]
-          )
+          await tx.insert(maintenanceTemplates).values({
+            id: ctx.newId(),
+            generatorId,
+            taskName: mParsed.taskName,
+            description: mParsed.description ?? null,
+            triggerType: mParsed.triggerType,
+            triggerHoursInterval: mParsed.triggerHoursInterval ?? null,
+            triggerCalendarDays: mParsed.triggerCalendarDays ?? null,
+            isOneTime: mParsed.isOneTime ? 1 : 0,
+            createdAt: now
+          })
         }
       })
 

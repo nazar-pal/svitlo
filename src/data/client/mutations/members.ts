@@ -1,6 +1,10 @@
 import { and, eq } from 'drizzle-orm'
 
-import { generators, generatorUserAssignments } from '@/data/client/db-schema'
+import {
+  generators,
+  generatorUserAssignments,
+  organizationMembers
+} from '@/data/client/db-schema'
 import type { MemberRef } from '@/data/shared/members'
 import { fail, ok, type MutationResult } from '@/data/shared/result'
 
@@ -36,29 +40,37 @@ export function createMemberMutations(ctx: MutationContext) {
         )
       )
 
-    await ctx.powersync.writeTransaction(async tx => {
+    await ctx.writeTx(async tx => {
       for (const a of assignments) {
-        await tx.execute(
-          'DELETE FROM generator_user_assignments WHERE id = ?',
-          [a.assignmentId]
-        )
+        await tx
+          .delete(generatorUserAssignments)
+          .where(eq(generatorUserAssignments.id, a.assignmentId))
 
-        const existing = await tx.getOptional(
-          'SELECT id FROM generator_user_assignments WHERE generator_id = ? AND user_id = ? LIMIT 1',
-          [a.generatorId, adminUserId]
-        )
+        const existing = await tx
+          .select({ id: generatorUserAssignments.id })
+          .from(generatorUserAssignments)
+          .where(
+            and(
+              eq(generatorUserAssignments.generatorId, a.generatorId),
+              eq(generatorUserAssignments.userId, adminUserId)
+            )
+          )
+          .limit(1)
+          .get()
 
         if (!existing) {
-          await tx.execute(
-            'INSERT INTO generator_user_assignments (id, generator_id, user_id, assigned_at) VALUES (?, ?, ?, ?)',
-            [ctx.newId(), a.generatorId, adminUserId, ctx.now().toISOString()]
-          )
+          await tx.insert(generatorUserAssignments).values({
+            id: ctx.newId(),
+            generatorId: a.generatorId,
+            userId: adminUserId,
+            assignedAt: ctx.now().toISOString()
+          })
         }
       }
 
-      await tx.execute('DELETE FROM organization_members WHERE id = ?', [
-        member.id
-      ])
+      await tx
+        .delete(organizationMembers)
+        .where(eq(organizationMembers.id, member.id))
     })
   }
 

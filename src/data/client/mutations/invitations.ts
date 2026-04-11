@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { invitations } from '@/data/client/db-schema'
+import { invitations, organizationMembers } from '@/data/client/db-schema'
 import {
   insertInvitationSchema,
   type InsertInvitationInput
@@ -49,17 +49,14 @@ export function createInvitationMutations(ctx: MutationContext) {
       )
       if (!check.ok) return fail(check.code)
 
-      await ctx.powersync.writeTransaction(async tx => {
-        await tx.execute(
-          'INSERT INTO organization_members (id, organization_id, user_id, joined_at) VALUES (?, ?, ?, ?)',
-          [
-            ctx.newId(),
-            check.invitation.organizationId,
-            userId,
-            ctx.now().toISOString()
-          ]
-        )
-        await tx.execute('DELETE FROM invitations WHERE id = ?', [invitationId])
+      await ctx.writeTx(async tx => {
+        await tx.insert(organizationMembers).values({
+          id: ctx.newId(),
+          organizationId: check.invitation.organizationId,
+          userId,
+          joinedAt: ctx.now().toISOString()
+        })
+        await tx.delete(invitations).where(eq(invitations.id, invitationId))
       })
 
       return ok

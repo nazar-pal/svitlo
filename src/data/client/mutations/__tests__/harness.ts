@@ -12,8 +12,8 @@ import { createSessionMutations } from '../sessions'
 // Stub out `@/lib/powersync/database` so jest never tries to load the native
 // op-sqlite binary. Each test builds its own MutationContext over the
 // in-memory SQLite db returned by createTestDatabase() — nothing ever touches
-// the production db, powersync, or randomUUID.
-jest.mock('@/lib/powersync/database', () => ({ db: null, powersync: null }))
+// the production db or randomUUID.
+jest.mock('@/lib/powersync/database', () => ({ db: null }))
 
 type TestDb = Awaited<ReturnType<typeof createTestDatabase>>
 
@@ -44,10 +44,10 @@ interface HarnessState {
 function buildHarness(state: HarnessState, t: TestDb): MutationHarness {
   const ctx: MutationContext = {
     db: t.db,
-    powersync: t.powersync as unknown as MutationContext['powersync'],
     checks: buildClientChecks(t.db),
     newId: () => `id-${++state.idCounter}`,
-    now: () => state.now
+    now: () => state.now,
+    writeTx: t.writeTx
   }
   return {
     db: t.db,

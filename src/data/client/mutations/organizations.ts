@@ -1,6 +1,15 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 
-import { organizations } from '@/data/client/db-schema'
+import {
+  generators,
+  generatorSessions,
+  generatorUserAssignments,
+  invitations,
+  maintenanceRecords,
+  maintenanceTemplates,
+  organizationMembers,
+  organizations
+} from '@/data/client/db-schema'
 import {
   insertOrganizationSchema,
   updateOrganizationSchema,
@@ -69,34 +78,32 @@ export function createOrganizationMutations(ctx: MutationContext) {
       // foreign keys instead. Both paths keep the side effect in the dialect-
       // specific layer rather than trying to share it from the shared policy
       // module.
-      await ctx.powersync.writeTransaction(async tx => {
-        await tx.execute(
-          'DELETE FROM maintenance_records WHERE generator_id IN (SELECT id FROM generators WHERE organization_id = ?)',
-          [orgId]
-        )
-        await tx.execute(
-          'DELETE FROM maintenance_templates WHERE generator_id IN (SELECT id FROM generators WHERE organization_id = ?)',
-          [orgId]
-        )
-        await tx.execute(
-          'DELETE FROM generator_sessions WHERE generator_id IN (SELECT id FROM generators WHERE organization_id = ?)',
-          [orgId]
-        )
-        await tx.execute(
-          'DELETE FROM generator_user_assignments WHERE generator_id IN (SELECT id FROM generators WHERE organization_id = ?)',
-          [orgId]
-        )
-        await tx.execute('DELETE FROM generators WHERE organization_id = ?', [
-          orgId
-        ])
-        await tx.execute('DELETE FROM invitations WHERE organization_id = ?', [
-          orgId
-        ])
-        await tx.execute(
-          'DELETE FROM organization_members WHERE organization_id = ?',
-          [orgId]
-        )
-        await tx.execute('DELETE FROM organizations WHERE id = ?', [orgId])
+      await ctx.writeTx(async tx => {
+        const genIdsForOrg = tx
+          .select({ id: generators.id })
+          .from(generators)
+          .where(eq(generators.organizationId, orgId))
+
+        await tx
+          .delete(maintenanceRecords)
+          .where(inArray(maintenanceRecords.generatorId, genIdsForOrg))
+        await tx
+          .delete(maintenanceTemplates)
+          .where(inArray(maintenanceTemplates.generatorId, genIdsForOrg))
+        await tx
+          .delete(generatorSessions)
+          .where(inArray(generatorSessions.generatorId, genIdsForOrg))
+        await tx
+          .delete(generatorUserAssignments)
+          .where(inArray(generatorUserAssignments.generatorId, genIdsForOrg))
+        await tx.delete(generators).where(eq(generators.organizationId, orgId))
+        await tx
+          .delete(invitations)
+          .where(eq(invitations.organizationId, orgId))
+        await tx
+          .delete(organizationMembers)
+          .where(eq(organizationMembers.organizationId, orgId))
+        await tx.delete(organizations).where(eq(organizations.id, orgId))
       })
 
       return ok

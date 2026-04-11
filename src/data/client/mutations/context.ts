@@ -1,5 +1,3 @@
-import type { PowerSyncDatabase } from '@powersync/react-native'
-
 import { createClientAssignmentFactsProvider } from '@/data/client/assignments/provider'
 import { createClientAuthzProvider } from '@/data/client/authz/provider'
 import { createClientGeneratorFactsProvider } from '@/data/client/generators/provider'
@@ -39,6 +37,8 @@ import {
 } from '@/data/shared/sessions'
 import type { ClientDb } from '@/lib/powersync/database'
 
+import type { WriteTx } from './tx'
+
 export interface ClientLifecycleChecks {
   readonly organizations: OrganizationLifecycleChecks
   readonly generators: GeneratorLifecycleChecks
@@ -51,10 +51,10 @@ export interface ClientLifecycleChecks {
 
 export interface MutationContext {
   readonly db: ClientDb
-  readonly powersync: PowerSyncDatabase
   readonly checks: ClientLifecycleChecks
   readonly newId: () => string
   readonly now: () => Date
+  readonly writeTx: WriteTx
 }
 
 export function buildClientChecks(db: ClientDb): ClientLifecycleChecks {

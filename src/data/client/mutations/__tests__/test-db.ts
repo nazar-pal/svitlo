@@ -10,6 +10,9 @@ import { SQLiteTable } from 'drizzle-orm/sqlite-core'
 
 import * as clientSchema from '@/data/client/db-schema'
 import * as serverSchema from '@/data/server/db-schema'
+import type { ClientDb } from '@/lib/powersync/database'
+
+import type { WriteTx } from '../tx'
 
 // Auto-derived from schema exports. No manual sync needed.
 const CLIENT_TABLES = Object.values(clientSchema).filter(v =>
@@ -26,7 +29,7 @@ export async function createTestDatabase() {
   return {
     sqlite,
     db,
-    powersync: createPowerSyncShim(sqlite)
+    writeTx: createTestWriteTx(sqlite, db)
   }
 }
 
@@ -39,39 +42,25 @@ export function closeDatabase(sqlite: Database.Database) {
   sqlite.close()
 }
 
-// ── PowerSync writeTransaction shim ─────────────────────────────────────────
-
-interface TransactionContext {
-  execute: (query: string, params?: unknown[]) => Promise<void>
-  getOptional: <R>(query: string, params?: unknown[]) => Promise<R | null>
-}
-
-function createPowerSyncShim(db: Database.Database) {
-  return {
-    writeTransaction: async <T>(
-      fn: (tx: TransactionContext) => Promise<T>
-    ): Promise<T> => {
-      db.exec('BEGIN')
-      try {
-        const tx: TransactionContext = {
-          execute: async (query, params) => {
-            db.prepare(query).run(...(params ?? []))
-          },
-          getOptional: async <R>(
-            query: string,
-            params?: unknown[]
-          ): Promise<R | null> => {
-            const row = db.prepare(query).get(...(params ?? []))
-            return (row as R) ?? null
-          }
-        }
-        const result = await fn(tx)
-        db.exec('COMMIT')
-        return result
-      } catch (e) {
-        db.exec('ROLLBACK')
-        throw e
-      }
+// ── WriteTx stand-in over better-sqlite3 ────────────────────────────────────
+// better-sqlite3's own `db.transaction()` rejects async callbacks, so the
+// production `db.transaction(async tx => ...)` path is unusable here. Instead
+// we drive BEGIN/COMMIT/ROLLBACK manually on the underlying sqlite handle and
+// pass the same Drizzle handle through as `tx` — every query issued on it
+// between BEGIN and COMMIT participates in the transaction.
+function createTestWriteTx(
+  sqlite: Database.Database,
+  db: ReturnType<typeof drizzle<typeof clientSchema>>
+): WriteTx {
+  return async fn => {
+    sqlite.exec('BEGIN')
+    try {
+      const result = await fn(db as unknown as ClientDb)
+      sqlite.exec('COMMIT')
+      return result
+    } catch (e) {
+      sqlite.exec('ROLLBACK')
+      throw e
     }
   }
 }

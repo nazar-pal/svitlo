@@ -1,8 +1,9 @@
 import { randomUUID } from 'expo-crypto'
 
-import { db, powersync } from '@/lib/powersync/database'
+import { db } from '@/lib/powersync/database'
 
 import { buildClientChecks, type MutationContext } from './context'
+import { createPowerSyncWriteTx } from './tx'
 import { createAssignmentMutations } from './assignments'
 import { createGeneratorMutations } from './generators'
 import { createInvitationMutations } from './invitations'
@@ -13,10 +14,10 @@ import { createSessionMutations } from './sessions'
 
 const defaultMutationContext: MutationContext = {
   db,
-  powersync,
   checks: buildClientChecks(db),
   newId: () => randomUUID(),
-  now: () => new Date()
+  now: () => new Date(),
+  writeTx: createPowerSyncWriteTx(db)
 }
 
 const organizations = createOrganizationMutations(defaultMutationContext)
