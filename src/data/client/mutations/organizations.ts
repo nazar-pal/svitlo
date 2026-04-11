@@ -1,17 +1,8 @@
 import { eq } from 'drizzle-orm'
 
 import { isOrgAdmin } from '@/data/client/authz'
-import {
-  invitations,
-  organizationMembers,
-  organizations
-} from '@/data/client/db-schema'
-import {
-  getInvitationById,
-  getInvitationByOrgAndEmail,
-  getOrgMemberById
-} from '@/data/client/queries'
-import { failFromZod } from '@/data/shared/errors-from-zod'
+import { invitations, organizations } from '@/data/client/db-schema'
+import { invitationLifecycleChecks } from '@/data/client/invitations'
 import {
   insertInvitationSchema,
   insertOrganizationSchema,
@@ -20,6 +11,7 @@ import {
   type InsertOrganizationInput,
   type UpdateOrganizationInput
 } from '@/data/client/validation'
+import { failFromZod } from '@/data/shared/errors-from-zod'
 import { db, powersync } from '@/lib/powersync/database'
 
 import { fail, newId, nowISO, ok, type MutationResult } from './helpers'
@@ -48,14 +40,12 @@ export async function createInvitation(
   const parsed = insertInvitationSchema.safeParse(input)
   if (!parsed.success) return failFromZod(parsed.error)
 
-  if (!(await isOrgAdmin(userId, parsed.data.organizationId)))
-    return fail('ONLY_ADMIN_CAN_INVITE')
-
-  const existing = await getInvitationByOrgAndEmail(
+  const check = await invitationLifecycleChecks.createInvitation(
+    userId,
     parsed.data.organizationId,
     parsed.data.inviteeEmail
   )
-  if (existing) return fail('INVITATION_ALREADY_SENT')
+  if (!check.ok) return fail(check.code)
 
   await db.insert(invitations).values({
     id: newId(),
@@ -73,23 +63,20 @@ export async function acceptInvitation(
   userEmail: string,
   invitationId: string
 ): Promise<MutationResult> {
-  const invitation = await getInvitationById(invitationId)
-
-  if (!invitation) return fail('INVITATION_NOT_FOUND')
-  if (invitation.inviteeEmail.toLowerCase() !== userEmail.toLowerCase())
-    return fail('INVITATION_NOT_FOR_YOU')
-
-  const existing = await getOrgMemberById(userId, invitation.organizationId)
-  if (existing) return fail('ALREADY_MEMBER')
-
-  await db.insert(organizationMembers).values({
-    id: newId(),
-    organizationId: invitation.organizationId,
+  const check = await invitationLifecycleChecks.acceptInvitation(
     userId,
-    joinedAt: nowISO()
-  })
+    userEmail,
+    invitationId
+  )
+  if (!check.ok) return fail(check.code)
 
-  await db.delete(invitations).where(eq(invitations.id, invitationId))
+  await powersync.writeTransaction(async tx => {
+    await tx.execute(
+      'INSERT INTO organization_members (id, organization_id, user_id, joined_at) VALUES (?, ?, ?, ?)',
+      [newId(), check.invitation.organizationId, userId, nowISO()]
+    )
+    await tx.execute('DELETE FROM invitations WHERE id = ?', [invitationId])
+  })
 
   return ok
 }
@@ -98,11 +85,11 @@ export async function declineInvitation(
   userEmail: string,
   invitationId: string
 ): Promise<MutationResult> {
-  const invitation = await getInvitationById(invitationId)
-
-  if (!invitation) return fail('INVITATION_NOT_FOUND')
-  if (invitation.inviteeEmail.toLowerCase() !== userEmail.toLowerCase())
-    return fail('INVITATION_NOT_FOR_YOU')
+  const check = await invitationLifecycleChecks.declineInvitation(
+    userEmail,
+    invitationId
+  )
+  if (!check.ok) return fail(check.code)
 
   await db.delete(invitations).where(eq(invitations.id, invitationId))
 
@@ -113,12 +100,11 @@ export async function cancelInvitation(
   userId: string,
   invitationId: string
 ): Promise<MutationResult> {
-  const invitation = await getInvitationById(invitationId)
-
-  if (!invitation) return fail('INVITATION_NOT_FOUND')
-
-  if (!(await isOrgAdmin(userId, invitation.organizationId)))
-    return fail('ONLY_ADMIN_CAN_CANCEL_INVITATIONS')
+  const check = await invitationLifecycleChecks.cancelInvitation(
+    userId,
+    invitationId
+  )
+  if (!check.ok) return fail(check.code)
 
   await db.delete(invitations).where(eq(invitations.id, invitationId))
 

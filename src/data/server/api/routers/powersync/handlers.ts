@@ -1,6 +1,12 @@
 import { and, eq, sql } from 'drizzle-orm'
 
 import {
+  insertGeneratorSchema,
+  updateGeneratorSchema
+} from '@/data/client/validation'
+import type { db } from '@/data/server'
+import { createServerAuthz } from '@/data/server/authz'
+import {
   user as userTable,
   organizations,
   organizationMembers,
@@ -11,14 +17,11 @@ import {
   maintenanceTemplates,
   maintenanceRecords
 } from '@/data/server/db-schema'
-import type { db } from '@/data/server'
-import { createServerAuthz } from '@/data/server/authz'
 import { createServerGeneratorChecks } from '@/data/server/generators'
+import { createServerInvitationChecks } from '@/data/server/invitations'
+import { createServerMemberChecks } from '@/data/server/members'
 import { createServerSessionChecks } from '@/data/server/sessions'
-import {
-  insertGeneratorSchema,
-  updateGeneratorSchema
-} from '@/data/client/validation'
+import type { MemberRef } from '@/data/shared/members'
 
 import { transformSyncData } from './transform'
 
@@ -49,13 +52,14 @@ type Insert<T extends { $inferInsert: unknown }> = T['$inferInsert']
 
 /**
  * Transfer a departing member's generator assignments to the org admin,
- * then delete the membership.
+ * then delete the membership. The caller supplies the resolved `MemberRef`
+ * from the shared policy result, so this Postgres dialect of the side
+ * effect doesn't need a second `findMembership` round trip.
  */
 async function transferAssignmentsAndRemoveMember(
   db: Db,
   adminUserId: string,
-  member: { organizationId: string; userId: string },
-  memberId: string
+  member: MemberRef
 ) {
   const assignments = await db
     .select({ generatorId: generatorUserAssignments.generatorId })
@@ -93,7 +97,7 @@ async function transferAssignmentsAndRemoveMember(
 
   await db
     .delete(organizationMembers)
-    .where(eq(organizationMembers.id, memberId))
+    .where(eq(organizationMembers.id, member.id))
 }
 
 // ── Per-table handlers ───────────────────────────────────────────────────────
@@ -196,31 +200,45 @@ export async function handleOrganizationMembers(
   }
 
   if (op === 'delete') {
+    const checks = createServerMemberChecks(db)
+
+    // Try the admin-removes-member path first. If the caller is the org
+    // admin, this resolves straight away with the member + adminUserId the
+    // side effect needs.
+    const remove = await checks.removeMember(userId, id)
+    if (remove.ok) {
+      await transferAssignmentsAndRemoveMember(
+        db,
+        remove.adminUserId,
+        remove.member
+      )
+      return ok
+    }
+    // Lost-ack replay: PowerSync resends the same delete whose ack was lost.
+    // Mirror `handleGenerators`'s `GENERATOR_NOT_FOUND → ok` and
+    // `handleGeneratorSessions`'s `SESSION_NOT_FOUND → ok` principle so the
+    // sync queue advances silently past an already-applied delete.
+    if (remove.code === 'MEMBER_NOT_FOUND') return ok
+
+    // Not authorized as admin. Fall back to the self-leave path. We need
+    // the organization id for `leaveOrganization`; fetch the member row
+    // directly here because `removeMember` doesn't expose it on failure.
     const member = await db.query.organizationMembers.findFirst({
       where: eq(organizationMembers.id, id),
       columns: { organizationId: true, userId: true }
     })
-    if (!member) return ok // already deleted
+    if (!member) return ok
+    // Not the caller's own membership — the admin-path rejection stands.
+    if (member.userId !== userId) return fail(remove.code)
 
-    // Admin removing a member
-    if (await authz.isOrgAdmin(userId, member.organizationId)) {
-      await transferAssignmentsAndRemoveMember(db, userId, member, id)
-      return ok
-    }
-
-    // Member leaving on their own
-    if (member.userId === userId) {
-      const org = await db.query.organizations.findFirst({
-        where: eq(organizations.id, member.organizationId),
-        columns: { adminUserId: true }
-      })
-      if (!org) return fail('Organization not found')
-
-      await transferAssignmentsAndRemoveMember(db, org.adminUserId, member, id)
-      return ok
-    }
-
-    return fail('Not authorized to remove members')
+    const leave = await checks.leaveOrganization(userId, member.organizationId)
+    if (!leave.ok) return fail(leave.code)
+    await transferAssignmentsAndRemoveMember(
+      db,
+      leave.adminUserId,
+      leave.member
+    )
+    return ok
   }
 
   return fail('Invalid operation on organization_members')
@@ -230,13 +248,24 @@ export async function handleInvitations(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, userEmail, op, id, data } = ctx
-  const authz = createServerAuthz(db)
+  const checks = createServerInvitationChecks(db)
 
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof invitations>>(data)
     const orgId = values.organizationId as string
-    if (!(await authz.isOrgAdmin(userId, orgId)))
-      return fail('Only admin can create invitations')
+    const inviteeEmail = values.inviteeEmail as string
+
+    const result = await checks.createInvitation(userId, orgId, inviteeEmail)
+    if (!result.ok) {
+      // Lost-ack replay: PowerSync may resend an insert whose ack was lost
+      // on the wire. The (org, email) unique constraint means the replay
+      // trips `INVITATION_ALREADY_SENT`; treat that as a no-op success so
+      // the sync queue advances past the already-applied insert. The
+      // `onConflictDoNothing` on the row id below is the belt-and-braces
+      // guard if the replay's uuid happens to be the same.
+      if (result.code === 'INVITATION_ALREADY_SENT') return ok
+      return fail(result.code)
+    }
 
     await db
       .insert(invitations)
@@ -246,25 +275,25 @@ export async function handleInvitations(
   }
 
   if (op === 'delete') {
-    const invitation = await db.query.invitations.findFirst({
-      where: eq(invitations.id, id),
-      columns: { organizationId: true, inviteeEmail: true }
-    })
-    if (!invitation) return ok // already deleted
-
-    // Admin canceling
-    if (await authz.isOrgAdmin(userId, invitation.organizationId)) {
+    // Server accepts a delete from either an admin (cancel) or the invitee
+    // (decline). Try cancel first — if the caller isn't the admin, fall
+    // back to the decline path. Both branches ultimately DELETE the same
+    // row, so whichever check approves is enough.
+    const cancel = await checks.cancelInvitation(userId, id)
+    if (cancel.ok) {
       await db.delete(invitations).where(eq(invitations.id, id))
       return ok
     }
+    // Lost-ack replay: PowerSync resends the same delete whose ack was
+    // lost. Mirror `handleGenerators`'s `GENERATOR_NOT_FOUND → ok` and
+    // `handleGeneratorSessions`'s `SESSION_NOT_FOUND → ok` principle.
+    if (cancel.code === 'INVITATION_NOT_FOUND') return ok
 
-    // Invitee declining (email match)
-    if (invitation.inviteeEmail.toLowerCase() === userEmail.toLowerCase()) {
-      await db.delete(invitations).where(eq(invitations.id, id))
-      return ok
-    }
+    const decline = await checks.declineInvitation(userEmail, id)
+    if (!decline.ok) return fail(decline.code)
 
-    return fail('Not authorized to delete this invitation')
+    await db.delete(invitations).where(eq(invitations.id, id))
+    return ok
   }
 
   return fail('Invalid operation on invitations')
