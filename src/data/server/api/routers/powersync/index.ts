@@ -5,18 +5,7 @@ import { z } from 'zod'
 import { env } from '@/env'
 
 import { protectedProcedure } from '../../orpc'
-import {
-  handleGeneratorSessions,
-  handleGeneratorUserAssignments,
-  handleGenerators,
-  handleInvitations,
-  handleMaintenanceRecords,
-  handleMaintenanceTemplates,
-  handleOrganizationMembers,
-  handleOrganizations,
-  handleUser,
-  type WriteContext
-} from './handlers'
+import { tableHandlers, type WriteContext } from './handlers'
 
 const SECRET = new TextEncoder().encode(env.POWERSYNC_PRIVATE_KEY)
 
@@ -84,31 +73,13 @@ export const powersyncRouter = {
       }
 
       try {
-        switch (input.table) {
-          case 'user':
-            return handleUser(wctx)
-          case 'organizations':
-            return handleOrganizations(wctx)
-          case 'organization_members':
-            return handleOrganizationMembers(wctx)
-          case 'invitations':
-            return handleInvitations(wctx)
-          case 'generators':
-            return handleGenerators(wctx)
-          case 'generator_user_assignments':
-            return handleGeneratorUserAssignments(wctx)
-          case 'generator_sessions':
-            return handleGeneratorSessions(wctx)
-          case 'maintenance_templates':
-            return handleMaintenanceTemplates(wctx)
-          case 'maintenance_records':
-            return handleMaintenanceRecords(wctx)
-          default:
-            return {
-              ok: false as const,
-              error: `Unhandled table: ${input.table}`
-            }
-        }
+        const handler = tableHandlers[input.table]
+        if (!handler)
+          return {
+            ok: false as const,
+            error: `Unhandled table: ${input.table}`
+          }
+        return handler(wctx)
       } catch (error) {
         // Constraint/trigger violations are expected rejections (not bugs).
         // Return structured info so the connector can log them with context.
