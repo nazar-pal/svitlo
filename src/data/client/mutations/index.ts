@@ -1,5 +1,6 @@
 export * from './helpers'
 export * from './organizations'
+export * from './invitations'
 export * from './generators'
 export * from './sessions'
 export * from './maintenance'

@@ -5,6 +5,7 @@ import {
   organizationMembers,
   organizations,
   type Invitation,
+  type Organization,
   type OrganizationMember
 } from '../db-schema'
 import { db } from '@/lib/powersync/database'
@@ -48,6 +49,17 @@ export function getInvitationsByEmail(email: string) {
 }
 
 // ── Row form (awaited, for mutations) ───────────────────────────────────────
+
+export async function getOrganizationById(
+  id: string
+): Promise<Organization | null> {
+  const [row] = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.id, id))
+    .limit(1)
+  return row ?? null
+}
 
 export async function getOrganizationAdminUserId(
   id: string

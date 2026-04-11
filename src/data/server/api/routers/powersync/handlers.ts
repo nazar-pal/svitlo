@@ -22,6 +22,7 @@ import { createServerGeneratorChecks } from '@/data/server/generators'
 import { createServerInvitationChecks } from '@/data/server/invitations'
 import { createServerMaintenanceChecks } from '@/data/server/maintenance'
 import { createServerMemberChecks } from '@/data/server/members'
+import { createServerOrganizationChecks } from '@/data/server/organizations'
 import { createServerSessionChecks } from '@/data/server/sessions'
 import type { MemberRef } from '@/data/shared/members'
 
@@ -125,7 +126,8 @@ export async function handleOrganizations(
   ctx: WriteContext
 ): Promise<MutationResult> {
   const { db, userId, op, id, data } = ctx
-  const authz = createServerAuthz(db)
+  const checks = createServerOrganizationChecks(db)
+
   if (op === 'insert') {
     const values = transformSyncData<Insert<typeof organizations>>(data)
     await db
@@ -136,8 +138,16 @@ export async function handleOrganizations(
   }
 
   if (op === 'update') {
-    if (!(await authz.isOrgAdmin(userId, id)))
-      return fail('Only admin can update organization')
+    const result = await checks.renameOrganization(userId, id)
+    if (!result.ok) {
+      // Lost-ack replay: if the org was already deleted on the server, a
+      // replayed update should land as a silent no-op so the sync queue
+      // advances past the already-applied delete instead of recording a
+      // spurious rejection. Mirrors `handleGenerators`'
+      // `GENERATOR_NOT_FOUND → ok` principle.
+      if (result.code === 'ORGANIZATION_NOT_FOUND') return ok
+      return fail(result.code)
+    }
 
     const fields: Record<string, unknown> = {}
     if (typeof data.name === 'string') fields.name = data.name
@@ -149,8 +159,19 @@ export async function handleOrganizations(
   }
 
   if (op === 'delete') {
-    if (!(await authz.isOrgAdmin(userId, id)))
-      return fail('Only admin can delete organization')
+    const result = await checks.deleteOrganization(userId, id)
+    if (!result.ok) {
+      // Same lost-ack replay handling as the update branch above.
+      if (result.code === 'ORGANIZATION_NOT_FOUND') return ok
+      return fail(result.code)
+    }
+
+    // Postgres FK constraints (`onDelete: 'cascade'` on
+    // `generators.organizationId`, `organizationMembers.organizationId`,
+    // `invitations.organizationId`, plus the maintenance chains below
+    // `generators`) handle the cascade automatically — the client cascade
+    // walk in the matching mutation is only needed because SQLite has no
+    // FK constraints.
     await db.delete(organizations).where(eq(organizations.id, id))
     return ok
   }

@@ -1,13 +1,10 @@
 import { eq } from 'drizzle-orm'
 
-import { isOrgAdmin } from '@/data/client/authz'
-import { invitations, organizations } from '@/data/client/db-schema'
-import { invitationLifecycleChecks } from '@/data/client/invitations'
+import { organizations } from '@/data/client/db-schema'
+import { organizationLifecycleChecks } from '@/data/client/organizations'
 import {
-  insertInvitationSchema,
   insertOrganizationSchema,
   updateOrganizationSchema,
-  type InsertInvitationInput,
   type InsertOrganizationInput,
   type UpdateOrganizationInput
 } from '@/data/client/validation'
@@ -33,84 +30,6 @@ export async function createOrganization(
   return ok
 }
 
-export async function createInvitation(
-  userId: string,
-  input: InsertInvitationInput
-): Promise<MutationResult> {
-  const parsed = insertInvitationSchema.safeParse(input)
-  if (!parsed.success) return failFromZod(parsed.error)
-
-  const check = await invitationLifecycleChecks.createInvitation(
-    userId,
-    parsed.data.organizationId,
-    parsed.data.inviteeEmail
-  )
-  if (!check.ok) return fail(check.code)
-
-  await db.insert(invitations).values({
-    id: newId(),
-    organizationId: parsed.data.organizationId,
-    inviteeEmail: parsed.data.inviteeEmail,
-    invitedByUserId: userId,
-    createdAt: nowISO()
-  })
-
-  return ok
-}
-
-export async function acceptInvitation(
-  userId: string,
-  userEmail: string,
-  invitationId: string
-): Promise<MutationResult> {
-  const check = await invitationLifecycleChecks.acceptInvitation(
-    userId,
-    userEmail,
-    invitationId
-  )
-  if (!check.ok) return fail(check.code)
-
-  await powersync.writeTransaction(async tx => {
-    await tx.execute(
-      'INSERT INTO organization_members (id, organization_id, user_id, joined_at) VALUES (?, ?, ?, ?)',
-      [newId(), check.invitation.organizationId, userId, nowISO()]
-    )
-    await tx.execute('DELETE FROM invitations WHERE id = ?', [invitationId])
-  })
-
-  return ok
-}
-
-export async function declineInvitation(
-  userEmail: string,
-  invitationId: string
-): Promise<MutationResult> {
-  const check = await invitationLifecycleChecks.declineInvitation(
-    userEmail,
-    invitationId
-  )
-  if (!check.ok) return fail(check.code)
-
-  await db.delete(invitations).where(eq(invitations.id, invitationId))
-
-  return ok
-}
-
-export async function cancelInvitation(
-  userId: string,
-  invitationId: string
-): Promise<MutationResult> {
-  const check = await invitationLifecycleChecks.cancelInvitation(
-    userId,
-    invitationId
-  )
-  if (!check.ok) return fail(check.code)
-
-  await db.delete(invitations).where(eq(invitations.id, invitationId))
-
-  return ok
-}
-
 export async function renameOrganization(
   userId: string,
   orgId: string,
@@ -119,8 +38,11 @@ export async function renameOrganization(
   const parsed = updateOrganizationSchema.safeParse(input)
   if (!parsed.success) return failFromZod(parsed.error)
 
-  if (!(await isOrgAdmin(userId, orgId)))
-    return fail('ONLY_ADMIN_CAN_RENAME_ORG')
+  const check = await organizationLifecycleChecks.renameOrganization(
+    userId,
+    orgId
+  )
+  if (!check.ok) return fail(check.code)
 
   await db
     .update(organizations)
@@ -134,11 +56,18 @@ export async function deleteOrganization(
   userId: string,
   orgId: string
 ): Promise<MutationResult> {
-  if (!(await isOrgAdmin(userId, orgId)))
-    return fail('ONLY_ADMIN_CAN_DELETE_ORG')
+  const check = await organizationLifecycleChecks.deleteOrganization(
+    userId,
+    orgId
+  )
+  if (!check.ok) return fail(check.code)
 
+  // Cascade delete is dialect-specific: client SQLite has no FK constraints,
+  // so we walk the relations leaves-first in a single write transaction. The
+  // server uses Postgres `onDelete: 'cascade'` on the foreign keys instead.
+  // Both paths keep the side effect in the dialect-specific layer rather
+  // than trying to share it from the shared policy module.
   await powersync.writeTransaction(async tx => {
-    // Cascade delete leaves-first (client SQLite has no FK constraints)
     await tx.execute(
       'DELETE FROM maintenance_records WHERE generator_id IN (SELECT id FROM generators WHERE organization_id = ?)',
       [orgId]
