@@ -1,13 +1,32 @@
-import { clientAuthzProvider } from '@/data/client/authz/provider'
-import { createAuthzChecks } from '@/data/shared/authz'
-import { createOrganizationLifecycleChecks } from '@/data/shared/organizations'
+import {
+  clientAuthzProvider,
+  createClientAuthzProvider
+} from '@/data/client/authz/provider'
+import { createAuthzChecks, type AuthzChecks } from '@/data/shared/authz'
+import {
+  createOrganizationLifecycleChecks,
+  type OrganizationLifecycleChecks
+} from '@/data/shared/organizations'
+import type { ClientDb } from '@/lib/powersync/database'
 
-import { clientOrganizationFactsProvider } from './provider'
+import {
+  clientOrganizationFactsProvider,
+  createClientOrganizationFactsProvider
+} from './provider'
 
-// Own AuthzChecks instance (not imported from `@/data/client/authz`) to
-// avoid a circular barrel dependency if this module is ever re-exported
-// from `@/data/client`. The provider is a module-level singleton so this
-// is cheap.
+export function createClientOrganizationLifecycleChecks(
+  db: ClientDb,
+  authz: AuthzChecks = createAuthzChecks(createClientAuthzProvider(db))
+): OrganizationLifecycleChecks {
+  return createOrganizationLifecycleChecks(
+    createClientOrganizationFactsProvider(db),
+    authz
+  )
+}
+
+// Singleton wrapper: uses the singleton facts + singleton authz, both of which
+// already defer `productionDb` access until method-call time. Kept until the
+// MutationContext refactor lands and all callers use the factory form.
 const authz = createAuthzChecks(clientAuthzProvider)
 
 export const organizationLifecycleChecks = createOrganizationLifecycleChecks(

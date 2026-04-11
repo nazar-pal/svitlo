@@ -1,13 +1,30 @@
-import { clientAuthzProvider } from '@/data/client/authz/provider'
-import { createAuthzChecks } from '@/data/shared/authz'
-import { createMaintenanceLifecycleChecks } from '@/data/shared/maintenance'
+import {
+  clientAuthzProvider,
+  createClientAuthzProvider
+} from '@/data/client/authz/provider'
+import { createAuthzChecks, type AuthzChecks } from '@/data/shared/authz'
+import {
+  createMaintenanceLifecycleChecks,
+  type MaintenanceLifecycleChecks
+} from '@/data/shared/maintenance'
+import type { ClientDb } from '@/lib/powersync/database'
 
-import { clientMaintenanceFactsProvider } from './provider'
+import {
+  clientMaintenanceFactsProvider,
+  createClientMaintenanceFactsProvider
+} from './provider'
 
-// Own AuthzChecks instance (not imported from `@/data/client/authz`) to
-// avoid a circular barrel dependency if this module is ever re-exported
-// from `@/data/client`. The provider is a module-level singleton so this
-// is cheap.
+export function createClientMaintenanceLifecycleChecks(
+  db: ClientDb,
+  authz: AuthzChecks = createAuthzChecks(createClientAuthzProvider(db))
+): MaintenanceLifecycleChecks {
+  return createMaintenanceLifecycleChecks(
+    createClientMaintenanceFactsProvider(db),
+    authz
+  )
+}
+
+// Singleton wrapper: see note in organizations/index.ts.
 const authz = createAuthzChecks(clientAuthzProvider)
 
 export const maintenanceLifecycleChecks = createMaintenanceLifecycleChecks(
