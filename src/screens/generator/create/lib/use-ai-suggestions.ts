@@ -13,16 +13,17 @@ interface UseAISuggestionsParams {
     maxConsecutiveRunHours: string | null
     requiredRestHours: string | null
   }) => void
-  onModeReset: () => void
 }
 
 interface UseAISuggestionsReturn {
+  mode: 'ai' | 'manual' | null
   isLoading: boolean
   sources: string[]
   modelInfo: string
   isGeneric: boolean
   items: EditableItem[]
-  trigger: (model: string, description: string) => void
+  enterAIMode: (model: string, description: string) => void
+  enterManualMode: () => void
   cancel: () => void
   addEmptyItem: () => void
   updateItem: (index: number, update: Partial<EditableItem>) => void
@@ -30,10 +31,10 @@ interface UseAISuggestionsReturn {
 
 export function useAISuggestions({
   locale,
-  onApply,
-  onModeReset
+  onApply
 }: UseAISuggestionsParams): UseAISuggestionsReturn {
   const { t } = useTranslation()
+  const [mode, setMode] = useState<'ai' | 'manual' | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [sources, setSources] = useState<string[]>([])
   const [modelInfo, setModelInfo] = useState('')
@@ -41,13 +42,14 @@ export function useAISuggestions({
   const [items, setItems] = useState<EditableItem[]>([])
   const cancelledRef = useRef(false)
 
-  async function trigger(model: string, description: string) {
+  async function enterAIMode(model: string, description: string) {
     cancelledRef.current = false
+    setMode('ai')
 
     const networkState = await Network.getNetworkStateAsync()
     if (!networkState.isConnected || !networkState.isInternetReachable) {
       RNAlert.alert(t('aiSuggestions.offline'), t('aiSuggestions.offlineDesc'))
-      onModeReset()
+      setMode(null)
       return
     }
 
@@ -82,7 +84,7 @@ export function useAISuggestions({
     setIsLoading(false)
 
     if (!result) {
-      onModeReset()
+      setMode(null)
       return
     }
 
@@ -120,9 +122,14 @@ export function useAISuggestions({
     }
   }
 
+  function enterManualMode() {
+    setMode('manual')
+  }
+
   function cancel() {
     cancelledRef.current = true
     setIsLoading(false)
+    setMode(null)
   }
 
   function addEmptyItem() {
@@ -147,12 +154,14 @@ export function useAISuggestions({
   }
 
   return {
+    mode,
     isLoading,
     sources,
     modelInfo,
     isGeneric,
     items,
-    trigger,
+    enterAIMode,
+    enterManualMode,
     cancel,
     addEmptyItem,
     updateItem

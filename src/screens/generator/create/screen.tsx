@@ -32,7 +32,6 @@ import { useLocalUser } from '@/lib/powersync'
 import { useAISuggestions } from './lib/use-ai-suggestions'
 
 type Step = 'basics' | 'details'
-type Mode = 'ai' | 'manual' | null
 
 export default function CreateGeneratorScreen() {
   const { t, locale } = useTranslation()
@@ -40,7 +39,6 @@ export default function CreateGeneratorScreen() {
   const localUser = useLocalUser()
   const { selectedOrgId } = useSelectedOrg()
   const [step, setStep] = useState<Step>('basics')
-  const [mode, setMode] = useState<Mode>(null)
 
   const ai = useAISuggestions({
     locale,
@@ -49,8 +47,7 @@ export default function CreateGeneratorScreen() {
         form.set('maxConsecutiveRunHours', values.maxConsecutiveRunHours)
       if (values.requiredRestHours !== null)
         form.set('requiredRestHours', values.requiredRestHours)
-    },
-    onModeReset: () => setMode(null)
+    }
   })
 
   const { form, submit, formError, bind } = useForm({
@@ -108,20 +105,6 @@ export default function CreateGeneratorScreen() {
       return
     }
     setStep('details')
-  }
-
-  function handleAIMode() {
-    setMode('ai')
-    ai.trigger(form.values.model, form.values.description)
-  }
-
-  function handleCancelAI() {
-    setMode(null)
-    ai.cancel()
-  }
-
-  function handleManualMode() {
-    setMode('manual')
   }
 
   const titleBinding = bind.text('title')
@@ -231,9 +214,13 @@ export default function CreateGeneratorScreen() {
             {t('generator.configureDesc', { model: form.values.model })}
           </Text>
 
-          {mode === null ? (
+          {ai.mode === null ? (
             <View className="gap-3">
-              <PressableFeedback onPress={handleAIMode}>
+              <PressableFeedback
+                onPress={() =>
+                  ai.enterAIMode(form.values.model, form.values.description)
+                }
+              >
                 <Card>
                   <Card.Body>
                     <Card.Title>{t('generator.autoFillAI')}</Card.Title>
@@ -245,7 +232,7 @@ export default function CreateGeneratorScreen() {
               </PressableFeedback>
               <PressableFeedback
                 testID="create-gen-manual-mode"
-                onPress={handleManualMode}
+                onPress={ai.enterManualMode}
               >
                 <Card>
                   <Card.Body>
@@ -262,11 +249,11 @@ export default function CreateGeneratorScreen() {
           {ai.isLoading ? (
             <AiLoader
               label={t('generator.researching', { model: form.values.model })}
-              onCancel={handleCancelAI}
+              onCancel={ai.cancel}
             />
           ) : null}
 
-          {mode !== null && !ai.isLoading ? (
+          {ai.mode !== null && !ai.isLoading ? (
             <>
               <View className="gap-5">
                 <View className="flex-row gap-3">
