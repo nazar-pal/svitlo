@@ -54,7 +54,9 @@ describe('transferAssignmentsAndRemoveMember', () => {
   })
 
   it('passes correct params to reassignGeneratorAssignment', async () => {
-    const captured: Parameters<MemberWritePort['reassignGeneratorAssignment']>[0][] = []
+    const captured: Parameters<
+      MemberWritePort['reassignGeneratorAssignment']
+    >[0][] = []
     const port: MemberWritePort = {
       async listAssignmentsForMemberInOrg() {
         return [{ generatorId: 'gen-1' }]
