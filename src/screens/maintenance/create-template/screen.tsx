@@ -15,7 +15,7 @@ import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createMaintenanceTemplate } from '@/data/client/mutations'
-import { insertMaintenanceTemplateSchema } from '@/data/client/validation'
+import { insertMaintenanceTemplateSchema } from '@/data/shared/validation'
 import { selection } from '@/lib/haptics'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import {

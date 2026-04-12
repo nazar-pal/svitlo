@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import {
   insertGeneratorSchema,
   updateGeneratorSchema
-} from '@/data/client/validation'
+} from '@/data/shared/validation'
 import { generators } from '@/data/server/db-schema'
 
 import { replayShieldNotFound } from './replay'

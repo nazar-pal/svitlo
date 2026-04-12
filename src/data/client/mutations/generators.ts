@@ -8,7 +8,7 @@ import {
   type InsertGeneratorInput,
   type InsertMaintenanceTemplateInput,
   type UpdateGeneratorInput
-} from '@/data/client/validation'
+} from '@/data/shared/validation'
 import { failFromZod } from '@/data/shared/errors-from-zod'
 import { fail, ok, type MutationResult } from '@/data/shared/result'
 

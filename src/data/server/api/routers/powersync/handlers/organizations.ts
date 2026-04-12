@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { updateOrganizationSchema } from '@/data/client/validation'
+import { updateOrganizationSchema } from '@/data/shared/validation'
 import { organizations } from '@/data/server/db-schema'
 
 import { replayShieldNotFound } from './replay'

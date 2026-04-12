@@ -12,7 +12,7 @@ import { Pressable, Text, TextInput, View } from 'react-native'
 
 import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
-import { signInSchema, signUpSchema } from '@/data/client/validation'
+import { signInSchema, signUpSchema } from '@/data/shared/validation'
 import { fail, ok } from '@/data/shared/result'
 import { authClient } from '@/lib/auth/auth-client'
 import { type BuildResult, useForm, validateWithZod } from '@/lib/hooks/forms'

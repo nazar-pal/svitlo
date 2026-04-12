@@ -8,7 +8,7 @@ import { HeaderSubmitButton } from '@/components/navigation/header-submit-button
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { useCanCreateInvitation } from '@/data/client/invitations/policy-hooks'
 import { createInvitation } from '@/data/client/mutations'
-import { insertInvitationSchema } from '@/data/client/validation'
+import { insertInvitationSchema } from '@/data/shared/validation'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useLocalUser } from '@/lib/powersync'
 

@@ -6,7 +6,7 @@ import {
   updateOrganizationSchema,
   type InsertOrganizationInput,
   type UpdateOrganizationInput
-} from '@/data/client/validation'
+} from '@/data/shared/validation'
 import { failFromZod } from '@/data/shared/errors-from-zod'
 import { fail, ok, type MutationResult } from '@/data/shared/result'
 

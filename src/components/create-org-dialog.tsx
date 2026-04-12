@@ -13,7 +13,7 @@ import { BlurDialogOverlay } from '@/components/blur-dialog-overlay'
 import { FormError } from '@/components/form-error'
 
 import { createOrganization } from '@/data/client/mutations'
-import { insertOrganizationSchema } from '@/data/client/validation'
+import { insertOrganizationSchema } from '@/data/shared/validation'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useTranslation } from '@/lib/i18n'
 import { useLocalUser } from '@/lib/powersync'

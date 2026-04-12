@@ -8,7 +8,7 @@ import { HeaderSubmitButton } from '@/components/navigation/header-submit-button
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { renameOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
-import { updateOrganizationSchema } from '@/data/client/validation'
+import { updateOrganizationSchema } from '@/data/shared/validation'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'

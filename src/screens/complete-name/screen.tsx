@@ -3,7 +3,7 @@ import { Text, View } from 'react-native'
 
 import { FormError } from '@/components/form-error'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
-import { completeNameSchema } from '@/data/client/validation'
+import { completeNameSchema } from '@/data/shared/validation'
 import { fail, ok } from '@/data/shared/result'
 import { authClient } from '@/lib/auth/auth-client'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'

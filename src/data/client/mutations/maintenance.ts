@@ -11,7 +11,7 @@ import {
   type InsertMaintenanceRecordInput,
   type InsertMaintenanceTemplateInput,
   type UpdateMaintenanceTemplateInput
-} from '@/data/client/validation'
+} from '@/data/shared/validation'
 import { failFromZod } from '@/data/shared/errors-from-zod'
 import { fail, ok, type MutationResult } from '@/data/shared/result'
 

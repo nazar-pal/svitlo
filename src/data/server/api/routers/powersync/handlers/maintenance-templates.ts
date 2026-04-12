@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { updateMaintenanceTemplateSchema } from '@/data/client/validation'
+import { updateMaintenanceTemplateSchema } from '@/data/shared/validation'
 import { maintenanceTemplates } from '@/data/server/db-schema'
 
 import { replayShieldNotFound } from './replay'

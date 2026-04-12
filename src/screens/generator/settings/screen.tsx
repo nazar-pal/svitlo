@@ -26,7 +26,7 @@ import {
   getGeneratorAssignments,
   getOrgMembers
 } from '@/data/client/queries'
-import { updateGeneratorSchema } from '@/data/client/validation'
+import { updateGeneratorSchema } from '@/data/shared/validation'
 import { alertOnError } from '@/lib/alerts'
 import { notifySuccess, notifyWarning } from '@/lib/haptics'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'

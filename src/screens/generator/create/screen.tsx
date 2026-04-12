@@ -25,7 +25,7 @@ import { HeaderSubmitButton } from '@/components/navigation/header-submit-button
 import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
-import { insertGeneratorSchema } from '@/data/client/validation'
+import { insertGeneratorSchema } from '@/data/shared/validation'
 import { rpcClient } from '@/data/client/rpc-client'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'

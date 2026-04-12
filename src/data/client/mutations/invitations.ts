@@ -4,7 +4,7 @@ import { invitations, organizationMembers } from '@/data/client/db-schema'
 import {
   insertInvitationSchema,
   type InsertInvitationInput
-} from '@/data/client/validation'
+} from '@/data/shared/validation'
 import { failFromZod } from '@/data/shared/errors-from-zod'
 import { fail, ok, type MutationResult } from '@/data/shared/result'
 

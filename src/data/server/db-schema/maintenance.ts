@@ -11,17 +11,14 @@ import {
   uuid
 } from 'drizzle-orm/pg-core'
 
+import { TRIGGER_TYPES } from '@/lib/maintenance/trigger-type'
 import { user } from './auth'
 import { generators } from './generators'
 import { pgTimestamp, uuidId } from './utils'
 
 // ── Enums ───────────────────────────────────────────────────────────────────
 
-export const triggerTypeEnum = pgEnum('trigger_type', [
-  'hours',
-  'calendar',
-  'whichever_first'
-])
+export const triggerTypeEnum = pgEnum('trigger_type', [...TRIGGER_TYPES])
 
 // ── Maintenance Templates ───────────────────────────────────────────────────
 
