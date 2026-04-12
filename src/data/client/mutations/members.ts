@@ -5,72 +5,88 @@ import {
   generatorUserAssignments,
   organizationMembers
 } from '@/data/client/db-schema'
-import type { MemberRef } from '@/data/shared/members'
+import {
+  transferAssignmentsAndRemoveMember,
+  type MemberRef,
+  type MemberWritePort
+} from '@/data/shared/members'
 import { fail, ok, type MutationResult } from '@/data/shared/result'
+
+import type { ClientDb } from '@/lib/powersync/database'
 
 import type { MutationContext } from './context'
 
-export function createMemberMutations(ctx: MutationContext) {
-  /**
-   * Transfer every generator assignment the departing member has in the org
-   * to the org admin, then delete the membership row. Shared between
-   * removeMember (admin-initiated) and leaveOrganization (self-initiated) —
-   * per spec §4.5, both entry points must leave open sessions open and
-   * reassign orphaned generators to the admin. Rules live in
-   * `shared/members/policy.ts`; this helper only handles the SQLite I/O.
-   */
-  async function transferAssignmentsAndRemove(
-    member: MemberRef,
-    adminUserId: string
-  ) {
-    const assignments = await ctx.db
-      .select({
-        assignmentId: generatorUserAssignments.id,
-        generatorId: generatorUserAssignments.generatorId
-      })
-      .from(generatorUserAssignments)
-      .innerJoin(
-        generators,
-        eq(generatorUserAssignments.generatorId, generators.id)
-      )
-      .where(
-        and(
-          eq(generatorUserAssignments.userId, member.userId),
-          eq(generators.organizationId, member.organizationId)
+function createClientMemberWritePort(
+  tx: ClientDb,
+  ctx: Pick<MutationContext, 'newId'>
+): MemberWritePort {
+  return {
+    async listAssignmentsForMemberInOrg(userId, organizationId) {
+      return tx
+        .select({ generatorId: generatorUserAssignments.generatorId })
+        .from(generatorUserAssignments)
+        .innerJoin(
+          generators,
+          eq(generatorUserAssignments.generatorId, generators.id)
         )
-      )
-
-    await ctx.writeTx(async tx => {
-      for (const a of assignments) {
-        await tx
-          .delete(generatorUserAssignments)
-          .where(eq(generatorUserAssignments.id, a.assignmentId))
-
-        const existing = await tx
-          .select({ id: generatorUserAssignments.id })
-          .from(generatorUserAssignments)
-          .where(
-            and(
-              eq(generatorUserAssignments.generatorId, a.generatorId),
-              eq(generatorUserAssignments.userId, adminUserId)
-            )
+        .where(
+          and(
+            eq(generatorUserAssignments.userId, userId),
+            eq(generators.organizationId, organizationId)
           )
-          .limit(1)
-          .get()
+        )
+    },
+    async reassignGeneratorAssignment({
+      generatorId,
+      fromUserId,
+      toUserId,
+      assignedAt
+    }) {
+      await tx
+        .delete(generatorUserAssignments)
+        .where(
+          and(
+            eq(generatorUserAssignments.generatorId, generatorId),
+            eq(generatorUserAssignments.userId, fromUserId)
+          )
+        )
 
-        if (!existing) {
-          await tx.insert(generatorUserAssignments).values({
-            id: ctx.newId(),
-            generatorId: a.generatorId,
-            userId: adminUserId,
-            assignedAt: ctx.now().toISOString()
-          })
-        }
+      const existing = await tx
+        .select({ id: generatorUserAssignments.id })
+        .from(generatorUserAssignments)
+        .where(
+          and(
+            eq(generatorUserAssignments.generatorId, generatorId),
+            eq(generatorUserAssignments.userId, toUserId)
+          )
+        )
+        .limit(1)
+        .get()
+
+      if (!existing) {
+        await tx.insert(generatorUserAssignments).values({
+          id: ctx.newId(),
+          generatorId,
+          userId: toUserId,
+          assignedAt: assignedAt.toISOString()
+        })
       }
-
+    },
+    async deleteMembership(membershipId) {
       await tx
         .delete(organizationMembers)
-        .where(eq(organizationMembers.id, member.id))
+        .where(eq(organizationMembers.id, membershipId))
+    }
+  }
+}
+
+export function createMemberMutations(ctx: MutationContext) {
+  async function runRemoval(member: MemberRef, adminUserId: string) {
+    await ctx.writeTx(async tx => {
+      await transferAssignmentsAndRemoveMember(
+        createClientMemberWritePort(tx, ctx),
+        { member, adminUserId, now: ctx.now() }
+      )
     })
   }
 
@@ -81,7 +97,7 @@ export function createMemberMutations(ctx: MutationContext) {
     ): Promise<MutationResult> {
       const check = await ctx.checks.members.removeMember(adminUserId, memberId)
       if (!check.ok) return fail(check.code)
-      await transferAssignmentsAndRemove(check.member, check.adminUserId)
+      await runRemoval(check.member, check.adminUserId)
       return ok
     },
 
@@ -91,7 +107,7 @@ export function createMemberMutations(ctx: MutationContext) {
     ): Promise<MutationResult> {
       const check = await ctx.checks.members.leaveOrganization(userId, orgId)
       if (!check.ok) return fail(check.code)
-      await transferAssignmentsAndRemove(check.member, check.adminUserId)
+      await runRemoval(check.member, check.adminUserId)
       return ok
     }
   }

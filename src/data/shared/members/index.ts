@@ -5,3 +5,7 @@ export {
 } from './checks'
 export type { LeaveOrganizationResult, RemoveMemberResult } from './policy'
 export type { MemberFactsProvider, MemberRef, OrgAdminRef } from './facts'
+export {
+  transferAssignmentsAndRemoveMember,
+  type MemberWritePort
+} from './side-effects'

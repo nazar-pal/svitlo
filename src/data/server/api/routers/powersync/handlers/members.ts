@@ -7,61 +7,57 @@ import {
   organizationMembers
 } from '@/data/server/db-schema'
 import { createServerAuthz } from '@/data/server/authz'
-import type { MemberRef } from '@/data/shared/members'
+import {
+  transferAssignmentsAndRemoveMember,
+  type MemberWritePort
+} from '@/data/shared/members'
 
 import { replayShieldNotFound } from './replay'
 import { transformSyncData } from '../transform'
 import { fail, ok, type Db, type Insert, type TableHandler } from './types'
 
-/**
- * Transfer a departing member's generator assignments to the org admin,
- * then delete the membership. The caller supplies the resolved `MemberRef`
- * from the shared policy result, so this Postgres dialect of the side
- * effect doesn't need a second `findMembership` round trip.
- */
-async function transferAssignmentsAndRemoveMember(
-  db: Db,
-  adminUserId: string,
-  member: MemberRef,
-  now: Date
-) {
-  const assignments = await db
-    .select({ generatorId: generatorUserAssignments.generatorId })
-    .from(generatorUserAssignments)
-    .innerJoin(
-      generators,
-      eq(generatorUserAssignments.generatorId, generators.id)
-    )
-    .where(
-      and(
-        eq(generatorUserAssignments.userId, member.userId),
-        eq(generators.organizationId, member.organizationId)
-      )
-    )
-
-  for (const a of assignments) {
-    await db
-      .delete(generatorUserAssignments)
-      .where(
-        and(
-          eq(generatorUserAssignments.generatorId, a.generatorId),
-          eq(generatorUserAssignments.userId, member.userId)
+function createServerMemberWritePort(db: Db): MemberWritePort {
+  return {
+    async listAssignmentsForMemberInOrg(userId, organizationId) {
+      return db
+        .select({ generatorId: generatorUserAssignments.generatorId })
+        .from(generatorUserAssignments)
+        .innerJoin(
+          generators,
+          eq(generatorUserAssignments.generatorId, generators.id)
         )
-      )
-
-    await db
-      .insert(generatorUserAssignments)
-      .values({
-        generatorId: a.generatorId,
-        userId: adminUserId,
-        assignedAt: now
-      })
-      .onConflictDoNothing()
+        .where(
+          and(
+            eq(generatorUserAssignments.userId, userId),
+            eq(generators.organizationId, organizationId)
+          )
+        )
+    },
+    async reassignGeneratorAssignment({
+      generatorId,
+      fromUserId,
+      toUserId,
+      assignedAt
+    }) {
+      await db
+        .delete(generatorUserAssignments)
+        .where(
+          and(
+            eq(generatorUserAssignments.generatorId, generatorId),
+            eq(generatorUserAssignments.userId, fromUserId)
+          )
+        )
+      await db
+        .insert(generatorUserAssignments)
+        .values({ generatorId, userId: toUserId, assignedAt })
+        .onConflictDoNothing()
+    },
+    async deleteMembership(membershipId) {
+      await db
+        .delete(organizationMembers)
+        .where(eq(organizationMembers.id, membershipId))
+    }
   }
-
-  await db
-    .delete(organizationMembers)
-    .where(eq(organizationMembers.id, member.id))
 }
 
 export const handleOrganizationMembers: TableHandler = async ctx => {
@@ -105,6 +101,7 @@ export const handleOrganizationMembers: TableHandler = async ctx => {
 
   if (op === 'delete') {
     const checks = ctx.checks.members
+    const port = createServerMemberWritePort(db)
 
     // Try the admin-removes-member path first. If the caller is the org
     // admin, this resolves straight away with the member + adminUserId the
@@ -114,12 +111,11 @@ export const handleOrganizationMembers: TableHandler = async ctx => {
       'MEMBER_NOT_FOUND'
     )
     if (remove.status === 'ok') {
-      await transferAssignmentsAndRemoveMember(
-        db,
-        remove.data.adminUserId,
-        remove.data.member,
-        ctx.now()
-      )
+      await transferAssignmentsAndRemoveMember(port, {
+        member: remove.data.member,
+        adminUserId: remove.data.adminUserId,
+        now: ctx.now()
+      })
       return ok
     }
     // Replay path: row already gone, sync queue should advance silently.
@@ -137,12 +133,11 @@ export const handleOrganizationMembers: TableHandler = async ctx => {
 
     const leave = await checks.leaveOrganization(userId, member.organizationId)
     if (!leave.ok) return fail(leave.code)
-    await transferAssignmentsAndRemoveMember(
-      db,
-      leave.adminUserId,
-      leave.member,
-      ctx.now()
-    )
+    await transferAssignmentsAndRemoveMember(port, {
+      member: leave.member,
+      adminUserId: leave.adminUserId,
+      now: ctx.now()
+    })
     return ok
   }
 
