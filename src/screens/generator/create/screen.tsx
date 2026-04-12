@@ -1,6 +1,5 @@
 import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
-import * as Network from 'expo-network'
 import { Stack, useRouter } from 'expo-router'
 import {
   Alert,
@@ -13,8 +12,8 @@ import {
   PressableFeedback,
   TextField
 } from 'heroui-native'
-import { useRef, useState } from 'react'
-import { Alert as RNAlert, Text, View } from 'react-native'
+import { useState } from 'react'
+import { Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { useTranslation } from '@/lib/i18n'
@@ -22,14 +21,15 @@ import { AiLoader } from '@/components/ai-loader'
 import { AiSourcesList } from '@/components/ai-sources-list'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
-import { SuggestionCard, type EditableItem } from '@/components/suggestion-card'
+import { SuggestionCard } from '@/components/suggestion-card'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
 import { insertGeneratorSchema } from '@/data/shared/validation'
-import { rpcClient } from '@/data/client/rpc-client'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useLocalUser } from '@/lib/powersync'
+
+import { useAISuggestions } from './lib/use-ai-suggestions'
 
 type Step = 'basics' | 'details'
 type Mode = 'ai' | 'manual' | null
@@ -42,13 +42,16 @@ export default function CreateGeneratorScreen() {
   const [step, setStep] = useState<Step>('basics')
   const [mode, setMode] = useState<Mode>(null)
 
-  const [maintenanceItems, setMaintenanceItems] = useState<EditableItem[]>([])
-  const [isLoadingAI, setIsLoadingAI] = useState(false)
-  const [aiSources, setAiSources] = useState<string[]>([])
-  const [aiModelInfo, setAiModelInfo] = useState('')
-  const [aiIsGeneric, setAiIsGeneric] = useState(false)
-
-  const cancelledRef = useRef(false)
+  const ai = useAISuggestions({
+    locale,
+    onApply: values => {
+      if (values.maxConsecutiveRunHours !== null)
+        form.set('maxConsecutiveRunHours', values.maxConsecutiveRunHours)
+      if (values.requiredRestHours !== null)
+        form.set('requiredRestHours', values.requiredRestHours)
+    },
+    onModeReset: () => setMode(null)
+  })
 
   const { form, submit, formError, bind } = useForm({
     initial: {
@@ -77,7 +80,7 @@ export default function CreateGeneratorScreen() {
       }
     },
     mutate: ({ userId, generatorInput }) => {
-      const maintenanceInputs = maintenanceItems
+      const maintenanceInputs = ai.items
         .filter(i => i.selected && i.taskName.trim())
         .map(item => ({
           taskName: item.taskName,
@@ -107,114 +110,18 @@ export default function CreateGeneratorScreen() {
     setStep('details')
   }
 
-  async function handleAIMode() {
-    cancelledRef.current = false
+  function handleAIMode() {
     setMode('ai')
-
-    const networkState = await Network.getNetworkStateAsync()
-    if (!networkState.isConnected || !networkState.isInternetReachable) {
-      RNAlert.alert(t('aiSuggestions.offline'), t('aiSuggestions.offlineDesc'))
-      setMode(null)
-      return
-    }
-
-    setIsLoadingAI(true)
-    setAiIsGeneric(false)
-    let timer: ReturnType<typeof setTimeout>
-
-    const result = await Promise.race([
-      rpcClient.ai.suggestMaintenancePlan({
-        generatorModel: form.values.model,
-        description: form.values.description || undefined,
-        locale
-      }),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error(t('aiSuggestions.timeout'))),
-          45_000
-        )
-      })
-    ])
-      .finally(() => clearTimeout(timer))
-      .catch((err: unknown) => {
-        if (cancelledRef.current) return null
-        RNAlert.alert(
-          t('common.error'),
-          err instanceof Error ? err.message : t('aiSuggestions.failedToGet')
-        )
-        return null
-      })
-
-    if (cancelledRef.current) return
-    setIsLoadingAI(false)
-
-    if (!result) {
-      setMode(null)
-      return
-    }
-
-    const suggestion = result
-
-    function applyResult() {
-      if (suggestion.maxConsecutiveRunHours != null)
-        form.set(
-          'maxConsecutiveRunHours',
-          String(suggestion.maxConsecutiveRunHours)
-        )
-      if (suggestion.requiredRestHours != null)
-        form.set('requiredRestHours', String(suggestion.requiredRestHours))
-
-      setAiSources(suggestion.sources)
-      setAiModelInfo(suggestion.modelInfo)
-      setAiIsGeneric(suggestion.isGeneric)
-      setMaintenanceItems(
-        suggestion.tasks.map(task => ({ ...task, selected: true }))
-      )
-    }
-
-    if (suggestion.isGeneric) {
-      RNAlert.alert(
-        t('aiSuggestions.genericTitle'),
-        t('aiSuggestions.genericPrompt'),
-        [
-          { text: t('aiSuggestions.noThanks'), style: 'cancel' },
-          { text: t('aiSuggestions.useTemplate'), onPress: applyResult }
-        ]
-      )
-    } else {
-      applyResult()
-    }
+    ai.trigger(form.values.model, form.values.description)
   }
 
   function handleCancelAI() {
-    cancelledRef.current = true
-    setIsLoadingAI(false)
     setMode(null)
+    ai.cancel()
   }
 
   function handleManualMode() {
     setMode('manual')
-  }
-
-  function addEmptyMaintenanceItem() {
-    setMaintenanceItems(prev => [
-      ...prev,
-      {
-        taskName: '',
-        description: '',
-        triggerType: 'hours',
-        triggerHoursInterval: null,
-        triggerCalendarDays: null,
-        isOneTime: false,
-        selected: true
-      }
-    ])
-  }
-
-  function updateItem(index: number, update: Partial<EditableItem>) {
-    setMaintenanceItems(prev =>
-      prev.map((item, i) => (i === index ? { ...item, ...update } : item))
-    )
   }
 
   const titleBinding = bind.text('title')
@@ -352,14 +259,14 @@ export default function CreateGeneratorScreen() {
             </View>
           ) : null}
 
-          {isLoadingAI ? (
+          {ai.isLoading ? (
             <AiLoader
               label={t('generator.researching', { model: form.values.model })}
               onCancel={handleCancelAI}
             />
           ) : null}
 
-          {mode !== null && !isLoadingAI ? (
+          {mode !== null && !ai.isLoading ? (
             <>
               <View className="gap-5">
                 <View className="flex-row gap-3">
@@ -404,7 +311,7 @@ export default function CreateGeneratorScreen() {
                 </TextField>
               </View>
 
-              {aiIsGeneric ? (
+              {ai.isGeneric ? (
                 <Alert status="warning">
                   <Alert.Indicator />
                   <Alert.Content>
@@ -415,32 +322,32 @@ export default function CreateGeneratorScreen() {
                 </Alert>
               ) : null}
 
-              {maintenanceItems.length > 0 ? (
+              {ai.items.length > 0 ? (
                 <View className="gap-2">
                   <Text className="text-foreground text-lg font-semibold">
                     {t('generator.maintenanceTasks')}
                   </Text>
-                  {aiModelInfo ? (
-                    <Text className="text-muted text-xs">{aiModelInfo}</Text>
+                  {ai.modelInfo ? (
+                    <Text className="text-muted text-xs">{ai.modelInfo}</Text>
                   ) : null}
-                  {maintenanceItems.map((item, index) => (
+                  {ai.items.map((item, index) => (
                     <SuggestionCard
                       key={index}
                       item={item}
                       onToggle={() =>
-                        updateItem(index, { selected: !item.selected })
+                        ai.updateItem(index, { selected: !item.selected })
                       }
-                      onUpdate={update => updateItem(index, update)}
+                      onUpdate={update => ai.updateItem(index, update)}
                     />
                   ))}
                 </View>
               ) : null}
 
-              <Button variant="secondary" onPress={addEmptyMaintenanceItem}>
+              <Button variant="secondary" onPress={ai.addEmptyItem}>
                 {t('generator.addMaintenanceTask')}
               </Button>
 
-              <AiSourcesList sources={aiSources} />
+              <AiSourcesList sources={ai.sources} />
 
               <FormError message={formError} />
             </>
