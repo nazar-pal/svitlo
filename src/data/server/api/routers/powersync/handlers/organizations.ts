@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 
+import { updateOrganizationSchema } from '@/data/client/validation'
 import { organizations } from '@/data/server/db-schema'
 
 import { replayShieldNotFound } from './replay'
@@ -26,8 +27,12 @@ export const handleOrganizations: TableHandler = async ctx => {
     )
     if (shielded.status === 'consume') return shielded.result
 
-    const fields: Record<string, unknown> = {}
-    if (typeof data.name === 'string') fields.name = data.name
+    const parsed = updateOrganizationSchema.safeParse(
+      transformSyncData<Partial<Insert<typeof organizations>>>(data)
+    )
+    if (!parsed.success)
+      return fail(`Invalid organization update: ${parsed.error.message}`)
+    const fields = parsed.data
 
     if (Object.keys(fields).length > 0)
       await db.update(organizations).set(fields).where(eq(organizations.id, id))

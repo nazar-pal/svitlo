@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 
+import { updateMaintenanceTemplateSchema } from '@/data/client/validation'
 import { maintenanceTemplates } from '@/data/server/db-schema'
 
 import { replayShieldNotFound } from './replay'
@@ -25,23 +26,25 @@ export const handleMaintenanceTemplates: TableHandler = async ctx => {
   }
 
   if (op === 'update') {
-    const fields =
+    const transformed =
       transformSyncData<Partial<Insert<typeof maintenanceTemplates>>>(data)
+    const parsed = updateMaintenanceTemplateSchema.safeParse(transformed)
+    if (!parsed.success)
+      return fail(
+        `Invalid maintenance template update: ${parsed.error.message}`
+      )
 
-    // The shared check fetches the template and runs the companion-field
-    // merging itself — pass only the trigger-related keys through so it can
-    // make the merge decision. Unknown keys are dropped.
     const result = await checks.updateTemplate(userId, id, {
-      triggerType: fields.triggerType,
-      triggerHoursInterval: fields.triggerHoursInterval,
-      triggerCalendarDays: fields.triggerCalendarDays
+      triggerType: parsed.data.triggerType,
+      triggerHoursInterval: parsed.data.triggerHoursInterval,
+      triggerCalendarDays: parsed.data.triggerCalendarDays
     })
     if (!result.ok) return fail(result.code)
 
-    if (Object.keys(fields).length > 0)
+    if (Object.keys(parsed.data).length > 0)
       await db
         .update(maintenanceTemplates)
-        .set(fields)
+        .set(parsed.data)
         .where(eq(maintenanceTemplates.id, id))
 
     return ok

@@ -54,7 +54,7 @@ describe('handleOrganizations', () => {
     expect(row!.adminUserId).toBe(IDS.admin)
   })
 
-  it('update no-ops when no whitelisted fields', async () => {
+  it('rejects update with no whitelisted fields', async () => {
     const result = await handleOrganizations(
       fixture.makeCtx({
         op: 'update',
@@ -62,7 +62,7 @@ describe('handleOrganizations', () => {
         data: { admin_user_id: IDS.outsider }
       })
     )
-    expect(result.ok).toBe(true)
+    expect(result.ok).toBe(false)
     const row = await fixture.testDb.db.query.organizations.findFirst({
       where: eq(organizations.id, IDS.org)
     })

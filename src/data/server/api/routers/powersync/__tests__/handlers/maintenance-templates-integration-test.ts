@@ -113,12 +113,12 @@ describe('handleMaintenanceTemplates', () => {
     expect(row!.taskName).not.toBe('Hacked')
   })
 
-  it('update: no-ops with empty data', async () => {
+  it('update: rejects empty data', async () => {
     await seedTemplate(fixture.testDb.db)
     const result = await handleMaintenanceTemplates(
       fixture.makeCtx({ op: 'update', id: IDS.template, data: {} })
     )
-    expect(result.ok).toBe(true)
+    expect(result.ok).toBe(false)
   })
 
   it('delete: admin deletes', async () => {
