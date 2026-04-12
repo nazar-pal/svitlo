@@ -2,6 +2,11 @@ import { EmptyState } from '@/components/empty-state'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { SectionHeader } from '@/components/section-header'
 import { useTranslation } from '@/lib/i18n'
+import {
+  useCanCancelInvitation,
+  useCanCreateInvitation
+} from '@/data/client/invitations/policy-hooks'
+import { useCanRemoveMember } from '@/data/client/members/policy-hooks'
 import { cancelInvitation, removeMember } from '@/data/client/mutations'
 import {
   getAllUsers,
@@ -26,7 +31,11 @@ import {
 } from 'heroui-native'
 import { Alert, ScrollView, View } from 'react-native'
 
-import { buildMemberList } from './lib/build-member-list'
+import {
+  buildMemberList,
+  type MemberListInvitation,
+  type MemberListPerson
+} from './lib/build-member-list'
 
 export default function MembersScreen() {
   const { selectedOrgId } = useSelectedOrg()
@@ -43,6 +52,10 @@ export default function MembersScreen() {
     selectedOrgId ? getOrganization(selectedOrgId) : undefined
   )
   const org = orgData[0]
+  // Pending-invitations section gate — a direct admin check is enough here
+  // because non-admins shouldn't see the section at all. The per-row Remove /
+  // Cancel affordances use reactive policy hooks instead.
+  const canManageOrg = org?.adminUserId === userId
 
   // Organization members
   const { data: members } = useDrizzleQuery(
@@ -57,7 +70,9 @@ export default function MembersScreen() {
   // All users for resolving names
   const { data: users } = useDrizzleQuery(getAllUsers())
 
-  const isAdmin = org?.adminUserId === userId
+  const createInvitePolicy = useCanCreateInvitation(userId, selectedOrgId)
+  const canInvite =
+    createInvitePolicy.status === 'ready' && createInvitePolicy.ok
 
   function getUserInfo(uid: string) {
     return {
@@ -119,7 +134,7 @@ export default function MembersScreen() {
               }
             : undefined,
           headerRight: () =>
-            isAdmin ? (
+            canInvite ? (
               <HeaderSubmitButton
                 testID="members-invite-button"
                 systemImage="person.badge.plus"
@@ -167,68 +182,23 @@ export default function MembersScreen() {
                       </ListGroup.ItemContent>
                     </ListGroup.Item>
                   ) : (
-                    filteredPeople.map((person, index) => {
-                      const { memberId } = person
-                      return (
-                        <View key={person.userId}>
-                          {index > 0 ? <Separator className="mx-4" /> : null}
-                          <ListGroup.Item>
-                            <ListGroup.ItemPrefix>
-                              <SymbolView
-                                name="person.fill"
-                                size={18}
-                                tintColor={foregroundColor}
-                              />
-                            </ListGroup.ItemPrefix>
-                            <ListGroup.ItemContent>
-                              <ListGroup.ItemTitle>
-                                {person.info.name}
-                              </ListGroup.ItemTitle>
-                              <ListGroup.ItemDescription>
-                                {person.info.email}
-                              </ListGroup.ItemDescription>
-                              {(person.isAdmin || person.isYou) && (
-                                <View className="mt-1 flex-row gap-1.5">
-                                  {person.isAdmin && (
-                                    <Chip
-                                      size="sm"
-                                      variant="soft"
-                                      color="warning"
-                                    >
-                                      {t('members.admin')}
-                                    </Chip>
-                                  )}
-                                  {person.isYou && (
-                                    <Chip
-                                      size="sm"
-                                      variant="soft"
-                                      color="accent"
-                                    >
-                                      {t('members.you')}
-                                    </Chip>
-                                  )}
-                                </View>
-                              )}
-                            </ListGroup.ItemContent>
-                            {isAdmin && memberId && (
-                              <Button
-                                size="sm"
-                                variant="danger-soft"
-                                onPress={() => handleRemoveMember(memberId)}
-                              >
-                                {t('common.remove')}
-                              </Button>
-                            )}
-                          </ListGroup.Item>
-                        </View>
-                      )
-                    })
+                    filteredPeople.map((person, index) => (
+                      <View key={person.userId}>
+                        {index > 0 ? <Separator className="mx-4" /> : null}
+                        <MemberRow
+                          person={person}
+                          userId={userId}
+                          foregroundColor={foregroundColor}
+                          onRemove={handleRemoveMember}
+                        />
+                      </View>
+                    ))
                   )}
                 </ListGroup>
               </View>
 
               {/* Pending Org Invitations (Admin only) */}
-              {isAdmin && filteredInvitations.length > 0 ? (
+              {canManageOrg && filteredInvitations.length > 0 ? (
                 <View className="gap-2">
                   <SectionHeader
                     testID="members-pending-invitations-header"
@@ -238,27 +208,12 @@ export default function MembersScreen() {
                     {filteredInvitations.map((inv, index) => (
                       <View key={inv.id}>
                         {index > 0 ? <Separator className="mx-4" /> : null}
-                        <ListGroup.Item>
-                          <ListGroup.ItemPrefix>
-                            <SymbolView
-                              name="envelope.fill"
-                              size={18}
-                              tintColor={foregroundColor}
-                            />
-                          </ListGroup.ItemPrefix>
-                          <ListGroup.ItemContent>
-                            <ListGroup.ItemTitle>
-                              {inv.inviteeEmail}
-                            </ListGroup.ItemTitle>
-                          </ListGroup.ItemContent>
-                          <Button
-                            size="sm"
-                            variant="danger-soft"
-                            onPress={() => handleCancelInvitation(inv.id)}
-                          >
-                            {t('common.cancel')}
-                          </Button>
-                        </ListGroup.Item>
+                        <PendingInvitationRow
+                          invitation={inv}
+                          userId={userId}
+                          foregroundColor={foregroundColor}
+                          onCancel={handleCancelInvitation}
+                        />
                       </View>
                     ))}
                   </ListGroup>
@@ -269,5 +224,99 @@ export default function MembersScreen() {
         </View>
       </ScrollView>
     </>
+  )
+}
+
+function MemberRow({
+  person,
+  userId,
+  foregroundColor,
+  onRemove
+}: {
+  person: MemberListPerson
+  userId: string
+  foregroundColor: string
+  onRemove: (memberId: string) => void
+}) {
+  const { t } = useTranslation()
+  const { memberId } = person
+  const policy = useCanRemoveMember(userId, memberId)
+  const canRemove = policy.status === 'ready' && policy.ok
+
+  return (
+    <ListGroup.Item>
+      <ListGroup.ItemPrefix>
+        <SymbolView name="person.fill" size={18} tintColor={foregroundColor} />
+      </ListGroup.ItemPrefix>
+      <ListGroup.ItemContent>
+        <ListGroup.ItemTitle>{person.info.name}</ListGroup.ItemTitle>
+        <ListGroup.ItemDescription>
+          {person.info.email}
+        </ListGroup.ItemDescription>
+        {(person.isAdmin || person.isYou) && (
+          <View className="mt-1 flex-row gap-1.5">
+            {person.isAdmin && (
+              <Chip size="sm" variant="soft" color="warning">
+                {t('members.admin')}
+              </Chip>
+            )}
+            {person.isYou && (
+              <Chip size="sm" variant="soft" color="accent">
+                {t('members.you')}
+              </Chip>
+            )}
+          </View>
+        )}
+      </ListGroup.ItemContent>
+      {canRemove && memberId && (
+        <Button
+          size="sm"
+          variant="danger-soft"
+          onPress={() => onRemove(memberId)}
+        >
+          {t('common.remove')}
+        </Button>
+      )}
+    </ListGroup.Item>
+  )
+}
+
+function PendingInvitationRow({
+  invitation,
+  userId,
+  foregroundColor,
+  onCancel
+}: {
+  invitation: MemberListInvitation
+  userId: string
+  foregroundColor: string
+  onCancel: (invitationId: string) => void
+}) {
+  const { t } = useTranslation()
+  const policy = useCanCancelInvitation(userId, invitation.id)
+  const canCancel = policy.status === 'ready' && policy.ok
+
+  return (
+    <ListGroup.Item>
+      <ListGroup.ItemPrefix>
+        <SymbolView
+          name="envelope.fill"
+          size={18}
+          tintColor={foregroundColor}
+        />
+      </ListGroup.ItemPrefix>
+      <ListGroup.ItemContent>
+        <ListGroup.ItemTitle>{invitation.inviteeEmail}</ListGroup.ItemTitle>
+      </ListGroup.ItemContent>
+      {canCancel && (
+        <Button
+          size="sm"
+          variant="danger-soft"
+          onPress={() => onCancel(invitation.id)}
+        >
+          {t('common.cancel')}
+        </Button>
+      )}
+    </ListGroup.Item>
   )
 }

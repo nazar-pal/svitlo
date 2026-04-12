@@ -48,6 +48,58 @@ export function getInvitationsByEmail(email: string) {
     .where(eq(invitations.inviteeEmail, email))
 }
 
+// Id-only projection for reactive existence checks — matches the shape
+// `findInvitationByOrgAndEmail` in the async provider, but builder-form so
+// `useCanCreateInvitation` can subscribe without awaiting. Email normalised
+// here so the case-insensitive policy invariant documented in
+// `src/data/shared/invitations/policy.ts:3-5` holds regardless of caller
+// hygiene.
+export function findInvitationByOrgAndEmailQuery(
+  db: ClientDb,
+  organizationId: string,
+  inviteeEmail: string
+) {
+  return db
+    .select({ id: invitations.id })
+    .from(invitations)
+    .where(
+      and(
+        eq(invitations.organizationId, organizationId),
+        eq(invitations.inviteeEmail, inviteeEmail.trim().toLowerCase())
+      )
+    )
+    .limit(1)
+}
+
+// Builder form of `getInvitationById` — two-stage subscription pattern (the
+// reactive hook first resolves the invitation to pull `organizationId`, then
+// subscribes to org authz).
+export function getInvitationByIdQuery(db: ClientDb, invitationId: string) {
+  return db
+    .select({
+      organizationId: invitations.organizationId,
+      inviteeEmail: invitations.inviteeEmail
+    })
+    .from(invitations)
+    .where(eq(invitations.id, invitationId))
+    .limit(1)
+}
+
+// Builder form of `getOrgMembershipById` — two-stage subscription pattern:
+// `useCanRemoveMember` resolves the member row to pull `organizationId`,
+// then subscribes to org authz.
+export function getMembershipByIdQuery(db: ClientDb, memberId: string) {
+  return db
+    .select({
+      id: organizationMembers.id,
+      organizationId: organizationMembers.organizationId,
+      userId: organizationMembers.userId
+    })
+    .from(organizationMembers)
+    .where(eq(organizationMembers.id, memberId))
+    .limit(1)
+}
+
 // ── Row form (awaited, for mutations) ───────────────────────────────────────
 
 export async function getOrganizationById(
@@ -127,7 +179,7 @@ export async function getInvitationByOrgAndEmail(
     .where(
       and(
         eq(invitations.organizationId, organizationId),
-        eq(invitations.inviteeEmail, inviteeEmail)
+        eq(invitations.inviteeEmail, inviteeEmail.trim().toLowerCase())
       )
     )
     .limit(1)

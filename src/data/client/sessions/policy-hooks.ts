@@ -4,6 +4,7 @@
 // provider. Lets UI disable affordances before the user taps them.
 
 import { getGeneratorAuthzFactsQuery } from '@/data/client/authz/provider'
+import { LOADING, type PolicyView } from '@/data/client/policy-hooks-shared'
 import {
   getGeneratorSession,
   openSessionExistsForGeneratorQuery
@@ -13,18 +14,11 @@ import {
   logManualSessionPolicy,
   startSessionPolicy,
   stopSessionPolicy,
-  updateSessionPolicy,
-  type PolicyResult
+  updateSessionPolicy
 } from '@/data/shared/sessions/policy'
 import type { SessionRef } from '@/data/shared/sessions'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { db } from '@/lib/powersync/database'
-
-export type PolicyView =
-  | { status: 'loading' }
-  | ({ status: 'ready' } & PolicyResult)
-
-const LOADING: PolicyView = { status: 'loading' }
 
 interface GeneratorAuthzFactsView {
   loading: boolean

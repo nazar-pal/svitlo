@@ -6,6 +6,7 @@ import { useTranslation } from '@/lib/i18n'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { useCanCreateInvitation } from '@/data/client/invitations/policy-hooks'
 import { createInvitation } from '@/data/client/mutations'
 import { insertInvitationSchema } from '@/data/client/validation'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
@@ -35,6 +36,11 @@ function InviteForm({ userId, orgId }: { userId: string; orgId: string }) {
 
   const emailBinding = bind.text('inviteeEmail')
 
+  const normalizedEmail = emailBinding.value.trim().toLowerCase() || undefined
+  const policy = useCanCreateInvitation(userId, orgId, normalizedEmail)
+  const canSubmit = policy.status === 'ready' && policy.ok
+  const submitDisabled = isSubmitting || !canSubmit
+
   return (
     <>
       <Stack.Screen
@@ -43,7 +49,7 @@ function InviteForm({ userId, orgId }: { userId: string; orgId: string }) {
             <HeaderSubmitButton
               systemImage="paperplane.fill"
               onPress={submit}
-              isDisabled={isSubmitting}
+              isDisabled={submitDisabled}
             />
           )
         }}
