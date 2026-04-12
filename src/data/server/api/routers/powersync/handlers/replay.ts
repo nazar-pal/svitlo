@@ -1,11 +1,11 @@
 import { fail, ok, type MutationResult } from './types'
 
-type Shielded<TOk> =
+export type Shielded<TOk> =
   | { status: 'ok'; data: TOk }
   | { status: 'consume'; result: MutationResult }
 
-type CheckResult = { ok: true } | { ok: false; code: string }
-type OkBranch<T> = Extract<T, { ok: true }>
+export type CheckResult = { ok: true } | { ok: false; code: string }
+export type OkBranch<T> = Extract<T, { ok: true }>
 
 /**
  * Lost-ack replay shield for delete/update handlers.

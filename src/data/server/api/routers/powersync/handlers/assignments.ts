@@ -2,60 +2,54 @@ import { eq } from 'drizzle-orm'
 
 import { generatorUserAssignments } from '@/data/server/db-schema'
 
-import { replayShieldAlreadyExists, replayShieldNotFound } from './replay'
-import { transformSyncData } from '../transform'
-import { fail, ok, type Insert, type TableHandler } from './types'
+import { defineTableHandler } from './pipeline'
+import type { Insert } from './types'
 
-export const handleGeneratorUserAssignments: TableHandler = async ctx => {
-  const { db, userId, op, id, data } = ctx
-  const checks = ctx.checks.assignments
-
-  if (op === 'insert') {
-    const values =
-      transformSyncData<Insert<typeof generatorUserAssignments>>(data)
-    const generatorId = values.generatorId as string
-    const targetUserId = (values.userId as string | undefined) ?? userId
-
-    const shielded = replayShieldAlreadyExists(
-      await checks.assignUserToGenerator(userId, generatorId, targetUserId),
-      'USER_ALREADY_ASSIGNED'
-    )
-    if (shielded.status === 'consume') return shielded.result
-
-    await db
-      .insert(generatorUserAssignments)
-      .values({ ...values, id })
-      .onConflictDoNothing()
-    return ok
-  }
-
-  if (op === 'delete') {
-    // Lookup the row up front so we can pass the target user id to the
-    // shared check. The shared policy works in (caller, generator, target)
-    // terms, but the server's delete wire shape only carries the assignment
-    // row id — hence the one-off fetch. If the row is already gone, return
-    // ok so the sync queue advances past the already-applied delete.
-    const assignment = await db.query.generatorUserAssignments.findFirst({
-      where: eq(generatorUserAssignments.id, id),
-      columns: { generatorId: true, userId: true }
-    })
-    if (!assignment) return ok
-
-    const shielded = replayShieldNotFound(
-      await checks.unassignUserFromGenerator(
+export const handleGeneratorUserAssignments = defineTableHandler({
+  table: 'generator_user_assignments',
+  insert: {
+    check: ({ userId, checks }, parsed) => {
+      const values = parsed as Insert<typeof generatorUserAssignments>
+      const generatorId = values.generatorId as string
+      const targetUserId = (values.userId as string | undefined) ?? userId
+      return checks.assignments.assignUserToGenerator(
+        userId,
+        generatorId,
+        targetUserId
+      )
+    },
+    shield: { kind: 'alreadyExists', code: 'USER_ALREADY_ASSIGNED' },
+    apply: async ({ db, id }, parsed) => {
+      const values = parsed as Insert<typeof generatorUserAssignments>
+      await db
+        .insert(generatorUserAssignments)
+        .values({ ...values, id })
+        .onConflictDoNothing()
+    }
+  },
+  delete: {
+    // The shared policy works in (caller, generator, target) terms, but the
+    // wire shape of a delete only carries the assignment row id — fetch the
+    // row inside `check` to extract the target. A missing row is folded into
+    // the same `USER_NOT_ASSIGNED` code that the shield consumes, so a replay
+    // against an already-applied delete advances the sync queue silently.
+    check: async ({ db, userId, id, checks }) => {
+      const assignment = await db.query.generatorUserAssignments.findFirst({
+        where: eq(generatorUserAssignments.id, id),
+        columns: { generatorId: true, userId: true }
+      })
+      if (!assignment) return { ok: false, code: 'USER_NOT_ASSIGNED' } as const
+      return checks.assignments.unassignUserFromGenerator(
         userId,
         assignment.generatorId,
         assignment.userId
-      ),
-      'USER_NOT_ASSIGNED'
-    )
-    if (shielded.status === 'consume') return shielded.result
-
-    await db
-      .delete(generatorUserAssignments)
-      .where(eq(generatorUserAssignments.id, id))
-    return ok
+      )
+    },
+    shield: { kind: 'notFound', code: 'USER_NOT_ASSIGNED' },
+    apply: async ({ db, id }) => {
+      await db
+        .delete(generatorUserAssignments)
+        .where(eq(generatorUserAssignments.id, id))
+    }
   }
-
-  return fail('Invalid operation on generator_user_assignments')
-}
+})

@@ -3,63 +3,54 @@ import { eq } from 'drizzle-orm'
 import { updateMaintenanceTemplateSchema } from '@/data/shared/validation'
 import { maintenanceTemplates } from '@/data/server/db-schema'
 
-import { replayShieldNotFound } from './replay'
-import { transformSyncData } from '../transform'
-import { fail, ok, type Insert, type TableHandler } from './types'
+import { defineTableHandler } from './pipeline'
+import type { Insert } from './types'
 
-export const handleMaintenanceTemplates: TableHandler = async ctx => {
-  const { db, userId, op, id, data } = ctx
-  const checks = ctx.checks.maintenance
-
-  if (op === 'insert') {
-    const values = transformSyncData<Insert<typeof maintenanceTemplates>>(data)
-    const generatorId = values.generatorId as string
-
-    const result = await checks.createTemplate(userId, { generatorId })
-    if (!result.ok) return fail(result.code)
-
-    await db
-      .insert(maintenanceTemplates)
-      .values({ ...values, id })
-      .onConflictDoNothing()
-    return ok
-  }
-
-  if (op === 'update') {
-    const transformed =
-      transformSyncData<Partial<Insert<typeof maintenanceTemplates>>>(data)
-    const parsed = updateMaintenanceTemplateSchema.safeParse(transformed)
-    if (!parsed.success)
-      return fail(
-        `Invalid maintenance template update: ${parsed.error.message}`
-      )
-
-    const result = await checks.updateTemplate(userId, id, {
-      triggerType: parsed.data.triggerType,
-      triggerHoursInterval: parsed.data.triggerHoursInterval,
-      triggerCalendarDays: parsed.data.triggerCalendarDays
-    })
-    if (!result.ok) return fail(result.code)
-
-    if (Object.keys(parsed.data).length > 0)
+export const handleMaintenanceTemplates = defineTableHandler({
+  table: 'maintenance_templates',
+  insert: {
+    // No `schema:` by design — the PG CHECK constraint
+    // `trigger_fields_match_type` (plus the positive-number / non-empty-name
+    // checks) is the server-side source of truth for payload shape, and the
+    // integration tests assert those constraints directly. Adding a Zod
+    // schema here would short-circuit those tests and duplicate the rule.
+    check: ({ userId, checks }, parsed) =>
+      checks.maintenance.createTemplate(userId, {
+        generatorId: parsed.generatorId as string
+      }),
+    apply: async ({ db, id }, parsed) => {
+      const values = parsed as Insert<typeof maintenanceTemplates>
       await db
-        .update(maintenanceTemplates)
-        .set(parsed.data)
+        .insert(maintenanceTemplates)
+        .values({ ...values, id })
+        .onConflictDoNothing()
+    }
+  },
+  update: {
+    schema: updateMaintenanceTemplateSchema,
+    errorLabel: 'maintenance template update',
+    check: ({ userId, id, checks }, parsed) =>
+      checks.maintenance.updateTemplate(userId, id, {
+        triggerType: parsed.triggerType,
+        triggerHoursInterval: parsed.triggerHoursInterval,
+        triggerCalendarDays: parsed.triggerCalendarDays
+      }),
+    apply: async ({ db, id }, parsed) => {
+      if (Object.keys(parsed).length > 0)
+        await db
+          .update(maintenanceTemplates)
+          .set(parsed)
+          .where(eq(maintenanceTemplates.id, id))
+    }
+  },
+  delete: {
+    check: ({ userId, id, checks }) =>
+      checks.maintenance.deleteTemplate(userId, id),
+    shield: { kind: 'notFound', code: 'TEMPLATE_NOT_FOUND' },
+    apply: async ({ db, id }) => {
+      await db
+        .delete(maintenanceTemplates)
         .where(eq(maintenanceTemplates.id, id))
-
-    return ok
+    }
   }
-
-  if (op === 'delete') {
-    const shielded = replayShieldNotFound(
-      await checks.deleteTemplate(userId, id),
-      'TEMPLATE_NOT_FOUND'
-    )
-    if (shielded.status === 'consume') return shielded.result
-
-    await db.delete(maintenanceTemplates).where(eq(maintenanceTemplates.id, id))
-    return ok
-  }
-
-  return fail('Invalid operation')
-}
+})
