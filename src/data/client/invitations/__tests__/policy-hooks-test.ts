@@ -35,7 +35,7 @@ const {
 
 const {
   createClientInvitationFactsProvider
-} = require('@/data/client/invitations/provider')
+} = require('@/data/client/facts-providers')
 const { createClientAuthzProvider } = require('@/data/client/authz/provider')
 const { createAuthzChecks } = require('@/data/shared/authz')
 const { createInvitationLifecycleChecks } = require('@/data/shared/invitations')

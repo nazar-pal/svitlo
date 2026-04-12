@@ -43,7 +43,7 @@ const {
 
 const {
   createClientSessionFactsProvider
-} = require('@/data/client/sessions/provider')
+} = require('@/data/client/facts-providers')
 const { createClientAuthzProvider } = require('@/data/client/authz/provider')
 const { createAuthzChecks } = require('@/data/shared/authz')
 const { createSessionLifecycleChecks } = require('@/data/shared/sessions')

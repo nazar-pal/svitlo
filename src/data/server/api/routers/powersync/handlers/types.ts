@@ -1,6 +1,5 @@
 import type { db } from '@/data/server'
-
-import type { ServerLifecycleChecks } from './checks'
+import type { LifecycleChecks } from '@/data/shared/lifecycle-checks'
 
 // Server-side handlers return free-form string errors that flow back through
 // the PowerSync wire contract for connector-side logging. These are
@@ -24,7 +23,7 @@ export interface WriteContext {
   id: string
   data: Record<string, unknown>
   now: () => Date
-  checks: ServerLifecycleChecks
+  checks: LifecycleChecks
 }
 
 export type TableHandler = (ctx: WriteContext) => Promise<MutationResult>

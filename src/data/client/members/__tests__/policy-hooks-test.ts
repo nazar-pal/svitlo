@@ -28,7 +28,7 @@ const { useCanRemoveMember } = require('../policy-hooks')
 
 const {
   createClientMemberFactsProvider
-} = require('@/data/client/members/provider')
+} = require('@/data/client/facts-providers')
 const { createClientAuthzProvider } = require('@/data/client/authz/provider')
 const { createAuthzChecks } = require('@/data/shared/authz')
 const { createMemberLifecycleChecks } = require('@/data/shared/members')
