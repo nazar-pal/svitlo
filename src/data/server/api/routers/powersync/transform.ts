@@ -1,25 +1,19 @@
-// Fields that arrive as ISO strings from SQLite and need Date conversion
-const TIMESTAMP_FIELDS = new Set([
-  'created_at',
-  'joined_at',
-  'assigned_at',
-  'started_at',
-  'stopped_at',
-  'performed_at',
-  'updated_at'
-])
+import { getTableColumns, is } from 'drizzle-orm'
+import { PgTable } from 'drizzle-orm/pg-core'
+import * as serverSchema from '@/data/server/db-schema'
 
-// Fields that arrive as 0/1 from SQLite and need boolean conversion
-const BOOLEAN_FIELDS = new Set(['is_one_time'])
+const TIMESTAMP_FIELDS = new Set<string>()
+const BOOLEAN_FIELDS = new Set<string>()
+const NUMBER_FIELDS = new Set<string>()
 
-// Fields that may arrive as strings from SQLite and need Number conversion
-const NUMBER_FIELDS = new Set([
-  'max_consecutive_run_hours',
-  'required_rest_hours',
-  'run_warning_threshold_pct',
-  'trigger_hours_interval',
-  'trigger_calendar_days'
-])
+for (const value of Object.values(serverSchema)) {
+  if (!is(value, PgTable)) continue
+  for (const col of Object.values(getTableColumns(value))) {
+    if (col.dataType === 'date') TIMESTAMP_FIELDS.add(col.name)
+    else if (col.dataType === 'boolean') BOOLEAN_FIELDS.add(col.name)
+    else if (col.dataType === 'number') NUMBER_FIELDS.add(col.name)
+  }
+}
 
 function snakeToCamel(s: string): string {
   return s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())

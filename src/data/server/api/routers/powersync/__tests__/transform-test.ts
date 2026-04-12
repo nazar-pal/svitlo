@@ -1,5 +1,27 @@
 import { transformSyncData } from '../transform'
 
+describe('schema-derived type coercion', () => {
+  it('converts schema-derived timestamp fields to Date objects', () => {
+    const result = transformSyncData({
+      expires_at: '2024-09-01T00:00:00Z',
+      access_token_expires_at: '2024-09-02T00:00:00Z'
+    })
+    expect(result).toEqual({
+      expiresAt: new Date('2024-09-01T00:00:00Z'),
+      accessTokenExpiresAt: new Date('2024-09-02T00:00:00Z')
+    })
+  })
+
+  it('converts schema-derived boolean fields from SQLite representations', () => {
+    expect(transformSyncData({ email_verified: '1' })).toEqual({
+      emailVerified: true
+    })
+    expect(transformSyncData({ email_verified: 0 })).toEqual({
+      emailVerified: false
+    })
+  })
+})
+
 describe('transformSyncData', () => {
   it('converts snake_case keys to camelCase', () => {
     const result = transformSyncData({
