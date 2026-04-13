@@ -2,19 +2,14 @@ import { useToast } from 'heroui-native'
 import { useEffect, useRef, useState } from 'react'
 
 import { InvitationDialog } from '@/components/invitation-dialog'
-import { getAllOrganizations, getAllUsers } from '@/data/client/queries'
-import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { usePendingInvitations } from '@/lib/hooks/use-pending-invitations'
-import { t } from '@/lib/i18n'
 import {
-  resolveInvitationDetails,
+  usePendingInvitations,
   type InvitationDetails
-} from '@/lib/organization/resolve-invitation-details'
+} from '@/lib/hooks/use-pending-invitations'
+import { t } from '@/lib/i18n'
 
 export function InvitationWatcher() {
   const pendingInvitations = usePendingInvitations()
-  const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
-  const { data: allUsers } = useDrizzleQuery(getAllUsers())
   const { toast } = useToast()
   const knownIdsRef = useRef<Set<string> | null>(null)
   const [queue, setQueue] = useState<InvitationDetails[]>([])
@@ -35,23 +30,19 @@ export function InvitationWatcher() {
 
     if (newInvitations.length === 0) return
 
-    const snapshot = newInvitations.map(inv =>
-      resolveInvitationDetails(inv, allOrgs, allUsers, t)
-    )
-
     toast.show({
       variant: 'accent',
       placement: 'top',
-      label: t('invitations.new', { count: snapshot.length }),
-      description: t('invitations.pending', { count: snapshot.length }),
+      label: t('invitations.new', { count: newInvitations.length }),
+      description: t('invitations.pending', { count: newInvitations.length }),
       actionLabel: t('invitations.view'),
       duration: 5000,
       onActionPress: ({ hide }) => {
         hide()
-        setQueue(snapshot)
+        setQueue(newInvitations)
       }
     })
-  }, [pendingInvitations, allOrgs, allUsers, toast])
+  }, [pendingInvitations, toast])
 
   return <InvitationDialog invitations={queue} onClose={() => setQueue([])} />
 }

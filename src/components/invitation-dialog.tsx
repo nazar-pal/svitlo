@@ -9,7 +9,7 @@ import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
 import { alertOnError } from '@/lib/alerts'
 import { notifySuccess, notifyWarning } from '@/lib/haptics'
 import { useTranslation } from '@/lib/i18n'
-import type { InvitationDetails } from '@/lib/organization/resolve-invitation-details'
+import type { InvitationDetails } from '@/lib/hooks/use-pending-invitations'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
 

@@ -2,12 +2,14 @@ import type Database from 'better-sqlite3'
 import type { drizzle } from 'drizzle-orm/better-sqlite3'
 import { renderHook, waitFor } from '@testing-library/react-native'
 
+import { invitations } from '@/data/client/db-schema/organizations'
 import {
   createTestDatabase,
   resetDatabase,
   closeDatabase
 } from '@/data/client/mutations/__tests__/test-db'
 import {
+  IDS,
   seedBaseScenario,
   seedInvitation
 } from '@/data/client/mutations/__tests__/seed'
@@ -62,7 +64,7 @@ it('returns [] when user has no invitations', async () => {
   })
 })
 
-it('returns matching invitations for user email', async () => {
+it('resolves orgName and inviterName from org + user tables', async () => {
   seedBaseScenario(mockDrizzleDb)
   seedInvitation(mockDrizzleDb, 'user@test.com')
 
@@ -71,8 +73,9 @@ it('returns matching invitations for user email', async () => {
   const { result } = renderHook(() => usePendingInvitations())
 
   await waitFor(() => {
-    expect(result.current).toHaveLength(1)
-    expect(result.current[0].inviteeEmail).toBe('user@test.com')
+    expect(result.current).toEqual([
+      { id: IDS.invitation, orgName: 'Test Org', inviterName: 'Admin' }
+    ])
   })
 })
 
@@ -109,5 +112,28 @@ it('returns [] when user is not loaded', async () => {
 
   await waitFor(() => {
     expect(result.current).toEqual([])
+  })
+})
+
+it('falls back to common.unknown when org or inviter is missing', async () => {
+  mockDrizzleDb
+    .insert(invitations)
+    .values({
+      id: 'orphan-inv',
+      organizationId: 'missing-org',
+      inviteeEmail: 'user@test.com',
+      invitedByUserId: 'missing-user',
+      createdAt: '2026-01-15T12:00:00Z'
+    })
+    .run()
+
+  useLocalUser.mockReturnValue({ email: 'user@test.com' })
+
+  const { result } = renderHook(() => usePendingInvitations())
+
+  await waitFor(() => {
+    expect(result.current).toEqual([
+      { id: 'orphan-inv', orgName: 'Unknown', inviterName: 'Unknown' }
+    ])
   })
 })
