@@ -16,6 +16,13 @@ import type { ClientDb } from '@/lib/powersync/database'
 
 import type { MutationContext } from './context'
 
+// Both mutations here stay imperative (outside the `defineMutation` pipeline)
+// because they thread the check's ok-branch data (`check.member`,
+// `check.adminUserId`) into `transferAssignmentsAndRemoveMember` via a
+// `MemberWritePort` that wraps the active `tx`. The pipeline runs the check
+// before `apply` gets the tx, so the port can't be constructed at the right
+// moment — the shape is fundamentally different from "check then write".
+
 function createClientMemberWritePort(
   tx: ClientDb,
   ctx: Pick<MutationContext, 'newId'>

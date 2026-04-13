@@ -13,31 +13,29 @@ import { failFromZod } from '@/data/shared/errors-from-zod'
 import { fail, ok, type MutationResult } from '@/data/shared/result'
 
 import type { MutationContext } from './context'
+import { defineMutation } from './pipeline'
 
 export function createGeneratorMutations(ctx: MutationContext) {
   return {
-    async updateGenerator(
-      userId: string,
-      generatorId: string,
-      input: UpdateGeneratorInput
-    ): Promise<MutationResult> {
-      const parsed = updateGeneratorSchema.safeParse(input)
-      if (!parsed.success) return failFromZod(parsed.error)
+    updateGenerator: defineMutation<
+      [string, string, UpdateGeneratorInput],
+      UpdateGeneratorInput
+    >(ctx, {
+      parse: ([, , input]) => updateGeneratorSchema.safeParse(input),
+      check: (c, [userId, generatorId]) =>
+        c.checks.generators.updateGenerator(userId, generatorId),
+      apply: async ({ db, args: [, generatorId], parsed }) => {
+        await db
+          .update(generators)
+          .set(parsed)
+          .where(eq(generators.id, generatorId))
+      }
+    }),
 
-      const check = await ctx.checks.generators.updateGenerator(
-        userId,
-        generatorId
-      )
-      if (!check.ok) return fail(check.code)
-
-      await ctx.db
-        .update(generators)
-        .set(parsed.data)
-        .where(eq(generators.id, generatorId))
-
-      return ok
-    },
-
+    // Stays imperative: the pre-`writeTx` validation loop emits the
+    // parameterized `MAINTENANCE_TASK_VALIDATION_FAILED` code with
+    // `{ taskName }`, which the `defineMutation` check model (scoped to
+    // param-free codes) cannot express.
     async createGeneratorWithMaintenance(
       userId: string,
       input: InsertGeneratorInput,
@@ -101,19 +99,12 @@ export function createGeneratorMutations(ctx: MutationContext) {
       return ok
     },
 
-    async deleteGenerator(
-      userId: string,
-      generatorId: string
-    ): Promise<MutationResult> {
-      const check = await ctx.checks.generators.deleteGenerator(
-        userId,
-        generatorId
-      )
-      if (!check.ok) return fail(check.code)
-
-      await ctx.db.delete(generators).where(eq(generators.id, generatorId))
-
-      return ok
-    }
+    deleteGenerator: defineMutation<[string, string]>(ctx, {
+      check: (c, [userId, generatorId]) =>
+        c.checks.generators.deleteGenerator(userId, generatorId),
+      apply: async ({ db, args: [, generatorId] }) => {
+        await db.delete(generators).where(eq(generators.id, generatorId))
+      }
+    })
   }
 }

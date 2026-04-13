@@ -1,95 +1,77 @@
 import { eq } from 'drizzle-orm'
 
 import { invitations, organizationMembers } from '@/data/client/db-schema'
+import type { AcceptInvitationResult } from '@/data/shared/invitations/policy'
 import {
   insertInvitationSchema,
   type InsertInvitationInput
 } from '@/data/shared/validation'
-import { failFromZod } from '@/data/shared/errors-from-zod'
-import { fail, ok, type MutationResult } from '@/data/shared/result'
 
 import type { MutationContext } from './context'
+import { defineMutation } from './pipeline'
 
 export function createInvitationMutations(ctx: MutationContext) {
   return {
-    async createInvitation(
-      userId: string,
-      input: InsertInvitationInput
-    ): Promise<MutationResult> {
-      const parsed = insertInvitationSchema.safeParse(input)
-      if (!parsed.success) return failFromZod(parsed.error)
-
-      const check = await ctx.checks.invitations.createInvitation(
-        userId,
-        parsed.data.organizationId,
-        parsed.data.inviteeEmail
-      )
-      if (!check.ok) return fail(check.code)
-
-      await ctx.db.insert(invitations).values({
-        id: ctx.newId(),
-        organizationId: parsed.data.organizationId,
-        inviteeEmail: parsed.data.inviteeEmail,
-        invitedByUserId: userId,
-        createdAt: ctx.now().toISOString()
-      })
-
-      return ok
-    },
-
-    async acceptInvitation(
-      userId: string,
-      userEmail: string,
-      invitationId: string
-    ): Promise<MutationResult> {
-      const check = await ctx.checks.invitations.acceptInvitation(
-        userId,
-        userEmail,
-        invitationId
-      )
-      if (!check.ok) return fail(check.code)
-
-      await ctx.writeTx(async tx => {
-        await tx.insert(organizationMembers).values({
-          id: ctx.newId(),
-          organizationId: check.invitation.organizationId,
+    createInvitation: defineMutation<
+      [string, InsertInvitationInput],
+      InsertInvitationInput
+    >(ctx, {
+      parse: ([, input]) => insertInvitationSchema.safeParse(input),
+      check: (c, [userId], parsed) =>
+        c.checks.invitations.createInvitation(
           userId,
-          joinedAt: ctx.now().toISOString()
+          parsed.organizationId,
+          parsed.inviteeEmail
+        ),
+      apply: async ({ ctx: c, db, args: [userId], parsed }) => {
+        await db.insert(invitations).values({
+          id: c.newId(),
+          organizationId: parsed.organizationId,
+          inviteeEmail: parsed.inviteeEmail,
+          invitedByUserId: userId,
+          createdAt: c.now().toISOString()
         })
-        await tx.delete(invitations).where(eq(invitations.id, invitationId))
-      })
+      }
+    }),
 
-      return ok
-    },
+    acceptInvitation: defineMutation<
+      [string, string, string],
+      undefined,
+      AcceptInvitationResult
+    >(ctx, {
+      check: (c, [userId, userEmail, invitationId]) =>
+        c.checks.invitations.acceptInvitation(userId, userEmail, invitationId),
+      tx: true,
+      apply: async ({
+        ctx: c,
+        db,
+        args: [userId, , invitationId],
+        checkOk
+      }) => {
+        await db.insert(organizationMembers).values({
+          id: c.newId(),
+          organizationId: checkOk.invitation.organizationId,
+          userId,
+          joinedAt: c.now().toISOString()
+        })
+        await db.delete(invitations).where(eq(invitations.id, invitationId))
+      }
+    }),
 
-    async declineInvitation(
-      userEmail: string,
-      invitationId: string
-    ): Promise<MutationResult> {
-      const check = await ctx.checks.invitations.declineInvitation(
-        userEmail,
-        invitationId
-      )
-      if (!check.ok) return fail(check.code)
+    declineInvitation: defineMutation<[string, string]>(ctx, {
+      check: (c, [userEmail, invitationId]) =>
+        c.checks.invitations.declineInvitation(userEmail, invitationId),
+      apply: async ({ db, args: [, invitationId] }) => {
+        await db.delete(invitations).where(eq(invitations.id, invitationId))
+      }
+    }),
 
-      await ctx.db.delete(invitations).where(eq(invitations.id, invitationId))
-
-      return ok
-    },
-
-    async cancelInvitation(
-      userId: string,
-      invitationId: string
-    ): Promise<MutationResult> {
-      const check = await ctx.checks.invitations.cancelInvitation(
-        userId,
-        invitationId
-      )
-      if (!check.ok) return fail(check.code)
-
-      await ctx.db.delete(invitations).where(eq(invitations.id, invitationId))
-
-      return ok
-    }
+    cancelInvitation: defineMutation<[string, string]>(ctx, {
+      check: (c, [userId, invitationId]) =>
+        c.checks.invitations.cancelInvitation(userId, invitationId),
+      apply: async ({ db, args: [, invitationId] }) => {
+        await db.delete(invitations).where(eq(invitations.id, invitationId))
+      }
+    })
   }
 }

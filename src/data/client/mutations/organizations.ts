@@ -7,68 +7,50 @@ import {
   type InsertOrganizationInput,
   type UpdateOrganizationInput
 } from '@/data/shared/validation'
-import { failFromZod } from '@/data/shared/errors-from-zod'
-import { fail, ok, type MutationResult } from '@/data/shared/result'
 
 import { cascadeDelete } from './cascade'
 import type { MutationContext } from './context'
+import { defineMutation } from './pipeline'
 
 export function createOrganizationMutations(ctx: MutationContext) {
   return {
-    async createOrganization(
-      userId: string,
-      input: InsertOrganizationInput
-    ): Promise<MutationResult> {
-      const parsed = insertOrganizationSchema.safeParse(input)
-      if (!parsed.success) return failFromZod(parsed.error)
+    createOrganization: defineMutation<
+      [string, InsertOrganizationInput],
+      InsertOrganizationInput
+    >(ctx, {
+      parse: ([, input]) => insertOrganizationSchema.safeParse(input),
+      apply: async ({ ctx: c, db, args: [userId], parsed }) => {
+        await db.insert(organizations).values({
+          id: c.newId(),
+          name: parsed.name,
+          adminUserId: userId,
+          createdAt: c.now().toISOString()
+        })
+      }
+    }),
 
-      await ctx.db.insert(organizations).values({
-        id: ctx.newId(),
-        name: parsed.data.name,
-        adminUserId: userId,
-        createdAt: ctx.now().toISOString()
-      })
+    renameOrganization: defineMutation<
+      [string, string, UpdateOrganizationInput],
+      UpdateOrganizationInput
+    >(ctx, {
+      parse: ([, , input]) => updateOrganizationSchema.safeParse(input),
+      check: (c, [userId, orgId]) =>
+        c.checks.organizations.renameOrganization(userId, orgId),
+      apply: async ({ db, args: [, orgId], parsed }) => {
+        await db
+          .update(organizations)
+          .set({ name: parsed.name })
+          .where(eq(organizations.id, orgId))
+      }
+    }),
 
-      return ok
-    },
-
-    async renameOrganization(
-      userId: string,
-      orgId: string,
-      input: UpdateOrganizationInput
-    ): Promise<MutationResult> {
-      const parsed = updateOrganizationSchema.safeParse(input)
-      if (!parsed.success) return failFromZod(parsed.error)
-
-      const check = await ctx.checks.organizations.renameOrganization(
-        userId,
-        orgId
-      )
-      if (!check.ok) return fail(check.code)
-
-      await ctx.db
-        .update(organizations)
-        .set({ name: parsed.data.name })
-        .where(eq(organizations.id, orgId))
-
-      return ok
-    },
-
-    async deleteOrganization(
-      userId: string,
-      orgId: string
-    ): Promise<MutationResult> {
-      const check = await ctx.checks.organizations.deleteOrganization(
-        userId,
-        orgId
-      )
-      if (!check.ok) return fail(check.code)
-
-      await ctx.writeTx(async tx => {
-        await cascadeDelete(tx, organizations, organizations.id, orgId)
-      })
-
-      return ok
-    }
+    deleteOrganization: defineMutation<[string, string]>(ctx, {
+      check: (c, [userId, orgId]) =>
+        c.checks.organizations.deleteOrganization(userId, orgId),
+      tx: true,
+      apply: async ({ db, args: [, orgId] }) => {
+        await cascadeDelete(db, organizations, organizations.id, orgId)
+      }
+    })
   }
 }
