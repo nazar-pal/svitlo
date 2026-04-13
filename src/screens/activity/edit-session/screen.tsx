@@ -7,6 +7,7 @@ import { ValueFormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { updateSession } from '@/data/client/mutations'
 import type { GeneratorSession } from '@/data/client/db-schema'
+import { isPolicyAllowed } from '@/data/client/policy-hooks-shared'
 import { getGenerator, getGeneratorSession } from '@/data/client/queries'
 import { useCanUpdateSession } from '@/data/client/sessions/policy-hooks'
 import { useAuthedParams } from '@/lib/hooks/use-authed-params'
@@ -64,14 +65,13 @@ function EditForm({ userId, session }: EditFormProps) {
     startedAt: form.values.startedAt.toISOString(),
     stoppedAt: form.values.stoppedAt.toISOString()
   })
-  const submitDisabled = policy.status === 'loading' || !policy.ok
 
   return (
     <FormScreen
       variant="scroll"
       onSubmit={submit}
       isSubmitting={isSubmitting}
-      submitDisabled={submitDisabled}
+      submitDisabled={!isPolicyAllowed(policy)}
       formError={formError}
     >
       <Card>

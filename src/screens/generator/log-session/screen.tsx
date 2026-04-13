@@ -8,6 +8,7 @@ import { useTranslation } from '@/lib/i18n'
 import { ValueFormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { logManualSession } from '@/data/client/mutations'
+import { isPolicyAllowed } from '@/data/client/policy-hooks-shared'
 import { getGenerator } from '@/data/client/queries'
 import { useCanLogManualSession } from '@/data/client/sessions/policy-hooks'
 import { useAuthedParams } from '@/lib/hooks/use-authed-params'
@@ -67,14 +68,13 @@ function LogSessionForm({
     startedAt: startedAtBinding.value.toISOString(),
     stoppedAt: stoppedAtBinding.value.toISOString()
   })
-  const submitDisabled = policy.status === 'loading' || !policy.ok
 
   return (
     <FormScreen
       variant="scroll"
       onSubmit={submit}
       isSubmitting={isSubmitting}
-      submitDisabled={submitDisabled}
+      submitDisabled={!isPolicyAllowed(policy)}
       formError={formError}
     >
       <Text className="text-muted text-3.75 leading-5.5">

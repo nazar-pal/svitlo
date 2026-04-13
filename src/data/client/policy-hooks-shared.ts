@@ -8,3 +8,7 @@ export type PolicyView =
   | ({ status: 'ready' } & PolicyResult)
 
 export const LOADING: PolicyView = { status: 'loading' }
+
+export function isPolicyAllowed(view: PolicyView): boolean {
+  return view.status === 'ready' && view.ok
+}

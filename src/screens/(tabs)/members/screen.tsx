@@ -7,6 +7,7 @@ import {
   useCanCreateInvitation
 } from '@/data/client/invitations/policy-hooks'
 import { useCanRemoveMember } from '@/data/client/members/policy-hooks'
+import { isPolicyAllowed } from '@/data/client/policy-hooks-shared'
 import { cancelInvitation, removeMember } from '@/data/client/mutations'
 import {
   getAllUsers,
@@ -70,8 +71,7 @@ export default function MembersScreen() {
   const { data: users } = useDrizzleQuery(getAllUsers())
 
   const createInvitePolicy = useCanCreateInvitation(userId, selectedOrgId)
-  const canInvite =
-    createInvitePolicy.status === 'ready' && createInvitePolicy.ok
+  const canInvite = isPolicyAllowed(createInvitePolicy)
 
   function getUserInfo(uid: string) {
     return {
@@ -239,7 +239,7 @@ function MemberRow({
   const { t } = useTranslation()
   const { memberId } = person
   const policy = useCanRemoveMember(userId, memberId)
-  const canRemove = policy.status === 'ready' && policy.ok
+  const canRemove = isPolicyAllowed(policy)
 
   return (
     <ListGroup.Item>
@@ -292,7 +292,7 @@ function PendingInvitationRow({
 }) {
   const { t } = useTranslation()
   const policy = useCanCancelInvitation(userId, invitation.id)
-  const canCancel = policy.status === 'ready' && policy.ok
+  const canCancel = isPolicyAllowed(policy)
 
   return (
     <ListGroup.Item>

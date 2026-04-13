@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native'
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator } from '@/data/client/db-schema'
 import { startSession, stopSession } from '@/data/client/mutations'
+import { isPolicyAllowed } from '@/data/client/policy-hooks-shared'
 import {
   useCanStartSession,
   useCanStopSession
@@ -291,9 +292,7 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
     isRunning ? (openSession?.id ?? null) : null
   )
 
-  const actionDisabled = isRunning
-    ? canStop.status === 'loading' || !canStop.ok
-    : canStart.status === 'loading' || !canStart.ok
+  const actionDisabled = !isPolicyAllowed(isRunning ? canStop : canStart)
 
   function maintenanceLabelText(info: NextMaintenanceCardInfo): string {
     if (info.urgency === 'overdue') return t('generator.overdue')
