@@ -1,5 +1,5 @@
 import { DatePicker, Host } from '@expo/ui/swift-ui'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { Card, TextArea } from 'heroui-native'
 
 import { useTranslation } from '@/lib/i18n'
@@ -12,19 +12,21 @@ import {
   getMaintenanceRecord,
   getMaintenanceTemplate
 } from '@/data/client/queries'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useLocalUser } from '@/lib/powersync'
 
 export default function EditMaintenanceScreen() {
-  const { recordId } = useLocalSearchParams<{ recordId: string }>()
-  const localUser = useLocalUser()
+  const ctx = useAuthedParams(['recordId'])
+
   const { data: recordData } = useDrizzleQuery(
-    recordId ? getMaintenanceRecord(recordId) : undefined
+    ctx ? getMaintenanceRecord(ctx.params.recordId) : undefined
   )
   const record = recordData[0]
-  if (!localUser || !record) return null
-  return <EditForm userId={localUser.id} record={record} />
+
+  if (!ctx || !record) return null
+
+  return <EditForm userId={ctx.userId} record={record} />
 }
 
 interface EditFormProps {

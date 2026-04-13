@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { Text } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
@@ -7,14 +7,13 @@ import { FormScreen } from '@/components/form/form-screen'
 import { useCanCreateInvitation } from '@/data/client/invitations/policy-hooks'
 import { createInvitation } from '@/data/client/mutations'
 import { insertInvitationSchema } from '@/data/shared/validation'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
-import { useLocalUser } from '@/lib/powersync'
 
 export default function InviteMemberScreen() {
-  const { id: orgId } = useLocalSearchParams<{ id: string }>()
-  const localUser = useLocalUser()
-  if (!localUser || !orgId) return null
-  return <InviteForm userId={localUser.id} orgId={orgId} />
+  const ctx = useAuthedParams(['id'])
+  if (!ctx) return null
+  return <InviteForm userId={ctx.userId} orgId={ctx.params.id} />
 }
 
 function InviteForm({ userId, orgId }: { userId: string; orgId: string }) {

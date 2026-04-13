@@ -1,6 +1,6 @@
 import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
 import { font, labelStyle } from '@expo/ui/swift-ui/modifiers'
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { Stack, useRouter } from 'expo-router'
 import { parseISO } from 'date-fns'
 import { SymbolView } from 'expo-symbols'
 import { ScrollView, Text, View } from 'react-native'
@@ -14,18 +14,17 @@ import {
   getMaintenanceTemplates
 } from '@/data/client/queries'
 import { formatDate, useTranslation } from '@/lib/i18n'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
   computeAllMaintenanceItems,
   formatMaintenanceLabel
 } from '@/lib/maintenance/due'
-import { useLocalUser } from '@/lib/powersync'
 
 export default function MaintenanceScreen() {
   const { t } = useTranslation()
-  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
-  const localUser = useLocalUser()
+  const ctx = useAuthedParams(['id'])
   const [mutedColor, dangerColor, warningColor, successColor] = useThemeColor([
     'muted',
     'danger',
@@ -33,28 +32,30 @@ export default function MaintenanceScreen() {
     'success'
   ])
 
-  const userId = localUser?.id ?? ''
-
   const { data: gens } = useDrizzleQuery(
-    generatorId ? getGenerator(generatorId) : undefined
+    ctx ? getGenerator(ctx.params.id) : undefined
   )
   const generator = gens[0]
 
   const { data: templates } = useDrizzleQuery(
-    generatorId ? getMaintenanceTemplates(generatorId) : undefined
+    ctx ? getMaintenanceTemplates(ctx.params.id) : undefined
   )
 
   const { data: records } = useDrizzleQuery(
-    generatorId ? getMaintenanceRecords(generatorId) : undefined
+    ctx ? getMaintenanceRecords(ctx.params.id) : undefined
   )
 
   const { data: sessions } = useDrizzleQuery(
-    generatorId ? getGeneratorSessions(generatorId) : undefined
+    ctx ? getGeneratorSessions(ctx.params.id) : undefined
   )
 
   const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
 
-  if (!generator) return null
+  if (!ctx || !generator) return null
+  const {
+    userId,
+    params: { id: generatorId }
+  } = ctx
 
   const org = allOrgs.find(o => o.id === generator.organizationId)
   const isAdmin = org?.adminUserId === userId

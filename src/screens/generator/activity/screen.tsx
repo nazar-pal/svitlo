@@ -1,5 +1,5 @@
 import { differenceInMilliseconds, parseISO } from 'date-fns'
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { Stack, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { Chip, ListGroup, Separator, Tabs, useThemeColor } from 'heroui-native'
 import { useRef, useState } from 'react'
@@ -18,8 +18,8 @@ import {
 import { confirmDeleteRecord, confirmDeleteSession } from '@/lib/alerts'
 import { type Filter, FILTERS, filterLabel } from '@/lib/activity-filters'
 import { selection } from '@/lib/haptics'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useLocalUser } from '@/lib/powersync'
 import { getUserName } from '@/lib/utils/get-user-name'
 import { formatDuration } from '@/lib/utils/time'
 import { SwipeableRow } from '@/components/swipeable-row'
@@ -30,32 +30,35 @@ const ItemSeparator = () => <Separator className="mx-4" />
 
 export default function ActivityScreen() {
   const { t } = useTranslation()
-  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
+  const ctx = useAuthedParams(['id'])
   const [filter, setFilter] = useState<Filter>('all')
   const openRowRef = useRef<SwipeableRowRef | null>(null)
-  const localUser = useLocalUser()
   const [mutedColor, successColor, warningColor] = useThemeColor([
     'muted',
     'success',
     'warning'
   ])
 
-  const userId = localUser?.id ?? ''
-
   const { data: sessions } = useDrizzleQuery(
-    generatorId ? getGeneratorSessions(generatorId) : undefined
+    ctx ? getGeneratorSessions(ctx.params.id) : undefined
   )
 
   const { data: records } = useDrizzleQuery(
-    generatorId ? getMaintenanceRecords(generatorId) : undefined
+    ctx ? getMaintenanceRecords(ctx.params.id) : undefined
   )
 
   const { data: templates } = useDrizzleQuery(
-    generatorId ? getMaintenanceTemplateSummaries(generatorId) : undefined
+    ctx ? getMaintenanceTemplateSummaries(ctx.params.id) : undefined
   )
 
   const { data: users } = useDrizzleQuery(getAllUsers())
+
+  if (!ctx) return null
+  const {
+    userId,
+    params: { id: generatorId }
+  } = ctx
 
   const resolveUserName = (uid: string) => getUserName(users, uid)
 

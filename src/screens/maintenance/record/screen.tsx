@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { Card } from 'heroui-native'
 import { Text } from 'react-native'
 
@@ -7,33 +7,29 @@ import { FormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { recordMaintenance } from '@/data/client/mutations'
 import { getGenerator, getMaintenanceTemplate } from '@/data/client/queries'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useLocalUser } from '@/lib/powersync'
 
 export default function RecordMaintenanceScreen() {
-  const { id: generatorId, templateId } = useLocalSearchParams<{
-    id: string
-    templateId: string
-  }>()
-  const localUser = useLocalUser()
-  if (!localUser || !templateId || !generatorId) return null
+  const ctx = useAuthedParams(['id', 'templateId'])
+  if (!ctx) return null
   return (
     <RecordForm
-      userId={localUser.id}
-      templateId={templateId}
-      generatorId={generatorId}
+      userId={ctx.userId}
+      generatorId={ctx.params.id}
+      templateId={ctx.params.templateId}
     />
   )
 }
 
 interface RecordFormProps {
   userId: string
-  templateId: string
   generatorId: string
+  templateId: string
 }
 
-function RecordForm({ userId, templateId, generatorId }: RecordFormProps) {
+function RecordForm({ userId, generatorId, templateId }: RecordFormProps) {
   const { t } = useTranslation()
   const router = useRouter()
 

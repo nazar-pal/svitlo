@@ -1,5 +1,5 @@
 import { DatePicker, Host } from '@expo/ui/swift-ui'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { Card } from 'heroui-native'
 import { useState } from 'react'
 import { Text } from 'react-native'
@@ -10,15 +10,14 @@ import { FormScreen } from '@/components/form/form-screen'
 import { logManualSession } from '@/data/client/mutations'
 import { getGenerator } from '@/data/client/queries'
 import { useCanLogManualSession } from '@/data/client/sessions/policy-hooks'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useLocalUser } from '@/lib/powersync'
 
 export default function LogSessionScreen() {
-  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
-  const localUser = useLocalUser()
-  if (!localUser || !generatorId) return null
-  return <LogSessionForm userId={localUser.id} generatorId={generatorId} />
+  const ctx = useAuthedParams(['id'])
+  if (!ctx) return null
+  return <LogSessionForm userId={ctx.userId} generatorId={ctx.params.id} />
 }
 
 function LogSessionForm({

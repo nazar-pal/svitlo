@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { Tabs } from 'heroui-native'
 import { Text, View } from 'react-native'
 
@@ -8,6 +8,7 @@ import { FormScreen } from '@/components/form/form-screen'
 import { createMaintenanceTemplate } from '@/data/client/mutations'
 import { insertMaintenanceTemplateSchema } from '@/data/shared/validation'
 import { selection } from '@/lib/haptics'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import {
   TRIGGER_TYPES,
@@ -18,13 +19,11 @@ import {
   showsHours
 } from '@/lib/maintenance/trigger-type'
 import { useTriggerLabels } from '@/lib/maintenance/use-trigger-labels'
-import { useLocalUser } from '@/lib/powersync'
 
 export default function CreateMaintenanceTemplateScreen() {
-  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
-  const localUser = useLocalUser()
-  if (!localUser || !generatorId) return null
-  return <CreateForm userId={localUser.id} generatorId={generatorId} />
+  const ctx = useAuthedParams(['id'])
+  if (!ctx) return null
+  return <CreateForm userId={ctx.userId} generatorId={ctx.params.id} />
 }
 
 interface CreateFormProps {

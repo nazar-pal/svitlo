@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { Tabs } from 'heroui-native'
 import { Text, View } from 'react-native'
 
@@ -10,6 +10,7 @@ import type { MaintenanceTemplate } from '@/data/client/db-schema/maintenance'
 import { getMaintenanceTemplate } from '@/data/client/queries'
 import { updateMaintenanceTemplateSchema } from '@/data/shared/validation'
 import { selection } from '@/lib/haptics'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
@@ -20,23 +21,18 @@ import {
   showsHours
 } from '@/lib/maintenance/trigger-type'
 import { useTriggerLabels } from '@/lib/maintenance/use-trigger-labels'
-import { useLocalUser } from '@/lib/powersync'
 
 export default function EditMaintenanceTemplateScreen() {
-  const { templateId } = useLocalSearchParams<{
-    id: string
-    templateId: string
-  }>()
-  const localUser = useLocalUser()
+  const ctx = useAuthedParams(['id', 'templateId'])
 
   const { data: templateData } = useDrizzleQuery(
-    templateId ? getMaintenanceTemplate(templateId) : undefined
+    ctx ? getMaintenanceTemplate(ctx.params.templateId) : undefined
   )
   const template = templateData[0]
 
-  if (!localUser || !template) return null
+  if (!ctx || !template) return null
 
-  return <EditForm userId={localUser.id} template={template} />
+  return <EditForm userId={ctx.userId} template={template} />
 }
 
 interface EditFormProps {

@@ -1,5 +1,5 @@
 import { DatePicker, Host } from '@expo/ui/swift-ui'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { Card } from 'heroui-native'
 
 import { useTranslation } from '@/lib/i18n'
@@ -9,19 +9,21 @@ import { updateSession } from '@/data/client/mutations'
 import type { GeneratorSession } from '@/data/client/db-schema'
 import { getGenerator, getGeneratorSession } from '@/data/client/queries'
 import { useCanUpdateSession } from '@/data/client/sessions/policy-hooks'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useLocalUser } from '@/lib/powersync'
 
 export default function EditSessionScreen() {
-  const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
-  const localUser = useLocalUser()
+  const ctx = useAuthedParams(['sessionId'])
+
   const { data: sessionData } = useDrizzleQuery(
-    sessionId ? getGeneratorSession(sessionId) : undefined
+    ctx ? getGeneratorSession(ctx.params.sessionId) : undefined
   )
   const session = sessionData[0]
-  if (!localUser || !session) return null
-  return <EditForm userId={localUser.id} session={session} />
+
+  if (!ctx || !session) return null
+
+  return <EditForm userId={ctx.userId} session={session} />
 }
 
 interface EditFormProps {

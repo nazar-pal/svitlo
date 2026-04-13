@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { Text } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
@@ -7,15 +7,14 @@ import { FormScreen } from '@/components/form/form-screen'
 import { renameOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
 import { updateOrganizationSchema } from '@/data/shared/validation'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useLocalUser } from '@/lib/powersync'
 
 export default function RenameOrganizationScreen() {
-  const { id: orgId } = useLocalSearchParams<{ id: string }>()
-  const localUser = useLocalUser()
-  if (!localUser || !orgId) return null
-  return <RenameForm userId={localUser.id} orgId={orgId} />
+  const ctx = useAuthedParams(['id'])
+  if (!ctx) return null
+  return <RenameForm userId={ctx.userId} orgId={ctx.params.id} />
 }
 
 function RenameForm({ userId, orgId }: { userId: string; orgId: string }) {

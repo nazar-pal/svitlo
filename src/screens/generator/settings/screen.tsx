@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { Button } from 'heroui-native'
 import { Alert, View } from 'react-native'
 
@@ -20,30 +20,33 @@ import {
 } from '@/data/client/queries'
 import { updateGeneratorSchema } from '@/data/shared/validation'
 import { runMutation } from '@/lib/alerts'
+import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useLocalUser } from '@/lib/powersync'
 import { getUserName } from '@/lib/utils/get-user-name'
 
 import { useTranslation } from '@/lib/i18n'
 import { AssignedMembersSection } from '@/components/assigned-members-section'
 
 export default function GeneratorSettingsScreen() {
-  const { id: generatorId } = useLocalSearchParams<{ id: string }>()
+  const ctx = useAuthedParams(['id'])
   const { data: gens } = useDrizzleQuery(
-    generatorId ? getGenerator(generatorId) : undefined
+    ctx ? getGenerator(ctx.params.id) : undefined
   )
   const generator = gens[0]
-  if (!generator) return null
+  if (!ctx || !generator) return null
 
-  return <SettingsForm generator={generator} />
+  return <SettingsForm userId={ctx.userId} generator={generator} />
 }
 
-function SettingsForm({ generator }: { generator: Generator }) {
+interface SettingsFormProps {
+  userId: string
+  generator: Generator
+}
+
+function SettingsForm({ userId, generator }: SettingsFormProps) {
   const { t } = useTranslation()
   const router = useRouter()
-  const localUser = useLocalUser()
-  const userId = localUser?.id ?? ''
   const generatorId = generator.id
 
   const { data: assignments } = useDrizzleQuery(
