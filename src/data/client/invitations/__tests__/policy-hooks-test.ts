@@ -131,7 +131,7 @@ describe('useCanCreateInvitation', () => {
 
   // Regression: case-insensitive email comparison must hold without caller
   // pre-normalisation. The policy invariant is documented in
-  // `src/data/shared/invitations/policy.ts:3-5`.
+  // `src/data/shared/invitations/index.ts` (see the invitee-email rule).
   it('rejects with INVITATION_ALREADY_SENT when caller email is mixed-case', async () => {
     seedBaseScenario(mockDb)
     seedInvitation(mockDb, INVITEE_EMAIL)

@@ -7,12 +7,10 @@ import {
 } from '@/data/client/db-schema'
 import {
   transferAssignmentsAndRemoveMember,
-  type MemberWritePort
+  type LeaveOrganizationResult,
+  type MemberWritePort,
+  type RemoveMemberResult
 } from '@/data/shared/members'
-import type {
-  LeaveOrganizationResult,
-  RemoveMemberResult
-} from '@/data/shared/members/policy'
 
 import type { ClientDb } from '@/lib/powersync/database'
 

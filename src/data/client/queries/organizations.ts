@@ -52,8 +52,7 @@ export function getInvitationsByEmail(email: string) {
 // `findInvitationByOrgAndEmail` in the async provider, but builder-form so
 // `useCanCreateInvitation` can subscribe without awaiting. Email normalised
 // here so the case-insensitive policy invariant documented in
-// `src/data/shared/invitations/policy.ts:3-5` holds regardless of caller
-// hygiene.
+// `src/data/shared/invitations/index.ts` holds regardless of caller hygiene.
 export function findInvitationByOrgAndEmailQuery(
   db: ClientDb,
   organizationId: string,

@@ -1,7 +1,7 @@
 // Reactive bindings for the session lifecycle policy. Same pure functions as
-// the mutation path (`src/data/shared/sessions/policy.ts`), but the facts
-// arrive via `useDrizzleQuery` subscriptions instead of the async facts
-// provider. Lets UI disable affordances before the user taps them.
+// the mutation path (`src/data/shared/sessions`), but the facts arrive via
+// `useDrizzleQuery` subscriptions instead of the async facts provider. Lets
+// UI disable affordances before the user taps them.
 
 import { getGeneratorAuthzFactsQuery } from '@/data/client/authz/provider'
 import { LOADING, type PolicyView } from '@/data/client/policy-hooks-shared'
@@ -12,11 +12,11 @@ import {
 import { policy as authzPolicy } from '@/data/shared/authz'
 import {
   logManualSessionPolicy,
+  type SessionRef,
   startSessionPolicy,
   stopSessionPolicy,
   updateSessionPolicy
-} from '@/data/shared/sessions/policy'
-import type { SessionRef } from '@/data/shared/sessions'
+} from '@/data/shared/sessions'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { db } from '@/lib/powersync/database'
 

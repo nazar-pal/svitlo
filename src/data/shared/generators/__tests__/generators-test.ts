@@ -1,7 +1,10 @@
 import type { AuthzChecks } from '@/data/shared/authz'
 
-import { createGeneratorLifecycleChecks } from '../checks'
-import type { GeneratorFactsProvider, GeneratorRef } from '../facts'
+import {
+  createGeneratorLifecycleChecks,
+  type GeneratorFactsProvider,
+  type GeneratorRef
+} from '..'
 
 // Boundary tests for the generator-lifecycle orchestrator. Every branch of
 // every rule goes through `createGeneratorLifecycleChecks` so the tests

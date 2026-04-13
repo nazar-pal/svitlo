@@ -1,12 +1,12 @@
 // Reactive bindings for the member lifecycle policy. Same pure functions as
-// the mutation path (`src/data/shared/members/policy.ts`), but the facts
-// arrive via `useDrizzleQuery` subscriptions instead of the async facts
-// provider. Lets UI disable affordances before the user taps.
+// the mutation path (`src/data/shared/members`), but the facts arrive via
+// `useDrizzleQuery` subscriptions instead of the async facts provider. Lets
+// UI disable affordances before the user taps.
 
 import { useOrgAuthzFacts } from '@/data/client/organizations/policy-hooks'
 import { LOADING, type PolicyView } from '@/data/client/policy-hooks-shared'
 import { getMembershipByIdQuery } from '@/data/client/queries'
-import { removeMemberPolicy } from '@/data/shared/members/policy'
+import { removeMemberPolicy } from '@/data/shared/members'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { db } from '@/lib/powersync/database'
 

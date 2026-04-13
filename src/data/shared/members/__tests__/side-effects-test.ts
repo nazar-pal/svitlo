@@ -1,8 +1,8 @@
 import {
   transferAssignmentsAndRemoveMember,
+  type MemberRef,
   type MemberWritePort
-} from '../side-effects'
-import type { MemberRef } from '../facts'
+} from '..'
 
 const ORG = 'org-1'
 const USER = 'user-1'

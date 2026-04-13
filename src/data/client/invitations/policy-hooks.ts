@@ -1,7 +1,7 @@
 // Reactive bindings for the invitation lifecycle policy. Same pure functions
-// as the mutation path (`src/data/shared/invitations/policy.ts`), but the
-// facts arrive via `useDrizzleQuery` subscriptions instead of the async
-// facts provider. Lets UI disable affordances before the user taps.
+// as the mutation path (`src/data/shared/invitations`), but the facts arrive
+// via `useDrizzleQuery` subscriptions instead of the async facts provider.
+// Lets UI disable affordances before the user taps.
 
 import { useOrgAuthzFacts } from '@/data/client/organizations/policy-hooks'
 import { LOADING, type PolicyView } from '@/data/client/policy-hooks-shared'
@@ -12,7 +12,7 @@ import {
 import {
   cancelInvitationPolicy,
   createInvitationPolicy
-} from '@/data/shared/invitations/policy'
+} from '@/data/shared/invitations'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { db } from '@/lib/powersync/database'
 

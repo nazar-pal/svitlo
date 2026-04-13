@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 
 import { invitations, organizationMembers } from '@/data/client/db-schema'
-import type { AcceptInvitationResult } from '@/data/shared/invitations/policy'
+import type { AcceptInvitationResult } from '@/data/shared/invitations'
 import {
   insertInvitationSchema,
   type InsertInvitationInput
