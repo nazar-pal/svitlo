@@ -14,47 +14,40 @@ import { useTranslation } from '@/lib/i18n'
 
 type MaintenanceInput = Omit<InsertMaintenanceTemplateInput, 'generatorId'>
 
-export type AIMode =
-  | 'idle'
-  | 'requesting'
-  | 'offline'
-  | 'error'
-  | 'manual'
-  | 'ai'
+export type AIView =
+  | { kind: 'choose'; lastFailure: 'offline' | 'error' | null }
+  | { kind: 'loading' }
+  | {
+      kind: 'editing'
+      items: EditableItem[]
+      ai: { sources: string[]; modelInfo: string; isGeneric: boolean } | null
+    }
 
-interface SetField {
-  (field: 'maxConsecutiveRunHours', value: string): void
-  (field: 'requiredRestHours', value: string): void
+export interface Recommendations {
+  maxConsecutiveRunHours: string | null
+  requiredRestHours: string | null
 }
 
-interface ApplyTarget {
-  set: SetField
+export interface StartResult {
+  recommendations: Recommendations | null
 }
 
 export interface UseAISuggestionsReturn {
-  mode: AIMode
-  isLoading: boolean
-  sources: string[]
-  modelInfo: string
-  isGeneric: boolean
-  items: EditableItem[]
-  enterAIMode: (model: string, description: string) => Promise<void>
-  enterManualMode: () => void
+  view: AIView
+  start: (params: {
+    model: string
+    description: string
+  }) => Promise<StartResult>
+  startManual: () => void
   cancel: () => void
   addEmptyItem: () => void
   updateItem: (index: number, update: Partial<EditableItem>) => void
   getSelectedTasks: () => MaintenanceInput[]
-  applyRecommendationsTo: (form: ApplyTarget) => void
 }
 
 interface UseAISuggestionsParams {
   locale: AppLocale
   port?: AIPort
-}
-
-interface Recommendations {
-  maxRunHours: string | null
-  restHours: string | null
 }
 
 type State =
@@ -68,7 +61,6 @@ type State =
       sources: string[]
       modelInfo: string
       isGeneric: boolean
-      recommendations: Recommendations
       items: EditableItem[]
     }
 
@@ -95,11 +87,11 @@ const EMPTY_ITEM: EditableItem = {
 
 function recommendationsFromPlan(plan: SuggestionPlan): Recommendations {
   return {
-    maxRunHours:
+    maxConsecutiveRunHours:
       plan.maxConsecutiveRunHours != null
         ? String(plan.maxConsecutiveRunHours)
         : null,
-    restHours:
+    requiredRestHours:
       plan.requiredRestHours != null ? String(plan.requiredRestHours) : null
   }
 }
@@ -121,7 +113,6 @@ function reducer(state: State, action: Action): State {
         sources: plan.sources,
         modelInfo: plan.modelInfo,
         isGeneric: plan.isGeneric,
-        recommendations: recommendationsFromPlan(plan),
         items: plan.tasks.map(task => ({ ...task, selected: true }))
       }
     }
@@ -144,6 +135,35 @@ function reducer(state: State, action: Action): State {
     default:
       throw new Error(
         `Unhandled AI action: ${JSON.stringify(action satisfies never)}`
+      )
+  }
+}
+
+function viewOf(state: State): AIView {
+  switch (state.kind) {
+    case 'idle':
+      return { kind: 'choose', lastFailure: null }
+    case 'offline':
+      return { kind: 'choose', lastFailure: 'offline' }
+    case 'error':
+      return { kind: 'choose', lastFailure: 'error' }
+    case 'requesting':
+      return { kind: 'loading' }
+    case 'manual':
+      return { kind: 'editing', items: state.items, ai: null }
+    case 'ai':
+      return {
+        kind: 'editing',
+        items: state.items,
+        ai: {
+          sources: state.sources,
+          modelInfo: state.modelInfo,
+          isGeneric: state.isGeneric
+        }
+      }
+    default:
+      throw new Error(
+        `Unhandled AI state: ${JSON.stringify(state satisfies never)}`
       )
   }
 }
@@ -181,10 +201,13 @@ export function useAISuggestions({
     }
   }
 
-  async function enterAIMode(
-    model: string,
+  async function start({
+    model,
+    description
+  }: {
+    model: string
     description: string
-  ): Promise<void> {
+  }): Promise<StartResult> {
     controllerRef.current?.abort()
     const controller = new AbortController()
     controllerRef.current = controller
@@ -202,29 +225,31 @@ export function useAISuggestions({
       signal: controller.signal
     })
 
-    if (controllerRef.current !== controller) return
+    if (controllerRef.current !== controller) return { recommendations: null }
 
     switch (result.kind) {
       case 'cancelled':
-        return
+        return { recommendations: null }
       case 'offline':
         dispatch({ type: 'request_offline' })
-        return
+        return { recommendations: null }
       case 'failed':
         dispatch({ type: 'request_error' })
-        return
+        return { recommendations: null }
       case 'rejected-generic':
         dispatch({ type: 'request_rejected_generic' })
-        return
-      case 'accepted':
+        return { recommendations: null }
+      case 'accepted': {
+        const recommendations = recommendationsFromPlan(result.plan)
         dispatch({ type: 'request_accepted', plan: result.plan })
-        return
+        return { recommendations }
+      }
       default:
         throw new Error(`Unhandled SuggestionResult: ${result satisfies never}`)
     }
   }
 
-  function enterManualMode() {
+  function startManual() {
     dispatch({ type: 'enter_manual' })
   }
 
@@ -255,26 +280,13 @@ export function useAISuggestions({
       }))
   }
 
-  function applyRecommendationsTo(form: ApplyTarget) {
-    if (state.kind !== 'ai') return
-    const { maxRunHours, restHours } = state.recommendations
-    if (maxRunHours !== null) form.set('maxConsecutiveRunHours', maxRunHours)
-    if (restHours !== null) form.set('requiredRestHours', restHours)
-  }
-
   return {
-    mode: state.kind,
-    isLoading: state.kind === 'requesting',
-    sources: state.kind === 'ai' ? state.sources : [],
-    modelInfo: state.kind === 'ai' ? state.modelInfo : '',
-    isGeneric: state.kind === 'ai' ? state.isGeneric : false,
-    items: itemsOf(state),
-    enterAIMode,
-    enterManualMode,
+    view: viewOf(state),
+    start,
+    startManual,
     cancel,
     addEmptyItem,
     updateItem,
-    getSelectedTasks,
-    applyRecommendationsTo
+    getSelectedTasks
   }
 }

@@ -63,17 +63,13 @@ describe('useAISuggestions', () => {
     return renderHook(() => useAISuggestions({ locale: 'en', port: noopPort }))
   }
 
-  it('starts in idle mode with empty view-model', () => {
+  it('starts in choose view with no prior failure', () => {
     const { result } = renderAI()
-    expect(result.current.mode).toBe('idle')
-    expect(result.current.isLoading).toBe(false)
-    expect(result.current.items).toEqual([])
-    expect(result.current.sources).toEqual([])
-    expect(result.current.modelInfo).toBe('')
-    expect(result.current.isGeneric).toBe(false)
+    expect(result.current.view).toEqual({ kind: 'choose', lastFailure: null })
+    expect(result.current.getSelectedTasks()).toEqual([])
   })
 
-  it('enterAIMode → accepted exposes plan via flat accessors', async () => {
+  it('start → accepted exposes plan via editing view', async () => {
     const plan = makePlan({
       maxConsecutiveRunHours: 12,
       requiredRestHours: 6,
@@ -94,95 +90,90 @@ describe('useAISuggestions', () => {
     requestSpy.mockResolvedValue({ kind: 'accepted', plan } as SuggestionResult)
     const { result } = renderAI()
 
+    let started: { recommendations: unknown } | undefined
     await act(async () => {
-      await result.current.enterAIMode('M', '')
+      started = await result.current.start({ model: 'M', description: '' })
     })
 
-    expect(result.current.mode).toBe('ai')
-    expect(result.current.sources).toEqual(['https://example.com'])
-    expect(result.current.modelInfo).toBe('Honda XYZ')
-    expect(result.current.isGeneric).toBe(true)
-    expect(result.current.items).toHaveLength(1)
-    expect(result.current.items[0]).toMatchObject({
-      taskName: 'Oil',
-      selected: true
+    expect(started).toEqual({
+      recommendations: { maxConsecutiveRunHours: '12', requiredRestHours: '6' }
     })
+
+    const view = result.current.view
+    if (view.kind !== 'editing') throw new Error('expected editing view')
+    expect(view.ai).toEqual({
+      sources: ['https://example.com'],
+      modelInfo: 'Honda XYZ',
+      isGeneric: true
+    })
+    expect(view.items).toHaveLength(1)
+    expect(view.items[0]).toMatchObject({ taskName: 'Oil', selected: true })
   })
 
-  it('applyRecommendationsTo writes both fields when present', async () => {
-    const plan = makePlan({ maxConsecutiveRunHours: 12, requiredRestHours: 6 })
-    requestSpy.mockResolvedValue({ kind: 'accepted', plan } as SuggestionResult)
-    const { result } = renderAI()
-    await act(async () => {
-      await result.current.enterAIMode('M', '')
-    })
-
-    const set = jest.fn()
-    result.current.applyRecommendationsTo({ set })
-
-    expect(set).toHaveBeenCalledWith('maxConsecutiveRunHours', '12')
-    expect(set).toHaveBeenCalledWith('requiredRestHours', '6')
-  })
-
-  it('applyRecommendationsTo skips null fields from plan', async () => {
+  it('start → accepted with null fields returns nullable recommendations', async () => {
     const plan = makePlan({
       maxConsecutiveRunHours: null,
       requiredRestHours: 6
     })
     requestSpy.mockResolvedValue({ kind: 'accepted', plan } as SuggestionResult)
     const { result } = renderAI()
+
+    let started: { recommendations: unknown } | undefined
     await act(async () => {
-      await result.current.enterAIMode('M', '')
+      started = await result.current.start({ model: 'M', description: '' })
     })
 
-    const set = jest.fn()
-    result.current.applyRecommendationsTo({ set })
-
-    expect(set).toHaveBeenCalledTimes(1)
-    expect(set).toHaveBeenCalledWith('requiredRestHours', '6')
+    expect(started).toEqual({
+      recommendations: { maxConsecutiveRunHours: null, requiredRestHours: '6' }
+    })
   })
 
-  it('applyRecommendationsTo is a no-op outside ai mode', () => {
-    const { result } = renderAI()
-    const set = jest.fn()
-    result.current.applyRecommendationsTo({ set })
-    expect(set).not.toHaveBeenCalled()
-  })
-
-  it('enterAIMode → offline transitions to offline mode', async () => {
+  it('start → offline transitions to choose view with offline failure and null recommendations', async () => {
     requestSpy.mockResolvedValue({ kind: 'offline' } as SuggestionResult)
     const { result } = renderAI()
+    let started: { recommendations: unknown } | undefined
     await act(async () => {
-      await result.current.enterAIMode('M', '')
+      started = await result.current.start({ model: 'M', description: '' })
     })
-    expect(result.current.mode).toBe('offline')
+    expect(started).toEqual({ recommendations: null })
+    expect(result.current.view).toEqual({
+      kind: 'choose',
+      lastFailure: 'offline'
+    })
   })
 
-  it('enterAIMode → failed transitions to error mode', async () => {
+  it('start → failed transitions to choose view with error failure and null recommendations', async () => {
     requestSpy.mockResolvedValue({
       kind: 'failed',
       message: 'boom'
     } as SuggestionResult)
     const { result } = renderAI()
+    let started: { recommendations: unknown } | undefined
     await act(async () => {
-      await result.current.enterAIMode('M', '')
+      started = await result.current.start({ model: 'M', description: '' })
     })
-    expect(result.current.mode).toBe('error')
+    expect(started).toEqual({ recommendations: null })
+    expect(result.current.view).toEqual({
+      kind: 'choose',
+      lastFailure: 'error'
+    })
   })
 
-  it('enterAIMode → rejected-generic returns to idle', async () => {
+  it('start → rejected-generic returns to choose view with no failure', async () => {
     requestSpy.mockResolvedValue({
       kind: 'rejected-generic',
       plan: makePlan({ isGeneric: true })
     } as SuggestionResult)
     const { result } = renderAI()
+    let started: { recommendations: unknown } | undefined
     await act(async () => {
-      await result.current.enterAIMode('M', '')
+      started = await result.current.start({ model: 'M', description: '' })
     })
-    expect(result.current.mode).toBe('idle')
+    expect(started).toEqual({ recommendations: null })
+    expect(result.current.view).toEqual({ kind: 'choose', lastFailure: null })
   })
 
-  it('cancel mid-request: stale resolution does not flip mode back to ai', async () => {
+  it('cancel mid-request: stale resolution does not flip view back to editing', async () => {
     let resolveResult: (r: SuggestionResult) => void = () => {}
     requestSpy.mockImplementation(
       () => new Promise<SuggestionResult>(r => (resolveResult = r))
@@ -191,34 +182,36 @@ describe('useAISuggestions', () => {
 
     let pending: Promise<unknown> | null = null
     act(() => {
-      pending = result.current.enterAIMode('M', '')
+      pending = result.current.start({ model: 'M', description: '' })
     })
-    await waitFor(() => expect(result.current.mode).toBe('requesting'))
+    await waitFor(() => expect(result.current.view.kind).toBe('loading'))
 
     act(() => {
       result.current.cancel()
     })
-    expect(result.current.mode).toBe('idle')
+    expect(result.current.view).toEqual({ kind: 'choose', lastFailure: null })
 
     await act(async () => {
       resolveResult({ kind: 'accepted', plan: makePlan() } as SuggestionResult)
       await pending
     })
 
-    expect(result.current.mode).toBe('idle')
+    expect(result.current.view).toEqual({ kind: 'choose', lastFailure: null })
   })
 
-  it('manual mode: enterManualMode → addEmptyItem appends a blank task', () => {
+  it('startManual → editing view with no AI metadata; addEmptyItem appends a blank task', () => {
     const { result } = renderAI()
-    act(() => result.current.enterManualMode())
-    expect(result.current.mode).toBe('manual')
+    act(() => result.current.startManual())
+    let view = result.current.view
+    if (view.kind !== 'editing') throw new Error('expected editing view')
+    expect(view.ai).toBeNull()
+    expect(view.items).toEqual([])
 
     act(() => result.current.addEmptyItem())
-    expect(result.current.items).toHaveLength(1)
-    expect(result.current.items[0]).toMatchObject({
-      taskName: '',
-      selected: true
-    })
+    view = result.current.view
+    if (view.kind !== 'editing') throw new Error('expected editing view')
+    expect(view.items).toHaveLength(1)
+    expect(view.items[0]).toMatchObject({ taskName: '', selected: true })
   })
 
   it('updateItem mutates only the targeted item', async () => {
@@ -246,14 +239,16 @@ describe('useAISuggestions', () => {
     const { result } = renderAI()
 
     await act(async () => {
-      await result.current.enterAIMode('M', '')
+      await result.current.start({ model: 'M', description: '' })
     })
     act(() => {
       result.current.updateItem(1, { selected: false })
     })
 
-    expect(result.current.items[0].selected).toBe(true)
-    expect(result.current.items[1].selected).toBe(false)
+    const view = result.current.view
+    if (view.kind !== 'editing') throw new Error('expected editing view')
+    expect(view.items[0].selected).toBe(true)
+    expect(view.items[1].selected).toBe(false)
   })
 
   it('getSelectedTasks returns only selected items with non-empty taskName', async () => {
@@ -281,7 +276,7 @@ describe('useAISuggestions', () => {
     const { result } = renderAI()
 
     await act(async () => {
-      await result.current.enterAIMode('M', '')
+      await result.current.start({ model: 'M', description: '' })
     })
 
     act(() => {
@@ -304,8 +299,54 @@ describe('useAISuggestions', () => {
     })
   })
 
-  it('getSelectedTasks returns [] when in idle mode', () => {
+  it('getSelectedTasks returns [] when in choose view', () => {
     const { result } = renderAI()
     expect(result.current.getSelectedTasks()).toEqual([])
+  })
+
+  it('every reachable reducer state maps to a known view kind', async () => {
+    const { result } = renderAI()
+
+    expect(result.current.view.kind).toBe('choose')
+
+    let resolve: (r: SuggestionResult) => void = () => {}
+    requestSpy.mockImplementation(
+      () => new Promise<SuggestionResult>(r => (resolve = r))
+    )
+    let pending: Promise<unknown> | null = null
+    act(() => {
+      pending = result.current.start({ model: 'M', description: '' })
+    })
+    await waitFor(() => expect(result.current.view.kind).toBe('loading'))
+
+    await act(async () => {
+      resolve({ kind: 'offline' } as SuggestionResult)
+      await pending
+    })
+    expect(result.current.view.kind).toBe('choose')
+
+    requestSpy.mockResolvedValue({
+      kind: 'failed',
+      message: 'x'
+    } as SuggestionResult)
+    await act(async () => {
+      await result.current.start({ model: 'M', description: '' })
+    })
+    expect(result.current.view.kind).toBe('choose')
+
+    requestSpy.mockResolvedValue({
+      kind: 'accepted',
+      plan: makePlan()
+    } as SuggestionResult)
+    await act(async () => {
+      await result.current.start({ model: 'M', description: '' })
+    })
+    expect(result.current.view.kind).toBe('editing')
+
+    act(() => result.current.cancel())
+    expect(result.current.view.kind).toBe('choose')
+
+    act(() => result.current.startManual())
+    expect(result.current.view.kind).toBe('editing')
   })
 })

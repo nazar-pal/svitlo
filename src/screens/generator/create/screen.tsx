@@ -22,10 +22,12 @@ import { AiSourcesList } from '@/components/ai-sources-list'
 import { FormError } from '@/components/form-error'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { SuggestionCard } from '@/components/suggestion-card'
+import type { EditableItem } from '@/components/suggestion-card'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { createGeneratorWithMaintenance } from '@/data/client/mutations'
 import { insertGeneratorSchema } from '@/data/shared/validation'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
+import type { TextBinding } from '@/lib/hooks/forms/bind-field'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -78,8 +80,14 @@ export default function CreateGeneratorScreen() {
   })
 
   async function startAI() {
-    await ai.enterAIMode(form.values.model, form.values.description)
-    ai.applyRecommendationsTo(form)
+    const { recommendations } = await ai.start({
+      model: form.values.model,
+      description: form.values.description
+    })
+    if (recommendations?.maxConsecutiveRunHours != null)
+      form.set('maxConsecutiveRunHours', recommendations.maxConsecutiveRunHours)
+    if (recommendations?.requiredRestHours != null)
+      form.set('requiredRestHours', recommendations.requiredRestHours)
   }
 
   function handleNext() {
@@ -99,6 +107,44 @@ export default function CreateGeneratorScreen() {
   const maxRunBinding = bind.text('maxConsecutiveRunHours')
   const restBinding = bind.text('requiredRestHours')
   const warnBinding = bind.text('runWarningThresholdPct')
+
+  function renderBody() {
+    const view = ai.view
+    switch (view.kind) {
+      case 'choose':
+        return (
+          <ChooseBlock
+            lastFailure={view.lastFailure}
+            onAI={startAI}
+            onManual={ai.startManual}
+          />
+        )
+      case 'loading':
+        return (
+          <AiLoader
+            label={t('generator.researching', { model: form.values.model })}
+            onCancel={ai.cancel}
+          />
+        )
+      case 'editing':
+        return (
+          <EditingBlock
+            items={view.items}
+            ai={view.ai}
+            maxRunBinding={maxRunBinding}
+            restBinding={restBinding}
+            warnBinding={warnBinding}
+            onAddItem={ai.addEmptyItem}
+            onUpdateItem={ai.updateItem}
+            formError={formError}
+          />
+        )
+      default:
+        throw new Error(
+          `Unhandled AI view: ${JSON.stringify(view satisfies never)}`
+        )
+    }
+  }
 
   if (step === 'basics')
     return (
@@ -200,132 +246,164 @@ export default function CreateGeneratorScreen() {
             {t('generator.configureDesc', { model: form.values.model })}
           </Text>
 
-          {ai.mode === 'idle' ||
-          ai.mode === 'offline' ||
-          ai.mode === 'error' ? (
-            <View className="gap-3">
-              <PressableFeedback onPress={startAI}>
-                <Card>
-                  <Card.Body>
-                    <Card.Title>{t('generator.autoFillAI')}</Card.Title>
-                    <Card.Description>
-                      {t('generator.autoFillAIDesc')}
-                    </Card.Description>
-                  </Card.Body>
-                </Card>
-              </PressableFeedback>
-              <PressableFeedback
-                testID="create-gen-manual-mode"
-                onPress={ai.enterManualMode}
-              >
-                <Card>
-                  <Card.Body>
-                    <Card.Title>{t('generator.enterManually')}</Card.Title>
-                    <Card.Description>
-                      {t('generator.enterManuallyDesc')}
-                    </Card.Description>
-                  </Card.Body>
-                </Card>
-              </PressableFeedback>
-            </View>
-          ) : null}
-
-          {ai.isLoading ? (
-            <AiLoader
-              label={t('generator.researching', { model: form.values.model })}
-              onCancel={ai.cancel}
-            />
-          ) : null}
-
-          {ai.mode === 'ai' || ai.mode === 'manual' ? (
-            <>
-              <View className="gap-5">
-                <View className="flex-row gap-3">
-                  <View className="flex-1">
-                    <TextField isInvalid={maxRunBinding.isInvalid}>
-                      <Label>{t('generator.maxRunHours')}</Label>
-                      <Input
-                        placeholder="8"
-                        value={maxRunBinding.value}
-                        onChangeText={maxRunBinding.onChangeText}
-                        keyboardType="decimal-pad"
-                      />
-                      <FieldError>{maxRunBinding.errorMessage}</FieldError>
-                    </TextField>
-                  </View>
-                  <View className="flex-1">
-                    <TextField isInvalid={restBinding.isInvalid}>
-                      <Label>{t('generator.restHours')}</Label>
-                      <Input
-                        placeholder="4"
-                        value={restBinding.value}
-                        onChangeText={restBinding.onChangeText}
-                        keyboardType="decimal-pad"
-                      />
-                      <FieldError>{restBinding.errorMessage}</FieldError>
-                    </TextField>
-                  </View>
-                </View>
-
-                <TextField isInvalid={warnBinding.isInvalid}>
-                  <Label>{t('generator.warningThresholdPct')}</Label>
-                  <Input
-                    placeholder="80"
-                    value={warnBinding.value}
-                    onChangeText={warnBinding.onChangeText}
-                    keyboardType="number-pad"
-                  />
-                  <Description>
-                    {t('generator.warningThresholdDesc')}
-                  </Description>
-                  <FieldError>{warnBinding.errorMessage}</FieldError>
-                </TextField>
-              </View>
-
-              {ai.isGeneric ? (
-                <Alert status="warning">
-                  <Alert.Indicator />
-                  <Alert.Content>
-                    <Alert.Description>
-                      {t('aiSuggestions.genericWarning')}
-                    </Alert.Description>
-                  </Alert.Content>
-                </Alert>
-              ) : null}
-
-              {ai.items.length > 0 ? (
-                <View className="gap-2">
-                  <Text className="text-foreground text-lg font-semibold">
-                    {t('generator.maintenanceTasks')}
-                  </Text>
-                  {ai.modelInfo ? (
-                    <Text className="text-muted text-xs">{ai.modelInfo}</Text>
-                  ) : null}
-                  {ai.items.map((item, index) => (
-                    <SuggestionCard
-                      key={index}
-                      item={item}
-                      onToggle={() =>
-                        ai.updateItem(index, { selected: !item.selected })
-                      }
-                      onUpdate={update => ai.updateItem(index, update)}
-                    />
-                  ))}
-                </View>
-              ) : null}
-
-              <Button variant="secondary" onPress={ai.addEmptyItem}>
-                {t('generator.addMaintenanceTask')}
-              </Button>
-
-              <AiSourcesList sources={ai.sources} />
-
-              <FormError message={formError} />
-            </>
-          ) : null}
+          {renderBody()}
         </View>
       </KeyboardAwareScrollView>
       <KeyboardToolbar />
+    </>
+  )
+}
+
+function ChooseBlock({
+  lastFailure,
+  onAI,
+  onManual
+}: {
+  lastFailure: 'offline' | 'error' | null
+  onAI: () => void
+  onManual: () => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <View className="gap-3">
+      {lastFailure !== null ? (
+        <Alert status={lastFailure === 'offline' ? 'warning' : 'danger'}>
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Description>
+              {t(
+                lastFailure === 'offline'
+                  ? 'generator.aiOfflineRetry'
+                  : 'generator.aiErrorRetry'
+              )}
+            </Alert.Description>
+          </Alert.Content>
+        </Alert>
+      ) : null}
+      <PressableFeedback onPress={onAI}>
+        <Card>
+          <Card.Body>
+            <Card.Title>{t('generator.autoFillAI')}</Card.Title>
+            <Card.Description>{t('generator.autoFillAIDesc')}</Card.Description>
+          </Card.Body>
+        </Card>
+      </PressableFeedback>
+      <PressableFeedback testID="create-gen-manual-mode" onPress={onManual}>
+        <Card>
+          <Card.Body>
+            <Card.Title>{t('generator.enterManually')}</Card.Title>
+            <Card.Description>
+              {t('generator.enterManuallyDesc')}
+            </Card.Description>
+          </Card.Body>
+        </Card>
+      </PressableFeedback>
+    </View>
+  )
+}
+
+interface EditingBlockProps {
+  items: EditableItem[]
+  ai: { sources: string[]; modelInfo: string; isGeneric: boolean } | null
+  maxRunBinding: TextBinding
+  restBinding: TextBinding
+  warnBinding: TextBinding
+  onAddItem: () => void
+  onUpdateItem: (index: number, update: Partial<EditableItem>) => void
+  formError: string
+}
+
+function EditingBlock({
+  items,
+  ai,
+  maxRunBinding,
+  restBinding,
+  warnBinding,
+  onAddItem,
+  onUpdateItem,
+  formError
+}: EditingBlockProps) {
+  const { t } = useTranslation()
+  return (
+    <>
+      <View className="gap-5">
+        <View className="flex-row gap-3">
+          <View className="flex-1">
+            <TextField isInvalid={maxRunBinding.isInvalid}>
+              <Label>{t('generator.maxRunHours')}</Label>
+              <Input
+                placeholder="8"
+                value={maxRunBinding.value}
+                onChangeText={maxRunBinding.onChangeText}
+                keyboardType="decimal-pad"
+              />
+              <FieldError>{maxRunBinding.errorMessage}</FieldError>
+            </TextField>
+          </View>
+          <View className="flex-1">
+            <TextField isInvalid={restBinding.isInvalid}>
+              <Label>{t('generator.restHours')}</Label>
+              <Input
+                placeholder="4"
+                value={restBinding.value}
+                onChangeText={restBinding.onChangeText}
+                keyboardType="decimal-pad"
+              />
+              <FieldError>{restBinding.errorMessage}</FieldError>
+            </TextField>
+          </View>
+        </View>
+
+        <TextField isInvalid={warnBinding.isInvalid}>
+          <Label>{t('generator.warningThresholdPct')}</Label>
+          <Input
+            placeholder="80"
+            value={warnBinding.value}
+            onChangeText={warnBinding.onChangeText}
+            keyboardType="number-pad"
+          />
+          <Description>{t('generator.warningThresholdDesc')}</Description>
+          <FieldError>{warnBinding.errorMessage}</FieldError>
+        </TextField>
+      </View>
+
+      {ai?.isGeneric ? (
+        <Alert status="warning">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Description>
+              {t('aiSuggestions.genericWarning')}
+            </Alert.Description>
+          </Alert.Content>
+        </Alert>
+      ) : null}
+
+      {items.length > 0 ? (
+        <View className="gap-2">
+          <Text className="text-foreground text-lg font-semibold">
+            {t('generator.maintenanceTasks')}
+          </Text>
+          {ai?.modelInfo ? (
+            <Text className="text-muted text-xs">{ai.modelInfo}</Text>
+          ) : null}
+          {items.map((item, index) => (
+            <SuggestionCard
+              key={index}
+              item={item}
+              onToggle={() => onUpdateItem(index, { selected: !item.selected })}
+              onUpdate={update => onUpdateItem(index, update)}
+            />
+          ))}
+        </View>
+      ) : null}
+
+      <Button variant="secondary" onPress={onAddItem}>
+        {t('generator.addMaintenanceTask')}
+      </Button>
+
+      <AiSourcesList sources={ai?.sources ?? []} />
+
+      <FormError message={formError} />
     </>
   )
 }

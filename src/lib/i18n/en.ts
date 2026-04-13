@@ -130,6 +130,8 @@ export const en = {
     enterManually: 'Enter manually',
     enterManuallyDesc: 'Set up generator specs and maintenance tasks yourself.',
     researching: 'Researching {{model}}...',
+    aiOfflineRetry: "You're offline. Try again once you're back online.",
+    aiErrorRetry: "Couldn't reach the AI. Tap to try again.",
     maxRunHours: 'Max Run Hours',
     restHours: 'Rest Hours',
     warningThresholdPct: 'Warning Threshold %',
