@@ -2,7 +2,7 @@ import type { PowerSyncBackendConnector } from '@powersync/react-native'
 
 import { createPowerSyncConnector } from '@/lib/powersync/connector'
 import { powersync } from '@/lib/powersync/database'
-import { clearRejections } from '@/lib/powersync/sync-rejections'
+import type { SyncOutbox } from '@/lib/powersync/sync-outbox'
 
 export interface PowerSyncRuntime {
   init(): Promise<void>
@@ -12,6 +12,7 @@ export interface PowerSyncRuntime {
 
 interface DefaultRuntimeOptions {
   onAuthExpired: () => void
+  outbox: SyncOutbox
 }
 
 // Ports-and-adapters layer around the PowerSync singleton. The coordinator
@@ -26,7 +27,7 @@ export function createDefaultPowerSyncRuntime(
   function disconnectIfConnected() {
     if (!connected) return
     powersync.disconnect()
-    clearRejections()
+    opts.outbox.clear()
     // The connector's credential cache is closure-scoped — discarding
     // the instance here is sufficient; no manual invalidation needed.
     connector = null
@@ -60,7 +61,8 @@ export function createDefaultPowerSyncRuntime(
     connect() {
       if (connected) return
       connector = createPowerSyncConnector({
-        onAuthExpired: opts.onAuthExpired
+        onAuthExpired: opts.onAuthExpired,
+        outbox: opts.outbox
       })
       // connect() is fire-and-forget per PowerSync docs
       powersync.connect(connector)

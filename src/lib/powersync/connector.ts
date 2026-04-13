@@ -9,7 +9,7 @@ import { ORPCError } from '@orpc/client'
 
 import { rpcClient } from '@/data/client/rpc-client'
 
-import { addRejection } from './sync-rejections'
+import type { SyncOutbox } from './sync-outbox'
 
 // ── Public types ────────────────────────────────────────────────────────────
 
@@ -50,12 +50,14 @@ export interface SyncTransport {
  * upload pipeline; inject `now` for deterministic cache-expiry tests.
  */
 export function createPowerSyncConnector(opts: {
+  outbox: SyncOutbox
   onAuthExpired?: () => void
   transport?: SyncTransport
   now?: () => number
 }): PowerSyncBackendConnector {
   const transport = opts.transport ?? defaultTransport()
   const now = opts.now ?? Date.now
+  const outbox = opts.outbox
 
   let cachedCredentials: PowerSyncCredentials | null = null
 
@@ -95,7 +97,7 @@ export function createPowerSyncConnector(opts: {
         if (result.ok) continue
 
         if ('rejection' in result && result.rejection) {
-          addRejection({
+          outbox.recordRejection({
             table: result.rejection.table,
             op: write.op,
             id: write.id,
@@ -112,7 +114,7 @@ export function createPowerSyncConnector(opts: {
             ? result.error
             : 'Server returned ok:false without structured rejection or error'
 
-        addRejection({
+        outbox.recordRejection({
           table: write.table,
           op: write.op,
           id: write.id,
@@ -139,7 +141,7 @@ export function createPowerSyncConnector(opts: {
         // below) so PowerSync retries with backoff — dropping an
         // unrecognised error would silently advance the queue past a
         // failing op and lose data.
-        addRejection({
+        outbox.recordRejection({
           table: lastOp.table,
           op: lastOp.op,
           id: lastOp.id,

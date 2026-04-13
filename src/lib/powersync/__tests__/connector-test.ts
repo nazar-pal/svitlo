@@ -3,8 +3,8 @@
  *
  * Every test drives `createPowerSyncConnector` through its public
  * interface (`fetchCredentials`, `uploadData`) and asserts on observable
- * outcomes: calls into the transport fake, entries sunk into the
- * `addRejection` mock, `tx.complete()` calls, and thrown errors. Nothing
+ * outcomes: calls into the transport fake, entries recorded by the
+ * injected outbox, `tx.complete()` calls, and thrown errors. Nothing
  * here reaches into private module state or tests internal helpers
  * directly — the classifier, credential cache, and CRUD mapping are all
  * verified via the behaviours they produce at the boundary.
@@ -13,8 +13,6 @@
  * doubles. `@powersync/react-native`, `@orpc/client`, and the chain
  * reached via `@/data/client/rpc-client` (which pulls `@orpc/client/fetch`)
  * are all ESM-only and can't be `require()`d in Jest 29's CJS runtime.
- * `sync-rejections` is mocked so tests can observe rejection writes
- * without a shared module-level store.
  */
 
 jest.mock('@powersync/react-native', () => ({
@@ -36,11 +34,6 @@ jest.mock('@orpc/client', () => {
 
 jest.mock('@/data/client/rpc-client', () => ({ rpcClient: {} }))
 
-const mockAddRejection = jest.fn()
-jest.mock('../sync-rejections', () => ({
-  addRejection: (...args: unknown[]) => mockAddRejection(...args)
-}))
-
 import { ORPCError } from '@orpc/client'
 import {
   UpdateType,
@@ -55,6 +48,7 @@ import {
   type CrudWrite,
   type SyncTransport
 } from '../connector'
+import { createSyncOutbox, type SyncOutbox } from '../sync-outbox'
 
 // ── Fakes ───────────────────────────────────────────────────────────────────
 
@@ -121,9 +115,10 @@ function fakeDatabase(
 // ── Lifecycle ───────────────────────────────────────────────────────────────
 
 let consoleErrorSpy: jest.SpyInstance
+let outbox: SyncOutbox
 
 beforeEach(() => {
-  mockAddRejection.mockReset()
+  outbox = createSyncOutbox({ now: () => 1_700_000_000_000 })
   consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
 })
 
@@ -136,7 +131,7 @@ afterEach(() => {
 describe('createPowerSyncConnector — fetchCredentials', () => {
   it('returns credentials from transport on first call', async () => {
     const transport = fakeTransport()
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
 
     const creds = await connector.fetchCredentials()
 
@@ -149,7 +144,7 @@ describe('createPowerSyncConnector — fetchCredentials', () => {
 
   it('returns cached credentials on subsequent calls', async () => {
     const transport = fakeTransport()
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
 
     await connector.fetchCredentials()
     await connector.fetchCredentials()
@@ -170,6 +165,7 @@ describe('createPowerSyncConnector — fetchCredentials', () => {
     })
     const connector = createPowerSyncConnector({
       transport,
+      outbox,
       now: clock.now
     })
 
@@ -194,6 +190,7 @@ describe('createPowerSyncConnector — fetchCredentials', () => {
     })
     const connector = createPowerSyncConnector({
       transport,
+      outbox,
       now: clock.now
     })
 
@@ -216,7 +213,11 @@ describe('createPowerSyncConnector — fetchCredentials', () => {
         return defaultCredentials()
       }
     })
-    const connector = createPowerSyncConnector({ transport, onAuthExpired })
+    const connector = createPowerSyncConnector({
+      transport,
+      outbox,
+      onAuthExpired
+    })
 
     await expect(connector.fetchCredentials()).rejects.toThrow('Unauthorized')
     expect(onAuthExpired).toHaveBeenCalledTimes(1)
@@ -234,7 +235,11 @@ describe('createPowerSyncConnector — fetchCredentials', () => {
         throw new Error('server down')
       }
     })
-    const connector = createPowerSyncConnector({ transport, onAuthExpired })
+    const connector = createPowerSyncConnector({
+      transport,
+      outbox,
+      onAuthExpired
+    })
 
     await expect(connector.fetchCredentials()).rejects.toThrow('server down')
     expect(onAuthExpired).not.toHaveBeenCalled()
@@ -246,7 +251,7 @@ describe('createPowerSyncConnector — fetchCredentials', () => {
 describe('createPowerSyncConnector — uploadData', () => {
   it('returns early when there is no pending transaction', async () => {
     const transport = fakeTransport()
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
 
     await connector.uploadData(fakeDatabase(null))
 
@@ -255,7 +260,7 @@ describe('createPowerSyncConnector — uploadData', () => {
 
   it('maps CRUD ops and calls applyWrite for each, completing on success', async () => {
     const transport = fakeTransport()
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
     const tx = fakeCrudTransaction([
       { op: UpdateType.DELETE, table: 'session', id: 'id1' },
       {
@@ -289,19 +294,22 @@ describe('createPowerSyncConnector — uploadData', () => {
         rejection: { table: 'generator', message: 'FK violation' }
       })
     })
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
     const tx = fakeCrudTransaction([
       { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }
     ])
 
     await connector.uploadData(fakeDatabase(tx))
 
-    expect(mockAddRejection).toHaveBeenCalledWith({
-      table: 'generator',
-      op: 'insert',
-      id: 'g1',
-      reason: 'FK violation'
-    })
+    expect(outbox.getRejections()).toEqual([
+      {
+        table: 'generator',
+        op: 'insert',
+        id: 'g1',
+        reason: 'FK violation',
+        timestamp: 1_700_000_000_000
+      }
+    ])
     expect(tx.complete).toHaveBeenCalledTimes(1)
   })
 
@@ -309,19 +317,22 @@ describe('createPowerSyncConnector — uploadData', () => {
     const transport = fakeTransport({
       applyWrite: async () => ({ ok: false, error: 'something went wrong' })
     })
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
     const tx = fakeCrudTransaction([
       { op: UpdateType.PATCH, table: 'session', id: 's1', opData: {} }
     ])
 
     await connector.uploadData(fakeDatabase(tx))
 
-    expect(mockAddRejection).toHaveBeenCalledWith({
-      table: 'session',
-      op: 'update',
-      id: 's1',
-      reason: 'something went wrong'
-    })
+    expect(outbox.getRejections()).toEqual([
+      {
+        table: 'session',
+        op: 'update',
+        id: 's1',
+        reason: 'something went wrong',
+        timestamp: 1_700_000_000_000
+      }
+    ])
     expect(tx.complete).toHaveBeenCalledTimes(1)
   })
 
@@ -331,19 +342,23 @@ describe('createPowerSyncConnector — uploadData', () => {
     const transport = fakeTransport({
       applyWrite: async () => ({ ok: false }) as unknown as ApplyWriteResult
     })
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
     const tx = fakeCrudTransaction([
       { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }
     ])
 
     await connector.uploadData(fakeDatabase(tx))
 
-    expect(mockAddRejection).toHaveBeenCalledWith({
-      table: 'generator',
-      op: 'insert',
-      id: 'g1',
-      reason: 'Server returned ok:false without structured rejection or error'
-    })
+    expect(outbox.getRejections()).toEqual([
+      {
+        table: 'generator',
+        op: 'insert',
+        id: 'g1',
+        reason:
+          'Server returned ok:false without structured rejection or error',
+        timestamp: 1_700_000_000_000
+      }
+    ])
     expect(tx.complete).toHaveBeenCalledTimes(1)
   })
 
@@ -353,7 +368,7 @@ describe('createPowerSyncConnector — uploadData', () => {
         throw new Error('network timeout')
       }
     })
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
     const tx = fakeCrudTransaction([
       { op: UpdateType.PUT, table: 'session', id: 's1', opData: {} }
     ])
@@ -363,7 +378,7 @@ describe('createPowerSyncConnector — uploadData', () => {
     )
 
     expect(tx.complete).not.toHaveBeenCalled()
-    expect(mockAddRejection).not.toHaveBeenCalled()
+    expect(outbox.getRejections()).toEqual([])
   })
 
   it('fires onAuthExpired, clears cache, and re-throws on ORPCError UNAUTHORIZED', async () => {
@@ -373,7 +388,11 @@ describe('createPowerSyncConnector — uploadData', () => {
         throw new ORPCError('UNAUTHORIZED', { message: 'Unauthorized' })
       }
     })
-    const connector = createPowerSyncConnector({ transport, onAuthExpired })
+    const connector = createPowerSyncConnector({
+      transport,
+      outbox,
+      onAuthExpired
+    })
     const tx = fakeCrudTransaction([
       { op: UpdateType.PUT, table: 'session', id: 's1', opData: {} }
     ])
@@ -402,7 +421,11 @@ describe('createPowerSyncConnector — uploadData', () => {
         throw new Error('Request failed with status 401')
       }
     })
-    const connector = createPowerSyncConnector({ transport, onAuthExpired })
+    const connector = createPowerSyncConnector({
+      transport,
+      outbox,
+      onAuthExpired
+    })
     const tx = fakeCrudTransaction([
       { op: UpdateType.PUT, table: 'session', id: 's1', opData: {} }
     ])
@@ -422,7 +445,7 @@ describe('createPowerSyncConnector — uploadData', () => {
         throw error
       }
     })
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
     const tx = fakeCrudTransaction([
       { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }
     ])
@@ -430,12 +453,15 @@ describe('createPowerSyncConnector — uploadData', () => {
     await connector.uploadData(fakeDatabase(tx))
 
     expect(tx.complete).toHaveBeenCalledTimes(1)
-    expect(mockAddRejection).toHaveBeenCalledWith({
-      table: 'generator',
-      op: 'insert',
-      id: 'g1',
-      reason: 'invalid authorization'
-    })
+    expect(outbox.getRejections()).toEqual([
+      {
+        table: 'generator',
+        op: 'insert',
+        id: 'g1',
+        reason: 'invalid authorization',
+        timestamp: 1_700_000_000_000
+      }
+    ])
   })
 
   it('completes and sinks rejection on auth_forbidden via 403 message', async () => {
@@ -444,7 +470,7 @@ describe('createPowerSyncConnector — uploadData', () => {
         throw new Error('403 Forbidden')
       }
     })
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
     const tx = fakeCrudTransaction([
       { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }
     ])
@@ -452,12 +478,15 @@ describe('createPowerSyncConnector — uploadData', () => {
     await connector.uploadData(fakeDatabase(tx))
 
     expect(tx.complete).toHaveBeenCalledTimes(1)
-    expect(mockAddRejection).toHaveBeenCalledWith({
-      table: 'generator',
-      op: 'insert',
-      id: 'g1',
-      reason: '403 Forbidden'
-    })
+    expect(outbox.getRejections()).toEqual([
+      {
+        table: 'generator',
+        op: 'insert',
+        id: 'g1',
+        reason: '403 Forbidden',
+        timestamp: 1_700_000_000_000
+      }
+    ])
   })
 
   it('regression guard: unknown error re-throws without completing or sinking', async () => {
@@ -471,7 +500,7 @@ describe('createPowerSyncConnector — uploadData', () => {
         throw new Error('totally weird error')
       }
     })
-    const connector = createPowerSyncConnector({ transport })
+    const connector = createPowerSyncConnector({ transport, outbox })
     const tx = fakeCrudTransaction([
       { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }
     ])
@@ -481,7 +510,7 @@ describe('createPowerSyncConnector — uploadData', () => {
     )
 
     expect(tx.complete).not.toHaveBeenCalled()
-    expect(mockAddRejection).not.toHaveBeenCalled()
+    expect(outbox.getRejections()).toEqual([])
     // Logger is called so operators can see the classification in logs.
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       '[sync] upload failed',

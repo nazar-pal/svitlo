@@ -5,7 +5,7 @@ import { Text, View } from 'react-native'
 
 import { useAuthSession } from '@/lib/auth/session'
 import { useTranslation } from '@/lib/i18n'
-import { useSyncRejections } from '@/lib/powersync/sync-rejections'
+import { useSyncRejections } from '@/lib/powersync/sync-outbox-context'
 
 import { type SyncStateKey, deriveSyncState } from './derive-sync-state'
 

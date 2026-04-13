@@ -15,6 +15,8 @@ import { AuthSessionProvider, useAuthSession } from '@/lib/auth/session'
 import { defaultSessionRuntime } from '@/lib/auth/session-runtime-default'
 import { SessionRuntimeProvider } from '@/lib/auth/session-runtime'
 import { powersync } from '@/lib/powersync/database'
+import { createSyncOutbox } from '@/lib/powersync/sync-outbox'
+import { SyncOutboxProvider } from '@/lib/powersync/sync-outbox-context'
 import '@/lib/i18n'
 import {
   DarkTheme,
@@ -75,10 +77,17 @@ function StartupCoordinatorBridge({ children }: { children: React.ReactNode }) {
   const { markExpired } = useAuthSession()
   const markExpiredRef = useRef(markExpired)
   markExpiredRef.current = markExpired
-  const [runtime] = useState(() =>
-    createDefaultPowerSyncRuntime({
-      onAuthExpired: () => markExpiredRef.current()
+  const [{ runtime, outbox }] = useState(() => {
+    const outbox = createSyncOutbox()
+    const runtime = createDefaultPowerSyncRuntime({
+      onAuthExpired: () => markExpiredRef.current(),
+      outbox
     })
+    return { runtime, outbox }
+  })
+  return (
+    <SyncOutboxProvider outbox={outbox}>
+      <StartupCoordinator runtime={runtime}>{children}</StartupCoordinator>
+    </SyncOutboxProvider>
   )
-  return <StartupCoordinator runtime={runtime}>{children}</StartupCoordinator>
 }

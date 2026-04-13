@@ -50,12 +50,14 @@ jest.mock('@/data/client/rpc-client', () => {
   }
 })
 
-const mockAddRejection = jest.fn()
-jest.mock('../sync-rejections', () => ({
-  addRejection: (...args: unknown[]) => mockAddRejection(...args)
-}))
-
 import { createPowerSyncConnector } from '../connector'
+import { createSyncOutbox, type SyncOutbox } from '../sync-outbox'
+
+let outbox: SyncOutbox
+
+beforeEach(() => {
+  outbox = createSyncOutbox({ now: () => 1_700_000_000_000 })
+})
 
 afterEach(() => {
   jest.resetAllMocks()
@@ -79,7 +81,7 @@ function makeMockDatabase(
 }
 
 function buildConnector() {
-  return createPowerSyncConnector({ onAuthExpired: () => {} })
+  return createPowerSyncConnector({ onAuthExpired: () => {}, outbox })
 }
 
 // ── fetchCredentials ─────────────────────────────────────────────────────────
@@ -201,14 +203,15 @@ describe('uploadData (integration)', () => {
 
     await connector.uploadData(db as never)
 
-    expect(mockAddRejection).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(outbox.getRejections()).toEqual([
+      {
         table: 'generator',
         op: 'insert',
         id: 'g1',
-        reason: 'duplicate key value violates unique constraint'
-      })
-    )
+        reason: 'duplicate key value violates unique constraint',
+        timestamp: 1_700_000_000_000
+      }
+    ])
     expect(tx.complete).toHaveBeenCalledTimes(1)
   })
 
@@ -241,6 +244,6 @@ describe('uploadData (integration)', () => {
     )
 
     expect(tx.complete).not.toHaveBeenCalled()
-    expect(mockAddRejection).not.toHaveBeenCalled()
+    expect(outbox.getRejections()).toEqual([])
   })
 })
