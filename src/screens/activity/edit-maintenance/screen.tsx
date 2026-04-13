@@ -1,9 +1,9 @@
 import { DatePicker, Host } from '@expo/ui/swift-ui'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Card, TextArea } from 'heroui-native'
-import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
+import { ValueFormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { updateMaintenanceRecord } from '@/data/client/mutations'
 import type { MaintenanceRecord } from '@/data/client/db-schema/maintenance'
@@ -46,7 +46,7 @@ function EditForm({ userId, record }: EditFormProps) {
   )
   const template = templateData[0]
 
-  const { form, submit, formError, isSubmitting } = useForm({
+  const { submit, formError, isSubmitting, bind } = useForm({
     initial: {
       performedAt: new Date(record.performedAt),
       notes: record.notes ?? ''
@@ -75,30 +75,31 @@ function EditForm({ userId, record }: EditFormProps) {
         </Card.Body>
       </Card>
 
-      <View className="gap-2">
-        <Text className="text-muted ml-1 text-sm font-medium">
-          {t('edit.performedAt')}
-        </Text>
-        <Host matchContents>
-          <DatePicker
-            selection={form.values.performedAt}
-            onDateChange={v => form.set('performedAt', v)}
-            displayedComponents={['date', 'hourAndMinute']}
-            range={{ end: new Date() }}
-          />
-        </Host>
-      </View>
+      <ValueFormField
+        binding={bind.value('performedAt')}
+        label={t('edit.performedAt')}
+      >
+        {b => (
+          <Host matchContents>
+            <DatePicker
+              selection={b.value}
+              onDateChange={b.onChange}
+              displayedComponents={['date', 'hourAndMinute']}
+              range={{ end: new Date() }}
+            />
+          </Host>
+        )}
+      </ValueFormField>
 
-      <View className="gap-2">
-        <Text className="text-muted ml-1 text-sm font-medium">
-          {t('edit.notes')}
-        </Text>
-        <TextArea
-          value={form.values.notes}
-          onChangeText={v => form.set('notes', v)}
-          placeholder={t('edit.optionalNotes')}
-        />
-      </View>
+      <ValueFormField binding={bind.value('notes')} label={t('edit.notes')}>
+        {b => (
+          <TextArea
+            value={b.value}
+            onChangeText={b.onChange}
+            placeholder={t('edit.optionalNotes')}
+          />
+        )}
+      </ValueFormField>
     </FormScreen>
   )
 }

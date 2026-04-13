@@ -1,15 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import {
-  Button,
-  Description,
-  FieldError,
-  Input,
-  Label,
-  TextField
-} from 'heroui-native'
+import { Button } from 'heroui-native'
 import { Alert, View } from 'react-native'
 
 import { FormError } from '@/components/form-error'
+import { FormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import {
   assignUserToGenerator,
@@ -144,76 +138,53 @@ function SettingsForm({ generator }: { generator: Generator }) {
       variant="long-form"
     >
       <View className="gap-5">
-        <TextField isInvalid={titleBinding.isInvalid}>
-          <Label>{t('generator.title')}</Label>
-          <Input
-            testID="gen-settings-title-input"
-            placeholder={t('generator.generatorTitle')}
-            value={titleBinding.value}
-            onChangeText={titleBinding.onChangeText}
-          />
-          <FieldError>{titleBinding.errorMessage}</FieldError>
-        </TextField>
+        <FormField
+          binding={titleBinding}
+          label={t('generator.title')}
+          testID="gen-settings-title-input"
+          placeholder={t('generator.generatorTitle')}
+        />
 
-        <TextField isInvalid={modelBinding.isInvalid}>
-          <Label>{t('generator.model')}</Label>
-          <Input
-            placeholder={t('generator.generatorModel')}
-            value={modelBinding.value}
-            onChangeText={modelBinding.onChangeText}
-          />
-          <FieldError>{modelBinding.errorMessage}</FieldError>
-        </TextField>
+        <FormField
+          binding={modelBinding}
+          label={t('generator.model')}
+          placeholder={t('generator.generatorModel')}
+        />
 
-        <TextField>
-          <Label>{t('generator.description')}</Label>
-          <Input
-            placeholder={t('generator.descriptionPlaceholder')}
-            value={descriptionBinding.value}
-            onChangeText={descriptionBinding.onChangeText}
-            multiline
-          />
-          <Description>{t('common.optional')}</Description>
-        </TextField>
+        <FormField
+          binding={descriptionBinding}
+          label={t('generator.description')}
+          description={t('common.optional')}
+          placeholder={t('generator.descriptionPlaceholder')}
+          multiline
+        />
 
         <View className="flex-row gap-3">
           <View className="flex-1">
-            <TextField isInvalid={maxRunBinding.isInvalid}>
-              <Label>{t('generator.maxRunHours')}</Label>
-              <Input
-                placeholder="8"
-                value={maxRunBinding.value}
-                onChangeText={maxRunBinding.onChangeText}
-                keyboardType="decimal-pad"
-              />
-              <FieldError>{maxRunBinding.errorMessage}</FieldError>
-            </TextField>
+            <FormField
+              binding={maxRunBinding}
+              label={t('generator.maxRunHours')}
+              placeholder="8"
+              keyboardType="decimal-pad"
+            />
           </View>
           <View className="flex-1">
-            <TextField isInvalid={restBinding.isInvalid}>
-              <Label>{t('generator.restHours')}</Label>
-              <Input
-                placeholder="4"
-                value={restBinding.value}
-                onChangeText={restBinding.onChangeText}
-                keyboardType="decimal-pad"
-              />
-              <FieldError>{restBinding.errorMessage}</FieldError>
-            </TextField>
+            <FormField
+              binding={restBinding}
+              label={t('generator.restHours')}
+              placeholder="4"
+              keyboardType="decimal-pad"
+            />
           </View>
         </View>
 
-        <TextField isInvalid={warnBinding.isInvalid}>
-          <Label>{t('generator.warningThresholdPct')}</Label>
-          <Input
-            placeholder="80"
-            value={warnBinding.value}
-            onChangeText={warnBinding.onChangeText}
-            keyboardType="number-pad"
-          />
-          <Description>{t('generator.warningThresholdDesc')}</Description>
-          <FieldError>{warnBinding.errorMessage}</FieldError>
-        </TextField>
+        <FormField
+          binding={warnBinding}
+          label={t('generator.warningThresholdPct')}
+          description={t('generator.warningThresholdDesc')}
+          placeholder="80"
+          keyboardType="number-pad"
+        />
       </View>
 
       <AssignedMembersSection

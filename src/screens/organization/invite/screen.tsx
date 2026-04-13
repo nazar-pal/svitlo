@@ -1,8 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Description, FieldError, Input, Label, TextField } from 'heroui-native'
 import { Text } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
+import { FormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { useCanCreateInvitation } from '@/data/client/invitations/policy-hooks'
 import { createInvitation } from '@/data/client/mutations'
@@ -50,20 +50,16 @@ function InviteForm({ userId, orgId }: { userId: string; orgId: string }) {
         {t('organization.inviteDesc')}
       </Text>
 
-      <TextField isInvalid={emailBinding.isInvalid}>
-        <Label>{t('organization.emailAddress')}</Label>
-        <Input
-          testID="invite-email-input"
-          placeholder={t('organization.emailPlaceholder')}
-          value={emailBinding.value}
-          onChangeText={emailBinding.onChangeText}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoFocus
-        />
-        <Description>{t('organization.inviteHint')}</Description>
-        <FieldError>{emailBinding.errorMessage}</FieldError>
-      </TextField>
+      <FormField
+        binding={emailBinding}
+        label={t('organization.emailAddress')}
+        description={t('organization.inviteHint')}
+        testID="invite-email-input"
+        placeholder={t('organization.emailPlaceholder')}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoFocus
+      />
     </FormScreen>
   )
 }

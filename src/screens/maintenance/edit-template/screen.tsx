@@ -1,15 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import {
-  Description,
-  FieldError,
-  Input,
-  Label,
-  Tabs,
-  TextField
-} from 'heroui-native'
+import { Tabs } from 'heroui-native'
 import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
+import { FormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { updateMaintenanceTemplate } from '@/data/client/mutations'
 import type { MaintenanceTemplate } from '@/data/client/db-schema/maintenance'
@@ -103,26 +97,19 @@ function EditForm({ userId, template }: EditFormProps) {
       formError={formError}
     >
       <View className="gap-5">
-        <TextField isInvalid={taskNameBinding.isInvalid}>
-          <Label>{t('maintenanceTemplate.taskName')}</Label>
-          <Input
-            placeholder={t('maintenanceTemplate.taskNamePlaceholder')}
-            value={taskNameBinding.value}
-            onChangeText={taskNameBinding.onChangeText}
-          />
-          <FieldError>{taskNameBinding.errorMessage}</FieldError>
-        </TextField>
+        <FormField
+          binding={taskNameBinding}
+          label={t('maintenanceTemplate.taskName')}
+          placeholder={t('maintenanceTemplate.taskNamePlaceholder')}
+        />
 
-        <TextField>
-          <Label>{t('generator.description')}</Label>
-          <Input
-            placeholder={t('maintenanceTemplate.instructionsPlaceholder')}
-            value={descriptionBinding.value}
-            onChangeText={descriptionBinding.onChangeText}
-            multiline
-          />
-          <Description>{t('common.optional')}</Description>
-        </TextField>
+        <FormField
+          binding={descriptionBinding}
+          label={t('generator.description')}
+          description={t('common.optional')}
+          placeholder={t('maintenanceTemplate.instructionsPlaceholder')}
+          multiline
+        />
 
         <View className="gap-2">
           <Text className="text-foreground text-sm font-medium">
@@ -147,35 +134,23 @@ function EditForm({ userId, template }: EditFormProps) {
         </View>
 
         {showHours ? (
-          <TextField isInvalid={hoursBinding.isInvalid}>
-            <Label>{t('maintenanceTemplate.hoursInterval')}</Label>
-            <Input
-              placeholder={t('maintenanceTemplate.hoursIntervalPlaceholder')}
-              value={hoursBinding.value}
-              onChangeText={hoursBinding.onChangeText}
-              keyboardType="decimal-pad"
-            />
-            <Description>
-              {t('maintenanceTemplate.hoursIntervalDesc')}
-            </Description>
-            <FieldError>{hoursBinding.errorMessage}</FieldError>
-          </TextField>
+          <FormField
+            binding={hoursBinding}
+            label={t('maintenanceTemplate.hoursInterval')}
+            description={t('maintenanceTemplate.hoursIntervalDesc')}
+            placeholder={t('maintenanceTemplate.hoursIntervalPlaceholder')}
+            keyboardType="decimal-pad"
+          />
         ) : null}
 
         {showCalendar ? (
-          <TextField isInvalid={daysBinding.isInvalid}>
-            <Label>{t('maintenanceTemplate.calendarDays')}</Label>
-            <Input
-              placeholder={t('maintenanceTemplate.calendarDaysPlaceholder')}
-              value={daysBinding.value}
-              onChangeText={daysBinding.onChangeText}
-              keyboardType="number-pad"
-            />
-            <Description>
-              {t('maintenanceTemplate.calendarDaysDesc')}
-            </Description>
-            <FieldError>{daysBinding.errorMessage}</FieldError>
-          </TextField>
+          <FormField
+            binding={daysBinding}
+            label={t('maintenanceTemplate.calendarDays')}
+            description={t('maintenanceTemplate.calendarDaysDesc')}
+            placeholder={t('maintenanceTemplate.calendarDaysPlaceholder')}
+            keyboardType="number-pad"
+          />
         ) : null}
       </View>
     </FormScreen>

@@ -2,9 +2,10 @@ import { DatePicker, Host } from '@expo/ui/swift-ui'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Card } from 'heroui-native'
 import { useState } from 'react'
-import { Text, View } from 'react-native'
+import { Text } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
+import { ValueFormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { logManualSession } from '@/data/client/mutations'
 import { getGenerator } from '@/data/client/queries'
@@ -88,33 +89,34 @@ function LogSessionForm({
         </Card.Body>
       </Card>
 
-      <View className="gap-2">
-        <Text className="text-muted ml-1 text-sm font-medium">
-          {t('generator.startTime')}
-        </Text>
-        <Host matchContents>
-          <DatePicker
-            selection={startedAtBinding.value}
-            onDateChange={startedAtBinding.onChange}
-            displayedComponents={['date', 'hourAndMinute']}
-            range={{ end: stoppedAtBinding.value }}
-          />
-        </Host>
-      </View>
+      <ValueFormField
+        binding={startedAtBinding}
+        label={t('generator.startTime')}
+      >
+        {b => (
+          <Host matchContents>
+            <DatePicker
+              selection={b.value}
+              onDateChange={b.onChange}
+              displayedComponents={['date', 'hourAndMinute']}
+              range={{ end: stoppedAtBinding.value }}
+            />
+          </Host>
+        )}
+      </ValueFormField>
 
-      <View className="gap-2">
-        <Text className="text-muted ml-1 text-sm font-medium">
-          {t('generator.endTime')}
-        </Text>
-        <Host matchContents>
-          <DatePicker
-            selection={stoppedAtBinding.value}
-            onDateChange={stoppedAtBinding.onChange}
-            displayedComponents={['date', 'hourAndMinute']}
-            range={{ start: startedAtBinding.value, end: new Date() }}
-          />
-        </Host>
-      </View>
+      <ValueFormField binding={stoppedAtBinding} label={t('generator.endTime')}>
+        {b => (
+          <Host matchContents>
+            <DatePicker
+              selection={b.value}
+              onDateChange={b.onChange}
+              displayedComponents={['date', 'hourAndMinute']}
+              range={{ start: startedAtBinding.value, end: new Date() }}
+            />
+          </Host>
+        )}
+      </ValueFormField>
     </FormScreen>
   )
 }

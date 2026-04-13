@@ -1,8 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Card, Description, Input, Label, TextField } from 'heroui-native'
+import { Card } from 'heroui-native'
 import { Text } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
+import { FormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { recordMaintenance } from '@/data/client/mutations'
 import { getGenerator, getMaintenanceTemplate } from '@/data/client/queries'
@@ -79,17 +80,14 @@ function RecordForm({ userId, templateId, generatorId }: RecordFormProps) {
         </Card.Body>
       </Card>
 
-      <TextField>
-        <Label>{t('maintenanceRecord.notes')}</Label>
-        <Input
-          testID="record-maintenance-notes-input"
-          placeholder={t('maintenanceRecord.notesPlaceholder')}
-          value={notesBinding.value}
-          onChangeText={notesBinding.onChangeText}
-          multiline
-        />
-        <Description>{t('common.optional')}</Description>
-      </TextField>
+      <FormField
+        binding={notesBinding}
+        label={t('maintenanceRecord.notes')}
+        description={t('common.optional')}
+        testID="record-maintenance-notes-input"
+        placeholder={t('maintenanceRecord.notesPlaceholder')}
+        multiline
+      />
     </FormScreen>
   )
 }

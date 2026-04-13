@@ -1,9 +1,9 @@
 import { DatePicker, Host } from '@expo/ui/swift-ui'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Card } from 'heroui-native'
-import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
+import { ValueFormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { updateSession } from '@/data/client/mutations'
 import type { GeneratorSession } from '@/data/client/db-schema'
@@ -38,7 +38,7 @@ function EditForm({ userId, session }: EditFormProps) {
   )
   const generator = generatorData[0]
 
-  const { form, submit, formError, isSubmitting } = useForm({
+  const { form, submit, formError, isSubmitting, bind } = useForm({
     initial: {
       startedAt: new Date(session.startedAt),
       stoppedAt: session.stoppedAt ? new Date(session.stoppedAt) : new Date()
@@ -79,33 +79,37 @@ function EditForm({ userId, session }: EditFormProps) {
         </Card.Body>
       </Card>
 
-      <View className="gap-2">
-        <Text className="text-muted ml-1 text-sm font-medium">
-          {t('edit.startTime')}
-        </Text>
-        <Host matchContents>
-          <DatePicker
-            selection={form.values.startedAt}
-            onDateChange={v => form.set('startedAt', v)}
-            displayedComponents={['date', 'hourAndMinute']}
-            range={{ end: form.values.stoppedAt }}
-          />
-        </Host>
-      </View>
+      <ValueFormField
+        binding={bind.value('startedAt')}
+        label={t('edit.startTime')}
+      >
+        {b => (
+          <Host matchContents>
+            <DatePicker
+              selection={b.value}
+              onDateChange={b.onChange}
+              displayedComponents={['date', 'hourAndMinute']}
+              range={{ end: form.values.stoppedAt }}
+            />
+          </Host>
+        )}
+      </ValueFormField>
 
-      <View className="gap-2">
-        <Text className="text-muted ml-1 text-sm font-medium">
-          {t('edit.endTime')}
-        </Text>
-        <Host matchContents>
-          <DatePicker
-            selection={form.values.stoppedAt}
-            onDateChange={v => form.set('stoppedAt', v)}
-            displayedComponents={['date', 'hourAndMinute']}
-            range={{ start: form.values.startedAt, end: new Date() }}
-          />
-        </Host>
-      </View>
+      <ValueFormField
+        binding={bind.value('stoppedAt')}
+        label={t('edit.endTime')}
+      >
+        {b => (
+          <Host matchContents>
+            <DatePicker
+              selection={b.value}
+              onDateChange={b.onChange}
+              displayedComponents={['date', 'hourAndMinute']}
+              range={{ start: form.values.startedAt, end: new Date() }}
+            />
+          </Host>
+        )}
+      </ValueFormField>
     </FormScreen>
   )
 }

@@ -1,7 +1,8 @@
-import { Button, FieldError, Input, Label, TextField } from 'heroui-native'
+import { Button } from 'heroui-native'
 import { Text, View } from 'react-native'
 
 import { FormError } from '@/components/form-error'
+import { FormField } from '@/components/form/form-field'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { completeNameSchema } from '@/data/shared/validation'
 import { fail, ok } from '@/data/shared/result'
@@ -46,21 +47,17 @@ export default function CompleteNameScreen() {
         </View>
 
         <View className="gap-4">
-          <TextField isInvalid={nameBinding.isInvalid}>
-            <Label>{t('auth.name')}</Label>
-            <Input
-              testID="complete-name-input"
-              placeholder={t('auth.namePlaceholder')}
-              value={nameBinding.value}
-              onChangeText={nameBinding.onChangeText}
-              autoCapitalize="words"
-              autoFocus
-              textContentType="name"
-              returnKeyType="done"
-              onSubmitEditing={submit}
-            />
-            <FieldError>{nameBinding.errorMessage}</FieldError>
-          </TextField>
+          <FormField
+            binding={nameBinding}
+            label={t('auth.name')}
+            testID="complete-name-input"
+            placeholder={t('auth.namePlaceholder')}
+            autoCapitalize="words"
+            autoFocus
+            textContentType="name"
+            returnKeyType="done"
+            onSubmitEditing={submit}
+          />
 
           <FormError message={formError} />
 

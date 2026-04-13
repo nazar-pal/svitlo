@@ -1,16 +1,10 @@
 import { useRouter } from 'expo-router'
-import {
-  Button,
-  Description,
-  FieldError,
-  Input,
-  Label,
-  TextField
-} from 'heroui-native'
+import { Button } from 'heroui-native'
 import { useRef, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 
 import { FormError } from '@/components/form-error'
+import { FormField } from '@/components/form/form-field'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
 import { signInSchema, signUpSchema } from '@/data/shared/validation'
 import { fail, ok } from '@/data/shared/result'
@@ -118,79 +112,63 @@ export default function EmailAuthScreen() {
 
         <View className="gap-4">
           {isSignUp && (
-            <TextField isInvalid={nameBinding.isInvalid}>
-              <Label>{t('auth.name')}</Label>
-              <Input
-                testID="email-auth-name-input"
-                placeholder={t('auth.namePlaceholder')}
-                value={nameBinding.value}
-                onChangeText={nameBinding.onChangeText}
-                autoCapitalize="words"
-                textContentType="name"
-                returnKeyType="next"
-                onSubmitEditing={() => emailRef.current?.focus()}
-              />
-              <FieldError>{nameBinding.errorMessage}</FieldError>
-            </TextField>
+            <FormField
+              binding={nameBinding}
+              label={t('auth.name')}
+              testID="email-auth-name-input"
+              placeholder={t('auth.namePlaceholder')}
+              autoCapitalize="words"
+              textContentType="name"
+              returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
+            />
           )}
 
-          <TextField isInvalid={emailBinding.isInvalid}>
-            <Label>{t('auth.email')}</Label>
-            <Input
-              testID="email-auth-email-input"
-              ref={emailRef}
-              placeholder={t('auth.emailPlaceholder')}
-              value={emailBinding.value}
-              onChangeText={emailBinding.onChangeText}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType="emailAddress"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-            />
-            <FieldError>{emailBinding.errorMessage}</FieldError>
-          </TextField>
+          <FormField
+            binding={emailBinding}
+            label={t('auth.email')}
+            ref={emailRef}
+            testID="email-auth-email-input"
+            placeholder={t('auth.emailPlaceholder')}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="emailAddress"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+          />
 
-          <TextField isInvalid={passwordBinding.isInvalid}>
-            <Label>{t('auth.password')}</Label>
-            <Input
-              testID="email-auth-password-input"
-              ref={passwordRef}
-              placeholder={
-                isSignUp ? t('auth.createPassword') : t('auth.enterPassword')
-              }
-              value={passwordBinding.value}
-              onChangeText={passwordBinding.onChangeText}
-              secureTextEntry
-              autoCapitalize="none"
-              textContentType={isSignUp ? 'newPassword' : 'password'}
-              returnKeyType={isSignUp ? 'next' : 'done'}
-              onSubmitEditing={() =>
-                isSignUp ? confirmPasswordRef.current?.focus() : submit()
-              }
-            />
-            {isSignUp && <Description>{t('auth.passwordHint')}</Description>}
-            <FieldError>{passwordBinding.errorMessage}</FieldError>
-          </TextField>
+          <FormField
+            binding={passwordBinding}
+            label={t('auth.password')}
+            description={isSignUp ? t('auth.passwordHint') : undefined}
+            ref={passwordRef}
+            testID="email-auth-password-input"
+            placeholder={
+              isSignUp ? t('auth.createPassword') : t('auth.enterPassword')
+            }
+            secureTextEntry
+            autoCapitalize="none"
+            textContentType={isSignUp ? 'newPassword' : 'password'}
+            returnKeyType={isSignUp ? 'next' : 'done'}
+            onSubmitEditing={() =>
+              isSignUp ? confirmPasswordRef.current?.focus() : submit()
+            }
+          />
 
           {isSignUp && (
-            <TextField isInvalid={confirmPasswordBinding.isInvalid}>
-              <Label>{t('auth.confirmPassword')}</Label>
-              <Input
-                testID="email-auth-confirm-password-input"
-                ref={confirmPasswordRef}
-                placeholder={t('auth.confirmPasswordPlaceholder')}
-                value={confirmPasswordBinding.value}
-                onChangeText={confirmPasswordBinding.onChangeText}
-                secureTextEntry
-                autoCapitalize="none"
-                textContentType="newPassword"
-                returnKeyType="done"
-                onSubmitEditing={submit}
-              />
-              <FieldError>{confirmPasswordBinding.errorMessage}</FieldError>
-            </TextField>
+            <FormField
+              binding={confirmPasswordBinding}
+              label={t('auth.confirmPassword')}
+              ref={confirmPasswordRef}
+              testID="email-auth-confirm-password-input"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
+              secureTextEntry
+              autoCapitalize="none"
+              textContentType="newPassword"
+              returnKeyType="done"
+              onSubmitEditing={submit}
+            />
           )}
         </View>
 

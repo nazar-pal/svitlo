@@ -1,8 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { FieldError, Input, Label, TextField } from 'heroui-native'
 import { Text } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
+import { FormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { renameOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
@@ -44,17 +44,13 @@ function RenameForm({ userId, orgId }: { userId: string; orgId: string }) {
         {t('organization.renameDesc')}
       </Text>
 
-      <TextField isInvalid={nameBinding.isInvalid}>
-        <Label>{t('organization.organizationName')}</Label>
-        <Input
-          testID="rename-org-name-input"
-          placeholder={t('organization.namePlaceholder')}
-          value={nameBinding.value}
-          onChangeText={nameBinding.onChangeText}
-          autoFocus
-        />
-        <FieldError>{nameBinding.errorMessage}</FieldError>
-      </TextField>
+      <FormField
+        binding={nameBinding}
+        label={t('organization.organizationName')}
+        testID="rename-org-name-input"
+        placeholder={t('organization.namePlaceholder')}
+        autoFocus
+      />
     </FormScreen>
   )
 }

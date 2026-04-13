@@ -1,17 +1,7 @@
 import { Host, Button as SwiftButton } from '@expo/ui/swift-ui'
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
 import { Stack, useRouter } from 'expo-router'
-import {
-  Alert,
-  Button,
-  Card,
-  Description,
-  FieldError,
-  Input,
-  Label,
-  PressableFeedback,
-  TextField
-} from 'heroui-native'
+import { Alert, Button, Card, PressableFeedback } from 'heroui-native'
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 import { KeyboardToolbar } from 'react-native-keyboard-controller'
@@ -20,6 +10,7 @@ import { useTranslation } from '@/lib/i18n'
 import { AiLoader } from '@/components/ai-loader'
 import { AiSourcesList } from '@/components/ai-sources-list'
 import { FormError } from '@/components/form-error'
+import { FormField } from '@/components/form/form-field'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { SuggestionCard } from '@/components/suggestion-card'
 import type { EditableItem } from '@/components/suggestion-card'
@@ -174,39 +165,28 @@ export default function CreateGeneratorScreen() {
             </Text>
 
             <View className="gap-5">
-              <TextField isInvalid={titleBinding.isInvalid}>
-                <Label>{t('generator.title')}</Label>
-                <Input
-                  testID="create-gen-title-input"
-                  placeholder={t('generator.titlePlaceholder')}
-                  value={titleBinding.value}
-                  onChangeText={titleBinding.onChangeText}
-                  autoFocus
-                />
-                <FieldError>{titleBinding.errorMessage}</FieldError>
-              </TextField>
+              <FormField
+                binding={titleBinding}
+                label={t('generator.title')}
+                testID="create-gen-title-input"
+                placeholder={t('generator.titlePlaceholder')}
+                autoFocus
+              />
 
-              <TextField isInvalid={modelBinding.isInvalid}>
-                <Label>{t('generator.model')}</Label>
-                <Input
-                  testID="create-gen-model-input"
-                  placeholder={t('generator.modelPlaceholder')}
-                  value={modelBinding.value}
-                  onChangeText={modelBinding.onChangeText}
-                />
-                <FieldError>{modelBinding.errorMessage}</FieldError>
-              </TextField>
+              <FormField
+                binding={modelBinding}
+                label={t('generator.model')}
+                testID="create-gen-model-input"
+                placeholder={t('generator.modelPlaceholder')}
+              />
 
-              <TextField>
-                <Label>{t('generator.description')}</Label>
-                <Input
-                  placeholder={t('generator.descriptionPlaceholder')}
-                  value={descriptionBinding.value}
-                  onChangeText={descriptionBinding.onChangeText}
-                  multiline
-                />
-                <Description>{t('common.optional')}</Description>
-              </TextField>
+              <FormField
+                binding={descriptionBinding}
+                label={t('generator.description')}
+                description={t('common.optional')}
+                placeholder={t('generator.descriptionPlaceholder')}
+                multiline
+              />
             </View>
           </View>
         </KeyboardAwareScrollView>
@@ -329,42 +309,30 @@ function EditingBlock({
       <View className="gap-5">
         <View className="flex-row gap-3">
           <View className="flex-1">
-            <TextField isInvalid={maxRunBinding.isInvalid}>
-              <Label>{t('generator.maxRunHours')}</Label>
-              <Input
-                placeholder="8"
-                value={maxRunBinding.value}
-                onChangeText={maxRunBinding.onChangeText}
-                keyboardType="decimal-pad"
-              />
-              <FieldError>{maxRunBinding.errorMessage}</FieldError>
-            </TextField>
+            <FormField
+              binding={maxRunBinding}
+              label={t('generator.maxRunHours')}
+              placeholder="8"
+              keyboardType="decimal-pad"
+            />
           </View>
           <View className="flex-1">
-            <TextField isInvalid={restBinding.isInvalid}>
-              <Label>{t('generator.restHours')}</Label>
-              <Input
-                placeholder="4"
-                value={restBinding.value}
-                onChangeText={restBinding.onChangeText}
-                keyboardType="decimal-pad"
-              />
-              <FieldError>{restBinding.errorMessage}</FieldError>
-            </TextField>
+            <FormField
+              binding={restBinding}
+              label={t('generator.restHours')}
+              placeholder="4"
+              keyboardType="decimal-pad"
+            />
           </View>
         </View>
 
-        <TextField isInvalid={warnBinding.isInvalid}>
-          <Label>{t('generator.warningThresholdPct')}</Label>
-          <Input
-            placeholder="80"
-            value={warnBinding.value}
-            onChangeText={warnBinding.onChangeText}
-            keyboardType="number-pad"
-          />
-          <Description>{t('generator.warningThresholdDesc')}</Description>
-          <FieldError>{warnBinding.errorMessage}</FieldError>
-        </TextField>
+        <FormField
+          binding={warnBinding}
+          label={t('generator.warningThresholdPct')}
+          description={t('generator.warningThresholdDesc')}
+          placeholder="80"
+          keyboardType="number-pad"
+        />
       </View>
 
       {ai?.isGeneric ? (

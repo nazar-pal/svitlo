@@ -1,16 +1,10 @@
-import {
-  Button,
-  Dialog,
-  FieldError,
-  Input,
-  Label,
-  TextField
-} from 'heroui-native'
+import { Button, Dialog } from 'heroui-native'
 import { View } from 'react-native'
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 
 import { BlurDialogOverlay } from '@/components/blur-dialog-overlay'
 import { FormError } from '@/components/form-error'
+import { FormField } from '@/components/form/form-field'
 
 import { createOrganization } from '@/data/client/mutations'
 import { insertOrganizationSchema } from '@/data/shared/validation'
@@ -78,18 +72,14 @@ function DialogBody({
             </Dialog.Description>
           </View>
 
-          <TextField isInvalid={nameBinding.isInvalid}>
-            <Label>{t('organization.organizationName')}</Label>
-            <Input
-              testID="create-org-name-input"
-              placeholder={t('organization.namePlaceholder')}
-              value={nameBinding.value}
-              onChangeText={nameBinding.onChangeText}
-              autoFocus
-              variant="secondary"
-            />
-            <FieldError>{nameBinding.errorMessage}</FieldError>
-          </TextField>
+          <FormField
+            binding={nameBinding}
+            label={t('organization.organizationName')}
+            testID="create-org-name-input"
+            placeholder={t('organization.namePlaceholder')}
+            autoFocus
+            variant="secondary"
+          />
 
           <FormError message={formError} />
 
