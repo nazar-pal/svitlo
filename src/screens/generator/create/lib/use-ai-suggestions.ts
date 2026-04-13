@@ -1,124 +1,145 @@
-import * as Network from 'expo-network'
 import { useRef, useState } from 'react'
-import { Alert as RNAlert } from 'react-native'
 
+import type { EditableItem } from '@/components/suggestion-card'
+import { defaultAIPort } from '@/data/client/ai/ai-port-default'
+import type { AIPort, OrchestratorCopy } from '@/data/client/ai/ai-port'
+import { requestSuggestion } from '@/data/client/ai/request-suggestion'
+import type { InsertMaintenanceTemplateInput } from '@/data/shared/validation'
 import type { AppLocale } from '@/lib/i18n'
 import { useTranslation } from '@/lib/i18n'
-import type { EditableItem } from '@/components/suggestion-card'
-import { rpcClient } from '@/data/client/rpc-client'
+
+export type AIMode =
+  | 'idle'
+  | 'requesting'
+  | 'ai'
+  | 'manual'
+  | 'error'
+  | 'offline'
+
+type MaintenanceInput = Omit<InsertMaintenanceTemplateInput, 'generatorId'>
 
 interface UseAISuggestionsParams {
   locale: AppLocale
-  onApply: (values: {
-    maxConsecutiveRunHours: string | null
-    requiredRestHours: string | null
-  }) => void
+  port?: AIPort
 }
 
-interface UseAISuggestionsReturn {
-  mode: 'ai' | 'manual' | null
+interface SetField {
+  (field: 'maxConsecutiveRunHours', value: string): void
+  (field: 'requiredRestHours', value: string): void
+}
+
+interface ApplyTarget {
+  set: SetField
+}
+
+export interface UseAISuggestionsReturn {
+  mode: AIMode
   isLoading: boolean
   sources: string[]
   modelInfo: string
   isGeneric: boolean
+  recommendedMaxRunHours: string | null
+  recommendedRestHours: string | null
   items: EditableItem[]
-  enterAIMode: (model: string, description: string) => void
-  enterManualMode: () => void
-  cancel: () => void
   addEmptyItem: () => void
   updateItem: (index: number, update: Partial<EditableItem>) => void
+  enterAIMode: (model: string, description: string) => Promise<void>
+  enterManualMode: () => void
+  cancel: () => void
+  getSelectedTasks: () => MaintenanceInput[]
+  applyRecommendationsTo: (form: ApplyTarget) => void
 }
 
 export function useAISuggestions({
   locale,
-  onApply
+  port
 }: UseAISuggestionsParams): UseAISuggestionsReturn {
   const { t } = useTranslation()
-  const [mode, setMode] = useState<'ai' | 'manual' | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [mode, setMode] = useState<AIMode>('idle')
   const [sources, setSources] = useState<string[]>([])
   const [modelInfo, setModelInfo] = useState('')
   const [isGeneric, setIsGeneric] = useState(false)
+  const [recommendedMaxRunHours, setRecommendedMaxRunHours] = useState<
+    string | null
+  >(null)
+  const [recommendedRestHours, setRecommendedRestHours] = useState<
+    string | null
+  >(null)
   const [items, setItems] = useState<EditableItem[]>([])
-  const cancelledRef = useRef(false)
+
+  const portRef = useRef<AIPort>(port ?? defaultAIPort())
+  const controllerRef = useRef<AbortController | null>(null)
+
+  function buildCopy(): OrchestratorCopy {
+    return {
+      offline: {
+        title: t('aiSuggestions.offline'),
+        message: t('aiSuggestions.offlineDesc')
+      },
+      timeoutMessage: t('aiSuggestions.timeout'),
+      fallbackErrorMessage: t('aiSuggestions.failedToGet'),
+      errorTitle: t('common.error'),
+      genericPrompt: {
+        title: t('aiSuggestions.genericTitle'),
+        message: t('aiSuggestions.genericPrompt'),
+        confirmLabel: t('aiSuggestions.useTemplate'),
+        cancelLabel: t('aiSuggestions.noThanks')
+      }
+    }
+  }
 
   async function enterAIMode(model: string, description: string) {
-    cancelledRef.current = false
-    setMode('ai')
+    controllerRef.current?.abort()
+    const controller = new AbortController()
+    controllerRef.current = controller
 
-    const networkState = await Network.getNetworkStateAsync()
-    if (!networkState.isConnected || !networkState.isInternetReachable) {
-      RNAlert.alert(t('aiSuggestions.offline'), t('aiSuggestions.offlineDesc'))
-      setMode(null)
-      return
-    }
-
-    setIsLoading(true)
+    setMode('requesting')
     setIsGeneric(false)
-    let timer: ReturnType<typeof setTimeout>
 
-    const result = await Promise.race([
-      rpcClient.ai.suggestMaintenancePlan({
+    const result = await requestSuggestion({
+      request: {
         generatorModel: model,
         description: description || undefined,
         locale
-      }),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error(t('aiSuggestions.timeout'))),
-          45_000
-        )
-      })
-    ])
-      .finally(() => clearTimeout(timer))
-      .catch((err: unknown) => {
-        if (cancelledRef.current) return null
-        RNAlert.alert(
-          t('common.error'),
-          err instanceof Error ? err.message : t('aiSuggestions.failedToGet')
-        )
-        return null
-      })
+      },
+      port: portRef.current,
+      copy: buildCopy(),
+      signal: controller.signal
+    })
 
-    if (cancelledRef.current) return
-    setIsLoading(false)
+    if (controllerRef.current !== controller) return
 
-    if (!result) {
-      setMode(null)
-      return
-    }
-
-    const suggestion = result
-
-    function applyResult() {
-      onApply({
-        maxConsecutiveRunHours:
-          suggestion.maxConsecutiveRunHours != null
-            ? String(suggestion.maxConsecutiveRunHours)
-            : null,
-        requiredRestHours:
-          suggestion.requiredRestHours != null
-            ? String(suggestion.requiredRestHours)
+    switch (result.kind) {
+      case 'cancelled':
+        return
+      case 'offline':
+        setMode('offline')
+        return
+      case 'failed':
+        setMode('error')
+        return
+      case 'rejected-generic':
+        setMode('idle')
+        return
+      case 'accepted': {
+        const { plan } = result
+        setSources(plan.sources)
+        setModelInfo(plan.modelInfo)
+        setIsGeneric(plan.isGeneric)
+        setRecommendedMaxRunHours(
+          plan.maxConsecutiveRunHours != null
+            ? String(plan.maxConsecutiveRunHours)
             : null
-      })
-
-      setSources(suggestion.sources)
-      setModelInfo(suggestion.modelInfo)
-      setIsGeneric(suggestion.isGeneric)
-      setItems(suggestion.tasks.map(task => ({ ...task, selected: true })))
-    }
-
-    if (suggestion.isGeneric) {
-      RNAlert.alert(
-        t('aiSuggestions.genericTitle'),
-        t('aiSuggestions.genericPrompt'),
-        [
-          { text: t('aiSuggestions.noThanks'), style: 'cancel' },
-          { text: t('aiSuggestions.useTemplate'), onPress: applyResult }
-        ]
-      )
-    } else {
-      applyResult()
+        )
+        setRecommendedRestHours(
+          plan.requiredRestHours != null ? String(plan.requiredRestHours) : null
+        )
+        setItems(plan.tasks.map(task => ({ ...task, selected: true })))
+        setMode('ai')
+        return
+      }
+      default:
+        throw new Error(`Unhandled SuggestionResult: ${result satisfies never}`)
     }
   }
 
@@ -127,9 +148,9 @@ export function useAISuggestions({
   }
 
   function cancel() {
-    cancelledRef.current = true
-    setIsLoading(false)
-    setMode(null)
+    controllerRef.current?.abort()
+    controllerRef.current = null
+    setMode('idle')
   }
 
   function addEmptyItem() {
@@ -153,17 +174,41 @@ export function useAISuggestions({
     )
   }
 
+  function getSelectedTasks(): MaintenanceInput[] {
+    return items
+      .filter(i => i.selected && i.taskName.trim())
+      .map(item => ({
+        taskName: item.taskName,
+        description: item.description || undefined,
+        triggerType: item.triggerType,
+        triggerHoursInterval: item.triggerHoursInterval ?? undefined,
+        triggerCalendarDays: item.triggerCalendarDays ?? undefined,
+        isOneTime: item.isOneTime
+      }))
+  }
+
+  function applyRecommendationsTo(form: ApplyTarget) {
+    if (recommendedMaxRunHours !== null)
+      form.set('maxConsecutiveRunHours', recommendedMaxRunHours)
+    if (recommendedRestHours !== null)
+      form.set('requiredRestHours', recommendedRestHours)
+  }
+
   return {
     mode,
-    isLoading,
+    isLoading: mode === 'requesting',
     sources,
     modelInfo,
     isGeneric,
+    recommendedMaxRunHours,
+    recommendedRestHours,
     items,
+    addEmptyItem,
+    updateItem,
     enterAIMode,
     enterManualMode,
     cancel,
-    addEmptyItem,
-    updateItem
+    getSelectedTasks,
+    applyRecommendationsTo
   }
 }

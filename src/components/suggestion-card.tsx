@@ -8,6 +8,7 @@ import {
 } from 'heroui-native'
 import { Text, View } from 'react-native'
 
+import type { SuggestionTask } from '@/data/shared/maintenance-suggestion'
 import { useTranslation } from '@/lib/i18n'
 import { selection } from '@/lib/haptics'
 import {
@@ -18,15 +19,7 @@ import {
   showsHours
 } from '@/lib/maintenance/trigger-type'
 
-export interface EditableItem {
-  taskName: string
-  description: string
-  triggerType: TriggerType
-  triggerHoursInterval: number | null
-  triggerCalendarDays: number | null
-  isOneTime: boolean
-  selected: boolean
-}
+export type EditableItem = SuggestionTask & { selected: boolean }
 
 export function SuggestionCard({
   item,

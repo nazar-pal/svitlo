@@ -40,15 +40,7 @@ export default function CreateGeneratorScreen() {
   const { selectedOrgId } = useSelectedOrg()
   const [step, setStep] = useState<Step>('basics')
 
-  const ai = useAISuggestions({
-    locale,
-    onApply: values => {
-      if (values.maxConsecutiveRunHours !== null)
-        form.set('maxConsecutiveRunHours', values.maxConsecutiveRunHours)
-      if (values.requiredRestHours !== null)
-        form.set('requiredRestHours', values.requiredRestHours)
-    }
-  })
+  const ai = useAISuggestions({ locale })
 
   const { form, submit, formError, bind } = useForm({
     initial: {
@@ -76,25 +68,19 @@ export default function CreateGeneratorScreen() {
         data: { userId: localUser.id, generatorInput: validated.data }
       }
     },
-    mutate: ({ userId, generatorInput }) => {
-      const maintenanceInputs = ai.items
-        .filter(i => i.selected && i.taskName.trim())
-        .map(item => ({
-          taskName: item.taskName,
-          description: item.description || undefined,
-          triggerType: item.triggerType,
-          triggerHoursInterval: item.triggerHoursInterval ?? undefined,
-          triggerCalendarDays: item.triggerCalendarDays ?? undefined,
-          isOneTime: item.isOneTime
-        }))
-      return createGeneratorWithMaintenance(
+    mutate: ({ userId, generatorInput }) =>
+      createGeneratorWithMaintenance(
         userId,
         generatorInput,
-        maintenanceInputs
-      )
-    },
+        ai.getSelectedTasks()
+      ),
     onSuccess: () => router.back()
   })
+
+  async function startAI() {
+    await ai.enterAIMode(form.values.model, form.values.description)
+    ai.applyRecommendationsTo(form)
+  }
 
   function handleNext() {
     const errors: Record<string, string> = {}
@@ -214,13 +200,11 @@ export default function CreateGeneratorScreen() {
             {t('generator.configureDesc', { model: form.values.model })}
           </Text>
 
-          {ai.mode === null ? (
+          {ai.mode === 'idle' ||
+          ai.mode === 'offline' ||
+          ai.mode === 'error' ? (
             <View className="gap-3">
-              <PressableFeedback
-                onPress={() =>
-                  ai.enterAIMode(form.values.model, form.values.description)
-                }
-              >
+              <PressableFeedback onPress={startAI}>
                 <Card>
                   <Card.Body>
                     <Card.Title>{t('generator.autoFillAI')}</Card.Title>
@@ -253,7 +237,7 @@ export default function CreateGeneratorScreen() {
             />
           ) : null}
 
-          {ai.mode !== null && !ai.isLoading ? (
+          {ai.mode === 'ai' || ai.mode === 'manual' ? (
             <>
               <View className="gap-5">
                 <View className="flex-row gap-3">

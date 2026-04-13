@@ -1,78 +1,18 @@
 import { z } from 'zod'
 
 import { maintenanceAgent } from '@/data/server/ai/maintenance-agent'
+import {
+  maintenanceSuggestionSchema,
+  rawTaskSchema
+} from '@/data/shared/maintenance-suggestion'
 
 import { protectedProcedure } from '../orpc'
 
-const rawTaskSchema = z.object({
-  taskName: z.string().describe('Name of the maintenance task'),
-  description: z.string().describe('What this task involves'),
-  triggerType: z
-    .enum(['hours', 'calendar', 'whichever_first'])
-    .describe(
-      'When this task triggers. "hours" = by runtime hours, "calendar" = by calendar days, "whichever_first" = whichever threshold is reached first'
-    ),
-  triggerHoursInterval: z
-    .number()
-    .nullable()
-    .describe(
-      'Runtime hours between maintenance. Required for "hours" and "whichever_first", must be null for "calendar"'
-    ),
-  triggerCalendarDays: z
-    .number()
-    .int()
-    .nullable()
-    .describe(
-      'Calendar days between maintenance. Required for "calendar" and "whichever_first", must be null for "hours"'
-    ),
-  isOneTime: z
-    .boolean()
-    .describe('True for tasks performed only once (e.g. break-in oil change)')
-})
-
-const taskSchema = rawTaskSchema.superRefine((task, ctx) => {
-  const needsHours =
-    task.triggerType === 'hours' || task.triggerType === 'whichever_first'
-  const needsDays =
-    task.triggerType === 'calendar' || task.triggerType === 'whichever_first'
-
-  if (needsHours && task.triggerHoursInterval == null)
-    ctx.addIssue({
-      code: 'custom',
-      path: ['triggerHoursInterval'],
-      message: 'Required for this trigger type'
-    })
-
-  if (needsDays && task.triggerCalendarDays == null)
-    ctx.addIssue({
-      code: 'custom',
-      path: ['triggerCalendarDays'],
-      message: 'Required for this trigger type'
-    })
-})
-
-export const maintenanceSuggestionSchema = z.object({
-  maxConsecutiveRunHours: z
-    .number()
-    .nullable()
-    .describe('Manufacturer-recommended max consecutive runtime hours'),
-  requiredRestHours: z
-    .number()
-    .nullable()
-    .describe('Recommended cooldown/rest hours after max runtime'),
-  tasks: z.array(taskSchema),
-  sources: z.array(z.string()).describe('URLs of sources used for research'),
-  modelInfo: z
-    .string()
-    .describe(
-      'Human-readable summary of the generator model and data sources used'
-    ),
-  isGeneric: z
-    .boolean()
-    .describe(
-      'True if no specific manufacturer data was found and the plan uses generic industry defaults'
-    )
-})
+export {
+  maintenanceSuggestionSchema,
+  rawTaskSchema,
+  taskSchema
+} from '@/data/shared/maintenance-suggestion'
 
 const rawSuggestionSchema = z.object({
   maxConsecutiveRunHours: z.number().nullable(),
