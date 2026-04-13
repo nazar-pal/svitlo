@@ -6,10 +6,9 @@ import {
   deleteSession
 } from '@/data/client/mutations'
 import type { MutationResult } from '@/data/shared/result'
-import { notifyWarning } from '@/lib/haptics'
 import { t } from '@/lib/i18n'
 
-import { alertOnError } from './alert-on-error'
+import { runMutation } from './run-mutation'
 
 function confirmDestructive(
   title: string,
@@ -22,12 +21,7 @@ function confirmDestructive(
     {
       text: t('common.delete'),
       style: 'destructive',
-      onPress: async () => {
-        const result = await mutation()
-        if (alertOnError(result)) return
-        notifyWarning()
-        onSuccess?.()
-      }
+      onPress: () => runMutation(mutation, { feedback: 'warning', onSuccess })
     }
   ])
 }

@@ -5,8 +5,7 @@ import { BlurDialogOverlay } from '@/components/blur-dialog-overlay'
 
 import { leaveOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
-import { alertOnError } from '@/lib/alerts'
-import { notifyWarning } from '@/lib/haptics'
+import { runMutation } from '@/lib/alerts'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useTranslation } from '@/lib/i18n'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
@@ -33,17 +32,17 @@ export function LeaveOrgDialog({
 
   async function handleLeave() {
     if (!orgId) return
-
-    const result = await leaveOrganization(userId, orgId)
-    if (alertOnError(result)) return
-
-    notifyWarning()
-    toast.show({
-      variant: 'warning',
-      label: t('organization.leftOrg', { name: orgName })
+    await runMutation(() => leaveOrganization(userId, orgId), {
+      feedback: 'warning',
+      onSuccess: () => {
+        toast.show({
+          variant: 'warning',
+          label: t('organization.leftOrg', { name: orgName })
+        })
+        onClose()
+        onLeft?.()
+      }
     })
-    onClose()
-    onLeft?.()
   }
 
   return (

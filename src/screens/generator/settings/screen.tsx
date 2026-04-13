@@ -27,8 +27,7 @@ import {
   getOrgMembers
 } from '@/data/client/queries'
 import { updateGeneratorSchema } from '@/data/shared/validation'
-import { alertOnError } from '@/lib/alerts'
-import { notifySuccess, notifyWarning } from '@/lib/haptics'
+import { runMutation } from '@/lib/alerts'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useLocalUser } from '@/lib/powersync'
@@ -102,25 +101,20 @@ function SettingsForm({ generator }: { generator: Generator }) {
         {
           text: t('common.delete'),
           style: 'destructive',
-          onPress: async () => {
-            const result = await deleteGenerator(userId, generatorId)
-            if (alertOnError(result)) return
-            notifyWarning()
-            router.dismissAll()
-          }
+          onPress: () =>
+            runMutation(() => deleteGenerator(userId, generatorId), {
+              feedback: 'warning',
+              onSuccess: () => router.dismissAll()
+            })
         }
       ]
     )
   }
 
   async function handleAssign(targetUserId: string) {
-    const result = await assignUserToGenerator(
-      userId,
-      generatorId,
-      targetUserId
+    await runMutation(() =>
+      assignUserToGenerator(userId, generatorId, targetUserId)
     )
-    if (alertOnError(result)) return
-    notifySuccess()
   }
 
   function handleUnassign(targetUserId: string) {
@@ -129,15 +123,11 @@ function SettingsForm({ generator }: { generator: Generator }) {
       {
         text: t('common.remove'),
         style: 'destructive',
-        onPress: async () => {
-          const result = await unassignUserFromGenerator(
-            userId,
-            generatorId,
-            targetUserId
+        onPress: () =>
+          runMutation(
+            () => unassignUserFromGenerator(userId, generatorId, targetUserId),
+            { feedback: 'warning' }
           )
-          if (alertOnError(result)) return
-          notifyWarning()
-        }
       }
     ])
   }

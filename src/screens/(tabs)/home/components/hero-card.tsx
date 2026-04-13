@@ -10,7 +10,7 @@ import {
   useCanStartSession,
   useCanStopSession
 } from '@/data/client/sessions/policy-hooks'
-import { alertOnError, confirmRestingStart } from '@/lib/alerts'
+import { confirmRestingStart, runMutation } from '@/lib/alerts'
 import {
   GENERATOR_STATUS_KEYS,
   type GeneratorStatus,
@@ -18,7 +18,6 @@ import {
 } from '@/lib/generator/status'
 import { useElapsedTimer } from '@/lib/generator/use-elapsed-time'
 import { useRestCountdown } from '@/lib/generator/use-rest-countdown'
-import { notifySuccess } from '@/lib/haptics'
 import { useTranslation } from '@/lib/i18n'
 import {
   formatMaintenanceLabel,
@@ -283,7 +282,7 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
 
   // Reactive authorization gates. Only the hook for the currently-relevant
   // action subscribes — the other receives a null id and returns LOADING
-  // without opening a query. The mutation path's `alertOnError` stays as a
+  // without opening a query. The mutation path's `runMutation` stays as a
   // backstop for the race where local state lags a revoked assignment.
   const isRunning = status === 'running'
   const canStart = useCanStartSession(userId, isRunning ? null : generator.id)
@@ -302,16 +301,12 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
   }
 
   async function handleStart() {
-    const result = await startSession(userId, generator.id)
-    if (alertOnError(result)) return
-    notifySuccess()
+    await runMutation(() => startSession(userId, generator.id))
   }
 
   async function handleStop() {
     if (!openSession) return
-    const result = await stopSession(userId, openSession.id)
-    if (alertOnError(result)) return
-    notifySuccess()
+    await runMutation(() => stopSession(userId, openSession.id))
   }
 
   const maintenanceIconBg =

@@ -76,7 +76,7 @@ jest.mock('@/data/client/mutations', () => ({
 }))
 
 jest.mock('@/lib/alerts', () => ({
-  alertOnError: jest.fn(() => false)
+  runMutation: jest.fn()
 }))
 
 jest.mock('@/lib/haptics', () => ({
@@ -93,6 +93,7 @@ jest.mock('@/lib/organization/use-user-orgs', () => ({
 }))
 
 import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
+import { runMutation } from '@/lib/alerts'
 import type { InvitationDetails } from '@/lib/hooks/use-pending-invitations'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
@@ -101,6 +102,7 @@ import { InvitationDialog } from '../invitation-dialog'
 
 const acceptInvitationMock = acceptInvitation as jest.Mock
 const declineInvitationMock = declineInvitation as jest.Mock
+const runMutationMock = runMutation as jest.Mock
 const useLocalUserMock = useLocalUser as jest.Mock
 const useUserOrgsMock = useUserOrgs as jest.Mock
 
@@ -122,6 +124,12 @@ beforeEach(() => {
   useUserOrgsMock.mockReturnValue({ userId: 'user-1' })
   acceptInvitationMock.mockResolvedValue({ ok: true })
   declineInvitationMock.mockResolvedValue({ ok: true })
+  runMutationMock.mockImplementation(async (mutation, options) => {
+    const result = await mutation()
+    if (!result.ok) return false
+    await options?.onSuccess?.()
+    return true
+  })
 })
 
 describe('InvitationDialog', () => {

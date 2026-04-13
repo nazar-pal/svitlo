@@ -1,13 +1,11 @@
 import { useToast } from 'heroui-native'
-import { Alert } from 'react-native'
 
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { deleteOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
-import { notifyWarning } from '@/lib/haptics'
+import { runMutation } from '@/lib/alerts'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useTranslation } from '@/lib/i18n'
-import { translateMutationError } from '@/lib/i18n/translate-mutation-error'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 
 interface DeleteOrgDialogProps {
@@ -42,20 +40,17 @@ export function DeleteOrgDialog({
       isMatch={text => text === orgName && orgName.length > 0}
       onDelete={async () => {
         if (!orgId) return
-
-        const result = await deleteOrganization(userId, orgId)
-        if (!result.ok) {
-          const message = translateMutationError(result.error)
-          Alert.alert(t('common.error'), message)
-          throw new Error(message)
-        }
-
-        notifyWarning()
-        toast.show({
-          variant: 'warning',
-          label: t('organization.orgDeleted', { name: orgName })
+        const ok = await runMutation(() => deleteOrganization(userId, orgId), {
+          feedback: 'warning',
+          onSuccess: () => {
+            toast.show({
+              variant: 'warning',
+              label: t('organization.orgDeleted', { name: orgName })
+            })
+            onDeleted?.()
+          }
         })
-        onDeleted?.()
+        if (!ok) throw new Error('delete-failed')
       }}
     />
   )

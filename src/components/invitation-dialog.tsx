@@ -6,8 +6,7 @@ import Animated, { Keyframe } from 'react-native-reanimated'
 import { BlurDialogOverlay } from '@/components/blur-dialog-overlay'
 
 import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
-import { alertOnError } from '@/lib/alerts'
-import { notifySuccess, notifyWarning } from '@/lib/haptics'
+import { runMutation } from '@/lib/alerts'
 import { useTranslation } from '@/lib/i18n'
 import type { InvitationDetails } from '@/lib/hooks/use-pending-invitations'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
@@ -55,18 +54,17 @@ export function InvitationDialog({
 
   async function handleAccept() {
     if (!current) return
-    const result = await acceptInvitation(userId, userEmail, current.id)
-    if (alertOnError(result)) return
-    advance()
-    notifySuccess()
+    await runMutation(() => acceptInvitation(userId, userEmail, current.id), {
+      onSuccess: advance
+    })
   }
 
   async function handleDecline() {
     if (!current) return
-    const result = await declineInvitation(userEmail, current.id)
-    if (alertOnError(result)) return
-    advance()
-    notifyWarning()
+    await runMutation(() => declineInvitation(userEmail, current.id), {
+      feedback: 'warning',
+      onSuccess: advance
+    })
   }
 
   return (

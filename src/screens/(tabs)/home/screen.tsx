@@ -12,9 +12,9 @@ import { scheduleOnRN } from 'react-native-worklets'
 import { storage } from '@/lib/storage'
 import { EmptyState } from '@/components/empty-state'
 import { deleteGenerator } from '@/data/client/mutations'
-import { impactLight, notifyWarning } from '@/lib/haptics'
+import { runMutation } from '@/lib/alerts'
+import { impactLight } from '@/lib/haptics'
 import { useTranslation } from '@/lib/i18n'
-import { translateMutationError } from '@/lib/i18n/translate-mutation-error'
 import {
   Host,
   Button as SwiftButton,
@@ -221,18 +221,11 @@ export default function HomeScreen() {
                             {
                               text: t('common.delete'),
                               style: 'destructive',
-                              onPress: async () => {
-                                const result = await deleteGenerator(
-                                  userId,
-                                  gen.id
+                              onPress: () =>
+                                runMutation(
+                                  () => deleteGenerator(userId, gen.id),
+                                  { feedback: 'warning' }
                                 )
-                                if (!result.ok)
-                                  return Alert.alert(
-                                    t('common.error'),
-                                    translateMutationError(result.error)
-                                  )
-                                notifyWarning()
-                              }
                             }
                           ]
                         )

@@ -14,8 +14,7 @@ import {
   getOrgInvitations,
   getOrgMembers
 } from '@/data/client/queries'
-import { alertOnError } from '@/lib/alerts'
-import { notifyWarning } from '@/lib/haptics'
+import { runMutation } from '@/lib/alerts'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { getUserName } from '@/lib/utils/get-user-name'
@@ -87,19 +86,18 @@ export default function MembersScreen() {
       {
         text: t('common.remove'),
         style: 'destructive',
-        onPress: async () => {
-          const result = await removeMember(userId, memberId)
-          if (alertOnError(result)) return
-          notifyWarning()
-        }
+        onPress: () =>
+          runMutation(() => removeMember(userId, memberId), {
+            feedback: 'warning'
+          })
       }
     ])
   }
 
   async function handleCancelInvitation(invitationId: string) {
-    const result = await cancelInvitation(userId, invitationId)
-    if (alertOnError(result)) return
-    notifyWarning()
+    await runMutation(() => cancelInvitation(userId, invitationId), {
+      feedback: 'warning'
+    })
   }
 
   const {
