@@ -1,11 +1,9 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Description, FieldError, Input, Label, TextField } from 'heroui-native'
-import { Text, View } from 'react-native'
+import { Text } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
-import { FormError } from '@/components/form-error'
-import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
-import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { FormScreen } from '@/components/form/form-screen'
 import { useCanCreateInvitation } from '@/data/client/invitations/policy-hooks'
 import { createInvitation } from '@/data/client/mutations'
 import { insertInvitationSchema } from '@/data/shared/validation'
@@ -39,51 +37,33 @@ function InviteForm({ userId, orgId }: { userId: string; orgId: string }) {
   const normalizedEmail = emailBinding.value.trim().toLowerCase() || undefined
   const policy = useCanCreateInvitation(userId, orgId, normalizedEmail)
   const canSubmit = policy.status === 'ready' && policy.ok
-  const submitDisabled = isSubmitting || !canSubmit
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <HeaderSubmitButton
-              systemImage="paperplane.fill"
-              onPress={submit}
-              isDisabled={submitDisabled}
-            />
-          )
-        }}
-      />
-      <KeyboardAwareScrollView
-        className="bg-background flex-1"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="px-5 pb-10 pt-6"
-        keyboardShouldPersistTaps="handled"
-        bottomOffset={16}
-      >
-        <View className="mx-auto w-full max-w-150 gap-7">
-          <Text className="text-muted text-3.75 leading-5.5">
-            {t('organization.inviteDesc')}
-          </Text>
+    <FormScreen
+      onSubmit={submit}
+      isSubmitting={isSubmitting}
+      submitDisabled={!canSubmit}
+      submitIcon="paperplane.fill"
+      formError={formError}
+    >
+      <Text className="text-muted text-3.75 leading-5.5">
+        {t('organization.inviteDesc')}
+      </Text>
 
-          <TextField isInvalid={emailBinding.isInvalid}>
-            <Label>{t('organization.emailAddress')}</Label>
-            <Input
-              testID="invite-email-input"
-              placeholder={t('organization.emailPlaceholder')}
-              value={emailBinding.value}
-              onChangeText={emailBinding.onChangeText}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoFocus
-            />
-            <Description>{t('organization.inviteHint')}</Description>
-            <FieldError>{emailBinding.errorMessage}</FieldError>
-          </TextField>
-
-          <FormError message={formError} />
-        </View>
-      </KeyboardAwareScrollView>
-    </>
+      <TextField isInvalid={emailBinding.isInvalid}>
+        <Label>{t('organization.emailAddress')}</Label>
+        <Input
+          testID="invite-email-input"
+          placeholder={t('organization.emailPlaceholder')}
+          value={emailBinding.value}
+          onChangeText={emailBinding.onChangeText}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoFocus
+        />
+        <Description>{t('organization.inviteHint')}</Description>
+        <FieldError>{emailBinding.errorMessage}</FieldError>
+      </TextField>
+    </FormScreen>
   )
 }

@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
   Button,
   Description,
@@ -8,11 +8,9 @@ import {
   TextField
 } from 'heroui-native'
 import { Alert, View } from 'react-native'
-import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { FormError } from '@/components/form-error'
-import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
-import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { FormScreen } from '@/components/form/form-screen'
 import {
   assignUserToGenerator,
   deleteGenerator,
@@ -62,7 +60,7 @@ function SettingsForm({ generator }: { generator: Generator }) {
     getOrgMembers(generator.organizationId)
   )
 
-  const { submit, formError, bind } = useForm({
+  const { submit, formError, isSubmitting, bind } = useForm({
     initial: {
       title: generator.title,
       model: generator.model,
@@ -140,116 +138,102 @@ function SettingsForm({ generator }: { generator: Generator }) {
   const warnBinding = bind.text('runWarningThresholdPct')
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: t('generator.settings'),
-          headerRight: () => <HeaderSubmitButton onPress={submit} />
-        }}
-      />
-      <KeyboardAwareScrollView
-        className="bg-background flex-1"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="px-5 pt-6 pb-6"
-        keyboardShouldPersistTaps="handled"
-        bottomOffset={16}
-        extraKeyboardSpace={42}
-      >
-        <View className="mx-auto w-full max-w-150 gap-7">
-          <View className="gap-5">
-            <TextField isInvalid={titleBinding.isInvalid}>
-              <Label>{t('generator.title')}</Label>
-              <Input
-                testID="gen-settings-title-input"
-                placeholder={t('generator.generatorTitle')}
-                value={titleBinding.value}
-                onChangeText={titleBinding.onChangeText}
-              />
-              <FieldError>{titleBinding.errorMessage}</FieldError>
-            </TextField>
+    <FormScreen
+      onSubmit={submit}
+      isSubmitting={isSubmitting}
+      variant="long-form"
+    >
+      <View className="gap-5">
+        <TextField isInvalid={titleBinding.isInvalid}>
+          <Label>{t('generator.title')}</Label>
+          <Input
+            testID="gen-settings-title-input"
+            placeholder={t('generator.generatorTitle')}
+            value={titleBinding.value}
+            onChangeText={titleBinding.onChangeText}
+          />
+          <FieldError>{titleBinding.errorMessage}</FieldError>
+        </TextField>
 
-            <TextField isInvalid={modelBinding.isInvalid}>
-              <Label>{t('generator.model')}</Label>
-              <Input
-                placeholder={t('generator.generatorModel')}
-                value={modelBinding.value}
-                onChangeText={modelBinding.onChangeText}
-              />
-              <FieldError>{modelBinding.errorMessage}</FieldError>
-            </TextField>
+        <TextField isInvalid={modelBinding.isInvalid}>
+          <Label>{t('generator.model')}</Label>
+          <Input
+            placeholder={t('generator.generatorModel')}
+            value={modelBinding.value}
+            onChangeText={modelBinding.onChangeText}
+          />
+          <FieldError>{modelBinding.errorMessage}</FieldError>
+        </TextField>
 
-            <TextField>
-              <Label>{t('generator.description')}</Label>
-              <Input
-                placeholder={t('generator.descriptionPlaceholder')}
-                value={descriptionBinding.value}
-                onChangeText={descriptionBinding.onChangeText}
-                multiline
-              />
-              <Description>{t('common.optional')}</Description>
-            </TextField>
+        <TextField>
+          <Label>{t('generator.description')}</Label>
+          <Input
+            placeholder={t('generator.descriptionPlaceholder')}
+            value={descriptionBinding.value}
+            onChangeText={descriptionBinding.onChangeText}
+            multiline
+          />
+          <Description>{t('common.optional')}</Description>
+        </TextField>
 
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <TextField isInvalid={maxRunBinding.isInvalid}>
-                  <Label>{t('generator.maxRunHours')}</Label>
-                  <Input
-                    placeholder="8"
-                    value={maxRunBinding.value}
-                    onChangeText={maxRunBinding.onChangeText}
-                    keyboardType="decimal-pad"
-                  />
-                  <FieldError>{maxRunBinding.errorMessage}</FieldError>
-                </TextField>
-              </View>
-              <View className="flex-1">
-                <TextField isInvalid={restBinding.isInvalid}>
-                  <Label>{t('generator.restHours')}</Label>
-                  <Input
-                    placeholder="4"
-                    value={restBinding.value}
-                    onChangeText={restBinding.onChangeText}
-                    keyboardType="decimal-pad"
-                  />
-                  <FieldError>{restBinding.errorMessage}</FieldError>
-                </TextField>
-              </View>
-            </View>
-
-            <TextField isInvalid={warnBinding.isInvalid}>
-              <Label>{t('generator.warningThresholdPct')}</Label>
+        <View className="flex-row gap-3">
+          <View className="flex-1">
+            <TextField isInvalid={maxRunBinding.isInvalid}>
+              <Label>{t('generator.maxRunHours')}</Label>
               <Input
-                placeholder="80"
-                value={warnBinding.value}
-                onChangeText={warnBinding.onChangeText}
-                keyboardType="number-pad"
+                placeholder="8"
+                value={maxRunBinding.value}
+                onChangeText={maxRunBinding.onChangeText}
+                keyboardType="decimal-pad"
               />
-              <Description>{t('generator.warningThresholdDesc')}</Description>
-              <FieldError>{warnBinding.errorMessage}</FieldError>
+              <FieldError>{maxRunBinding.errorMessage}</FieldError>
             </TextField>
           </View>
-
-          <AssignedMembersSection
-            assignments={assignments}
-            unassignedMembers={unassignedMembers}
-            getUserName={resolveUserName}
-            onAssign={handleAssign}
-            onUnassign={handleUnassign}
-          />
-
-          <FormError message={formError} />
-
-          <Button
-            testID="gen-settings-delete"
-            variant="danger"
-            size="lg"
-            onPress={handleDelete}
-          >
-            {t('generator.deleteGenerator')}
-          </Button>
+          <View className="flex-1">
+            <TextField isInvalid={restBinding.isInvalid}>
+              <Label>{t('generator.restHours')}</Label>
+              <Input
+                placeholder="4"
+                value={restBinding.value}
+                onChangeText={restBinding.onChangeText}
+                keyboardType="decimal-pad"
+              />
+              <FieldError>{restBinding.errorMessage}</FieldError>
+            </TextField>
+          </View>
         </View>
-      </KeyboardAwareScrollView>
-      <KeyboardToolbar />
-    </>
+
+        <TextField isInvalid={warnBinding.isInvalid}>
+          <Label>{t('generator.warningThresholdPct')}</Label>
+          <Input
+            placeholder="80"
+            value={warnBinding.value}
+            onChangeText={warnBinding.onChangeText}
+            keyboardType="number-pad"
+          />
+          <Description>{t('generator.warningThresholdDesc')}</Description>
+          <FieldError>{warnBinding.errorMessage}</FieldError>
+        </TextField>
+      </View>
+
+      <AssignedMembersSection
+        assignments={assignments}
+        unassignedMembers={unassignedMembers}
+        getUserName={resolveUserName}
+        onAssign={handleAssign}
+        onUnassign={handleUnassign}
+      />
+
+      <FormError message={formError} />
+
+      <Button
+        testID="gen-settings-delete"
+        variant="danger"
+        size="lg"
+        onPress={handleDelete}
+      >
+        {t('generator.deleteGenerator')}
+      </Button>
+    </FormScreen>
   )
 }

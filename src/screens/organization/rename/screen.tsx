@@ -1,11 +1,9 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { FieldError, Input, Label, TextField } from 'heroui-native'
-import { Text, View } from 'react-native'
+import { Text } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
-import { FormError } from '@/components/form-error'
-import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
-import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { FormScreen } from '@/components/form/form-screen'
 import { renameOrganization } from '@/data/client/mutations'
 import { getOrganization } from '@/data/client/queries'
 import { updateOrganizationSchema } from '@/data/shared/validation'
@@ -26,7 +24,7 @@ function RenameForm({ userId, orgId }: { userId: string; orgId: string }) {
   const { data: orgs } = useDrizzleQuery(getOrganization(orgId))
   const currentName = orgs[0]?.name ?? ''
 
-  const { submit, formError, bind } = useForm({
+  const { submit, formError, isSubmitting, bind } = useForm({
     initial: { name: currentName },
     shortCircuit: state => !state.isDirty,
     build: values => validateWithZod(updateOrganizationSchema, values),
@@ -37,39 +35,26 @@ function RenameForm({ userId, orgId }: { userId: string; orgId: string }) {
   const nameBinding = bind.text('name')
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerRight: () => <HeaderSubmitButton onPress={submit} />
-        }}
-      />
-      <KeyboardAwareScrollView
-        className="bg-background flex-1"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="px-5 pb-10 pt-6"
-        keyboardShouldPersistTaps="handled"
-        bottomOffset={16}
-      >
-        <View className="mx-auto w-full max-w-150 gap-7">
-          <Text className="text-muted text-3.75 leading-5.5">
-            {t('organization.renameDesc')}
-          </Text>
+    <FormScreen
+      onSubmit={submit}
+      isSubmitting={isSubmitting}
+      formError={formError}
+    >
+      <Text className="text-muted text-3.75 leading-5.5">
+        {t('organization.renameDesc')}
+      </Text>
 
-          <TextField isInvalid={nameBinding.isInvalid}>
-            <Label>{t('organization.organizationName')}</Label>
-            <Input
-              testID="rename-org-name-input"
-              placeholder={t('organization.namePlaceholder')}
-              value={nameBinding.value}
-              onChangeText={nameBinding.onChangeText}
-              autoFocus
-            />
-            <FieldError>{nameBinding.errorMessage}</FieldError>
-          </TextField>
-
-          <FormError message={formError} />
-        </View>
-      </KeyboardAwareScrollView>
-    </>
+      <TextField isInvalid={nameBinding.isInvalid}>
+        <Label>{t('organization.organizationName')}</Label>
+        <Input
+          testID="rename-org-name-input"
+          placeholder={t('organization.namePlaceholder')}
+          value={nameBinding.value}
+          onChangeText={nameBinding.onChangeText}
+          autoFocus
+        />
+        <FieldError>{nameBinding.errorMessage}</FieldError>
+      </TextField>
+    </FormScreen>
   )
 }

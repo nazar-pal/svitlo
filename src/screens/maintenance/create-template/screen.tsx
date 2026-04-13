@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
   Description,
   FieldError,
@@ -8,12 +8,9 @@ import {
   TextField
 } from 'heroui-native'
 import { Text, View } from 'react-native'
-import { KeyboardToolbar } from 'react-native-keyboard-controller'
 
 import { useTranslation } from '@/lib/i18n'
-import { FormError } from '@/components/form-error'
-import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
-import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { FormScreen } from '@/components/form/form-screen'
 import { createMaintenanceTemplate } from '@/data/client/mutations'
 import { insertMaintenanceTemplateSchema } from '@/data/shared/validation'
 import { selection } from '@/lib/haptics'
@@ -46,7 +43,7 @@ function CreateForm({ userId, generatorId }: CreateFormProps) {
   const router = useRouter()
   const triggerLabels = useTriggerLabels()
 
-  const { form, submit, formError, bind } = useForm({
+  const { form, submit, formError, isSubmitting, bind } = useForm({
     initial: {
       taskName: '',
       description: '',
@@ -83,115 +80,99 @@ function CreateForm({ userId, generatorId }: CreateFormProps) {
   const daysBinding = bind.text('triggerCalendarDays')
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerRight: () => <HeaderSubmitButton onPress={submit} />
-        }}
-      />
-      <KeyboardAwareScrollView
-        className="bg-background flex-1"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="px-5 pt-6 pb-6"
-        keyboardShouldPersistTaps="handled"
-        bottomOffset={16}
-        extraKeyboardSpace={42}
-      >
-        <View className="mx-auto w-full max-w-150 gap-7">
-          <Text className="text-muted text-3.75 leading-5.5">
-            {t('maintenanceTemplate.defineDesc')}
+    <FormScreen
+      onSubmit={submit}
+      isSubmitting={isSubmitting}
+      variant="long-form"
+      formError={formError}
+    >
+      <Text className="text-muted text-3.75 leading-5.5">
+        {t('maintenanceTemplate.defineDesc')}
+      </Text>
+
+      <View className="gap-5">
+        <TextField isInvalid={taskNameBinding.isInvalid}>
+          <Label>{t('maintenanceTemplate.taskName')}</Label>
+          <Input
+            testID="create-template-name-input"
+            placeholder={t('maintenanceTemplate.taskNamePlaceholder')}
+            value={taskNameBinding.value}
+            onChangeText={taskNameBinding.onChangeText}
+            autoFocus
+          />
+          <FieldError>{taskNameBinding.errorMessage}</FieldError>
+        </TextField>
+
+        <TextField>
+          <Label>{t('generator.description')}</Label>
+          <Input
+            placeholder={t('maintenanceTemplate.instructionsPlaceholder')}
+            value={descriptionBinding.value}
+            onChangeText={descriptionBinding.onChangeText}
+            multiline
+          />
+          <Description>{t('common.optional')}</Description>
+        </TextField>
+
+        <View className="gap-2">
+          <Text
+            testID="create-template-trigger-type-label"
+            className="text-foreground text-sm font-medium"
+          >
+            {t('maintenanceTemplate.triggerType')}
           </Text>
-
-          <View className="gap-5">
-            <TextField isInvalid={taskNameBinding.isInvalid}>
-              <Label>{t('maintenanceTemplate.taskName')}</Label>
-              <Input
-                testID="create-template-name-input"
-                placeholder={t('maintenanceTemplate.taskNamePlaceholder')}
-                value={taskNameBinding.value}
-                onChangeText={taskNameBinding.onChangeText}
-                autoFocus
-              />
-              <FieldError>{taskNameBinding.errorMessage}</FieldError>
-            </TextField>
-
-            <TextField>
-              <Label>{t('generator.description')}</Label>
-              <Input
-                placeholder={t('maintenanceTemplate.instructionsPlaceholder')}
-                value={descriptionBinding.value}
-                onChangeText={descriptionBinding.onChangeText}
-                multiline
-              />
-              <Description>{t('common.optional')}</Description>
-            </TextField>
-
-            <View className="gap-2">
-              <Text
-                testID="create-template-trigger-type-label"
-                className="text-foreground text-sm font-medium"
-              >
-                {t('maintenanceTemplate.triggerType')}
-              </Text>
-              <Tabs
-                value={form.values.triggerType}
-                onValueChange={v => {
-                  selection()
-                  if (isTriggerType(v)) form.set('triggerType', v)
-                }}
-              >
-                <Tabs.List>
-                  <Tabs.Indicator />
-                  {TRIGGER_TYPES.map(type => (
-                    <Tabs.Trigger key={type} value={type}>
-                      <Tabs.Label>{triggerLabels[type]}</Tabs.Label>
-                    </Tabs.Trigger>
-                  ))}
-                </Tabs.List>
-              </Tabs>
-            </View>
-
-            {showHours ? (
-              <TextField isInvalid={hoursBinding.isInvalid}>
-                <Label>{t('maintenanceTemplate.hoursInterval')}</Label>
-                <Input
-                  testID="create-template-hours-input"
-                  placeholder={t(
-                    'maintenanceTemplate.hoursIntervalPlaceholder'
-                  )}
-                  value={hoursBinding.value}
-                  onChangeText={hoursBinding.onChangeText}
-                  keyboardType="decimal-pad"
-                />
-                <Description>
-                  {t('maintenanceTemplate.hoursIntervalDesc')}
-                </Description>
-                <FieldError>{hoursBinding.errorMessage}</FieldError>
-              </TextField>
-            ) : null}
-
-            {showCalendar ? (
-              <TextField isInvalid={daysBinding.isInvalid}>
-                <Label>{t('maintenanceTemplate.calendarDays')}</Label>
-                <Input
-                  testID="create-template-days-input"
-                  placeholder={t('maintenanceTemplate.calendarDaysPlaceholder')}
-                  value={daysBinding.value}
-                  onChangeText={daysBinding.onChangeText}
-                  keyboardType="number-pad"
-                />
-                <Description>
-                  {t('maintenanceTemplate.calendarDaysDesc')}
-                </Description>
-                <FieldError>{daysBinding.errorMessage}</FieldError>
-              </TextField>
-            ) : null}
-          </View>
-
-          <FormError message={formError} />
+          <Tabs
+            value={form.values.triggerType}
+            onValueChange={v => {
+              selection()
+              if (isTriggerType(v)) form.set('triggerType', v)
+            }}
+          >
+            <Tabs.List>
+              <Tabs.Indicator />
+              {TRIGGER_TYPES.map(type => (
+                <Tabs.Trigger key={type} value={type}>
+                  <Tabs.Label>{triggerLabels[type]}</Tabs.Label>
+                </Tabs.Trigger>
+              ))}
+            </Tabs.List>
+          </Tabs>
         </View>
-      </KeyboardAwareScrollView>
-      <KeyboardToolbar />
-    </>
+
+        {showHours ? (
+          <TextField isInvalid={hoursBinding.isInvalid}>
+            <Label>{t('maintenanceTemplate.hoursInterval')}</Label>
+            <Input
+              testID="create-template-hours-input"
+              placeholder={t('maintenanceTemplate.hoursIntervalPlaceholder')}
+              value={hoursBinding.value}
+              onChangeText={hoursBinding.onChangeText}
+              keyboardType="decimal-pad"
+            />
+            <Description>
+              {t('maintenanceTemplate.hoursIntervalDesc')}
+            </Description>
+            <FieldError>{hoursBinding.errorMessage}</FieldError>
+          </TextField>
+        ) : null}
+
+        {showCalendar ? (
+          <TextField isInvalid={daysBinding.isInvalid}>
+            <Label>{t('maintenanceTemplate.calendarDays')}</Label>
+            <Input
+              testID="create-template-days-input"
+              placeholder={t('maintenanceTemplate.calendarDaysPlaceholder')}
+              value={daysBinding.value}
+              onChangeText={daysBinding.onChangeText}
+              keyboardType="number-pad"
+            />
+            <Description>
+              {t('maintenanceTemplate.calendarDaysDesc')}
+            </Description>
+            <FieldError>{daysBinding.errorMessage}</FieldError>
+          </TextField>
+        ) : null}
+      </View>
+    </FormScreen>
   )
 }

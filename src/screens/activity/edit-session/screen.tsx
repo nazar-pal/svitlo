@@ -1,11 +1,10 @@
 import { DatePicker, Host } from '@expo/ui/swift-ui'
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Card } from 'heroui-native'
-import { ScrollView, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
-import { FormError } from '@/components/form-error'
-import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
+import { FormScreen } from '@/components/form/form-screen'
 import { updateSession } from '@/data/client/mutations'
 import type { GeneratorSession } from '@/data/client/db-schema'
 import { getGenerator, getGeneratorSession } from '@/data/client/queries'
@@ -63,62 +62,50 @@ function EditForm({ userId, session }: EditFormProps) {
     startedAt: form.values.startedAt.toISOString(),
     stoppedAt: form.values.stoppedAt.toISOString()
   })
-  const submitDisabled =
-    isSubmitting || policy.status === 'loading' || !policy.ok
+  const submitDisabled = policy.status === 'loading' || !policy.ok
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <HeaderSubmitButton onPress={submit} isDisabled={submitDisabled} />
-          )
-        }}
-      />
-      <ScrollView
-        className="bg-background flex-1"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="px-5 pb-10 pt-6"
-      >
-        <View className="mx-auto w-full max-w-150 gap-7">
-          <Card>
-            <Card.Body>
-              <Card.Title>{generator?.title ?? ''}</Card.Title>
-              <Card.Description>{generator?.model ?? ''}</Card.Description>
-            </Card.Body>
-          </Card>
+    <FormScreen
+      variant="scroll"
+      onSubmit={submit}
+      isSubmitting={isSubmitting}
+      submitDisabled={submitDisabled}
+      formError={formError}
+    >
+      <Card>
+        <Card.Body>
+          <Card.Title>{generator?.title ?? ''}</Card.Title>
+          <Card.Description>{generator?.model ?? ''}</Card.Description>
+        </Card.Body>
+      </Card>
 
-          <View className="gap-2">
-            <Text className="text-muted ml-1 text-sm font-medium">
-              {t('edit.startTime')}
-            </Text>
-            <Host matchContents>
-              <DatePicker
-                selection={form.values.startedAt}
-                onDateChange={v => form.set('startedAt', v)}
-                displayedComponents={['date', 'hourAndMinute']}
-                range={{ end: form.values.stoppedAt }}
-              />
-            </Host>
-          </View>
+      <View className="gap-2">
+        <Text className="text-muted ml-1 text-sm font-medium">
+          {t('edit.startTime')}
+        </Text>
+        <Host matchContents>
+          <DatePicker
+            selection={form.values.startedAt}
+            onDateChange={v => form.set('startedAt', v)}
+            displayedComponents={['date', 'hourAndMinute']}
+            range={{ end: form.values.stoppedAt }}
+          />
+        </Host>
+      </View>
 
-          <View className="gap-2">
-            <Text className="text-muted ml-1 text-sm font-medium">
-              {t('edit.endTime')}
-            </Text>
-            <Host matchContents>
-              <DatePicker
-                selection={form.values.stoppedAt}
-                onDateChange={v => form.set('stoppedAt', v)}
-                displayedComponents={['date', 'hourAndMinute']}
-                range={{ start: form.values.startedAt, end: new Date() }}
-              />
-            </Host>
-          </View>
-
-          <FormError message={formError} />
-        </View>
-      </ScrollView>
-    </>
+      <View className="gap-2">
+        <Text className="text-muted ml-1 text-sm font-medium">
+          {t('edit.endTime')}
+        </Text>
+        <Host matchContents>
+          <DatePicker
+            selection={form.values.stoppedAt}
+            onDateChange={v => form.set('stoppedAt', v)}
+            displayedComponents={['date', 'hourAndMinute']}
+            range={{ start: form.values.startedAt, end: new Date() }}
+          />
+        </Host>
+      </View>
+    </FormScreen>
   )
 }

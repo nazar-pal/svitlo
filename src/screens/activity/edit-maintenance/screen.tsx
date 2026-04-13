@@ -1,12 +1,10 @@
 import { DatePicker, Host } from '@expo/ui/swift-ui'
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Card, TextArea } from 'heroui-native'
 import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
-import { FormError } from '@/components/form-error'
-import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
-import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { FormScreen } from '@/components/form/form-screen'
 import { updateMaintenanceRecord } from '@/data/client/mutations'
 import type { MaintenanceRecord } from '@/data/client/db-schema/maintenance'
 import {
@@ -48,7 +46,7 @@ function EditForm({ userId, record }: EditFormProps) {
   )
   const template = templateData[0]
 
-  const { form, submit, formError } = useForm({
+  const { form, submit, formError, isSubmitting } = useForm({
     initial: {
       performedAt: new Date(record.performedAt),
       notes: record.notes ?? ''
@@ -65,55 +63,42 @@ function EditForm({ userId, record }: EditFormProps) {
   })
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerRight: () => <HeaderSubmitButton onPress={submit} />
-        }}
-      />
-      <KeyboardAwareScrollView
-        className="bg-background flex-1"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="px-5 pb-10 pt-6"
-        keyboardShouldPersistTaps="handled"
-        bottomOffset={16}
-      >
-        <View className="mx-auto w-full max-w-150 gap-7">
-          <Card>
-            <Card.Body>
-              <Card.Title>{generator?.title ?? ''}</Card.Title>
-              <Card.Description>{template?.taskName ?? ''}</Card.Description>
-            </Card.Body>
-          </Card>
+    <FormScreen
+      onSubmit={submit}
+      isSubmitting={isSubmitting}
+      formError={formError}
+    >
+      <Card>
+        <Card.Body>
+          <Card.Title>{generator?.title ?? ''}</Card.Title>
+          <Card.Description>{template?.taskName ?? ''}</Card.Description>
+        </Card.Body>
+      </Card>
 
-          <View className="gap-2">
-            <Text className="text-muted ml-1 text-sm font-medium">
-              {t('edit.performedAt')}
-            </Text>
-            <Host matchContents>
-              <DatePicker
-                selection={form.values.performedAt}
-                onDateChange={v => form.set('performedAt', v)}
-                displayedComponents={['date', 'hourAndMinute']}
-                range={{ end: new Date() }}
-              />
-            </Host>
-          </View>
+      <View className="gap-2">
+        <Text className="text-muted ml-1 text-sm font-medium">
+          {t('edit.performedAt')}
+        </Text>
+        <Host matchContents>
+          <DatePicker
+            selection={form.values.performedAt}
+            onDateChange={v => form.set('performedAt', v)}
+            displayedComponents={['date', 'hourAndMinute']}
+            range={{ end: new Date() }}
+          />
+        </Host>
+      </View>
 
-          <View className="gap-2">
-            <Text className="text-muted ml-1 text-sm font-medium">
-              {t('edit.notes')}
-            </Text>
-            <TextArea
-              value={form.values.notes}
-              onChangeText={v => form.set('notes', v)}
-              placeholder={t('edit.optionalNotes')}
-            />
-          </View>
-
-          <FormError message={formError} />
-        </View>
-      </KeyboardAwareScrollView>
-    </>
+      <View className="gap-2">
+        <Text className="text-muted ml-1 text-sm font-medium">
+          {t('edit.notes')}
+        </Text>
+        <TextArea
+          value={form.values.notes}
+          onChangeText={v => form.set('notes', v)}
+          placeholder={t('edit.optionalNotes')}
+        />
+      </View>
+    </FormScreen>
   )
 }

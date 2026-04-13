@@ -1,12 +1,11 @@
 import { DatePicker, Host } from '@expo/ui/swift-ui'
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Card } from 'heroui-native'
 import { useState } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
-import { FormError } from '@/components/form-error'
-import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
+import { FormScreen } from '@/components/form/form-screen'
 import { logManualSession } from '@/data/client/mutations'
 import { getGenerator } from '@/data/client/queries'
 import { useCanLogManualSession } from '@/data/client/sessions/policy-hooks'
@@ -68,66 +67,54 @@ function LogSessionForm({
     startedAt: startedAtBinding.value.toISOString(),
     stoppedAt: stoppedAtBinding.value.toISOString()
   })
-  const submitDisabled =
-    isSubmitting || policy.status === 'loading' || !policy.ok
+  const submitDisabled = policy.status === 'loading' || !policy.ok
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <HeaderSubmitButton onPress={submit} isDisabled={submitDisabled} />
-          )
-        }}
-      />
-      <ScrollView
-        className="bg-background flex-1"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="px-5 pb-10 pt-6"
-      >
-        <View className="mx-auto w-full max-w-150 gap-7">
-          <Text className="text-muted text-3.75 leading-5.5">
-            {t('generator.logSessionDesc')}
-          </Text>
+    <FormScreen
+      variant="scroll"
+      onSubmit={submit}
+      isSubmitting={isSubmitting}
+      submitDisabled={submitDisabled}
+      formError={formError}
+    >
+      <Text className="text-muted text-3.75 leading-5.5">
+        {t('generator.logSessionDesc')}
+      </Text>
 
-          <Card>
-            <Card.Body>
-              <Card.Title>{generator?.title ?? t('common.loading')}</Card.Title>
-              <Card.Description>{generator?.model ?? ''}</Card.Description>
-            </Card.Body>
-          </Card>
+      <Card>
+        <Card.Body>
+          <Card.Title>{generator?.title ?? t('common.loading')}</Card.Title>
+          <Card.Description>{generator?.model ?? ''}</Card.Description>
+        </Card.Body>
+      </Card>
 
-          <View className="gap-2">
-            <Text className="text-muted ml-1 text-sm font-medium">
-              {t('generator.startTime')}
-            </Text>
-            <Host matchContents>
-              <DatePicker
-                selection={startedAtBinding.value}
-                onDateChange={startedAtBinding.onChange}
-                displayedComponents={['date', 'hourAndMinute']}
-                range={{ end: stoppedAtBinding.value }}
-              />
-            </Host>
-          </View>
+      <View className="gap-2">
+        <Text className="text-muted ml-1 text-sm font-medium">
+          {t('generator.startTime')}
+        </Text>
+        <Host matchContents>
+          <DatePicker
+            selection={startedAtBinding.value}
+            onDateChange={startedAtBinding.onChange}
+            displayedComponents={['date', 'hourAndMinute']}
+            range={{ end: stoppedAtBinding.value }}
+          />
+        </Host>
+      </View>
 
-          <View className="gap-2">
-            <Text className="text-muted ml-1 text-sm font-medium">
-              {t('generator.endTime')}
-            </Text>
-            <Host matchContents>
-              <DatePicker
-                selection={stoppedAtBinding.value}
-                onDateChange={stoppedAtBinding.onChange}
-                displayedComponents={['date', 'hourAndMinute']}
-                range={{ start: startedAtBinding.value, end: new Date() }}
-              />
-            </Host>
-          </View>
-
-          <FormError message={formError} />
-        </View>
-      </ScrollView>
-    </>
+      <View className="gap-2">
+        <Text className="text-muted ml-1 text-sm font-medium">
+          {t('generator.endTime')}
+        </Text>
+        <Host matchContents>
+          <DatePicker
+            selection={stoppedAtBinding.value}
+            onDateChange={stoppedAtBinding.onChange}
+            displayedComponents={['date', 'hourAndMinute']}
+            range={{ start: startedAtBinding.value, end: new Date() }}
+          />
+        </Host>
+      </View>
+    </FormScreen>
   )
 }

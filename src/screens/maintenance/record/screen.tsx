@@ -1,11 +1,9 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Card, Description, Input, Label, TextField } from 'heroui-native'
-import { Text, View } from 'react-native'
+import { Text } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
-import { FormError } from '@/components/form-error'
-import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
-import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { FormScreen } from '@/components/form/form-screen'
 import { recordMaintenance } from '@/data/client/mutations'
 import { getGenerator, getMaintenanceTemplate } from '@/data/client/queries'
 import { useForm } from '@/lib/hooks/forms'
@@ -63,52 +61,35 @@ function RecordForm({ userId, templateId, generatorId }: RecordFormProps) {
   const notesBinding = bind.text('notes')
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <HeaderSubmitButton onPress={submit} isDisabled={isSubmitting} />
-          )
-        }}
-      />
-      <KeyboardAwareScrollView
-        className="bg-background flex-1"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="px-5 pb-10 pt-6"
-        keyboardShouldPersistTaps="handled"
-        bottomOffset={16}
-      >
-        <View className="mx-auto w-full max-w-150 gap-7">
-          <Text className="text-muted text-3.75 leading-5.5">
-            {t('maintenanceRecord.logDesc')}
-          </Text>
+    <FormScreen
+      onSubmit={submit}
+      isSubmitting={isSubmitting}
+      formError={formError}
+    >
+      <Text className="text-muted text-3.75 leading-5.5">
+        {t('maintenanceRecord.logDesc')}
+      </Text>
 
-          <Card>
-            <Card.Body>
-              <Card.Title>
-                {template?.taskName ?? t('common.loading')}
-              </Card.Title>
-              <Card.Description>
-                {generator?.title ?? t('common.loading')}
-              </Card.Description>
-            </Card.Body>
-          </Card>
+      <Card>
+        <Card.Body>
+          <Card.Title>{template?.taskName ?? t('common.loading')}</Card.Title>
+          <Card.Description>
+            {generator?.title ?? t('common.loading')}
+          </Card.Description>
+        </Card.Body>
+      </Card>
 
-          <TextField>
-            <Label>{t('maintenanceRecord.notes')}</Label>
-            <Input
-              testID="record-maintenance-notes-input"
-              placeholder={t('maintenanceRecord.notesPlaceholder')}
-              value={notesBinding.value}
-              onChangeText={notesBinding.onChangeText}
-              multiline
-            />
-            <Description>{t('common.optional')}</Description>
-          </TextField>
-
-          <FormError message={formError} />
-        </View>
-      </KeyboardAwareScrollView>
-    </>
+      <TextField>
+        <Label>{t('maintenanceRecord.notes')}</Label>
+        <Input
+          testID="record-maintenance-notes-input"
+          placeholder={t('maintenanceRecord.notesPlaceholder')}
+          value={notesBinding.value}
+          onChangeText={notesBinding.onChangeText}
+          multiline
+        />
+        <Description>{t('common.optional')}</Description>
+      </TextField>
+    </FormScreen>
   )
 }
