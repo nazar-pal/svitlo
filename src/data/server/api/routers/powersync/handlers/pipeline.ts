@@ -1,3 +1,5 @@
+import { getTableName } from 'drizzle-orm'
+import type { PgTable } from 'drizzle-orm/pg-core'
 import type { z } from 'zod'
 
 import {
@@ -6,7 +8,7 @@ import {
   type CheckResult,
   type OkBranch
 } from './replay'
-import { transformSyncData } from '../transform'
+import { transformSyncRow } from '../transform'
 import {
   fail,
   ok,
@@ -43,10 +45,11 @@ interface OpDef<
 
 function parseWire<T>(
   schema: z.ZodType<T>,
+  table: PgTable,
   data: Record<string, unknown>,
   errorLabel: string
 ): { ok: true; value: T } | { ok: false; result: MutationResult } {
-  const transformed = transformSyncData(data)
+  const transformed = transformSyncRow(table, data)
   const parsed = schema.safeParse(transformed)
   if (!parsed.success)
     return {
@@ -59,17 +62,17 @@ function parseWire<T>(
 async function runOp<TP, TC extends CheckResult>(
   ctx: WriteContext,
   opDef: OpDef<TP, TC>,
-  table: string
+  table: PgTable
 ): Promise<MutationResult> {
-  const errorLabel = opDef.errorLabel ?? `${ctx.op} ${table}`
+  const errorLabel = opDef.errorLabel ?? `${ctx.op} ${getTableName(table)}`
 
   let parsed: TP
   if (opDef.schema) {
-    const r = parseWire(opDef.schema, ctx.data, errorLabel)
+    const r = parseWire(opDef.schema, table, ctx.data, errorLabel)
     if (!r.ok) return r.result
     parsed = r.value
   } else {
-    parsed = transformSyncData(ctx.data) as TP
+    parsed = transformSyncRow(table, ctx.data) as TP
   }
 
   let checkOk: OkBranch<TC> | undefined
@@ -103,7 +106,7 @@ interface TableHandlerDef<
   DP,
   DC extends CheckResult
 > {
-  table: string
+  table: PgTable
   insert?: OpDef<IP, IC>
   update?: OpDef<UP, UC>
   delete?: OpDef<DP, DC>
@@ -151,6 +154,6 @@ export function defineTableHandler<
       return runOp(ctx, def.update, def.table)
     if (ctx.op === 'delete' && def.delete)
       return runOp(ctx, def.delete, def.table)
-    return fail(`Invalid operation on ${def.table}`)
+    return fail(`Invalid operation on ${getTableName(def.table)}`)
   }
 }

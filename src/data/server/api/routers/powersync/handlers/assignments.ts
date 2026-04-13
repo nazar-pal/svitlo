@@ -6,7 +6,7 @@ import { defineTableHandler } from './pipeline'
 import type { Insert } from './types'
 
 export const handleGeneratorUserAssignments = defineTableHandler({
-  table: 'generator_user_assignments',
+  table: generatorUserAssignments,
   insert: {
     check: ({ userId, checks }, parsed) => {
       const values = parsed as Insert<typeof generatorUserAssignments>

@@ -9,7 +9,7 @@ import { generators } from '@/data/server/db-schema'
 import { defineTableHandler } from './pipeline'
 
 export const handleGenerators = defineTableHandler({
-  table: 'generators',
+  table: generators,
   insert: {
     schema: insertGeneratorSchema,
     errorLabel: 'generator insert',

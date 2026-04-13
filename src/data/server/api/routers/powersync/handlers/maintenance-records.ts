@@ -4,7 +4,7 @@ import { maintenanceRecords } from '@/data/server/db-schema'
 import { createServerAuthz } from '@/data/server/authz'
 
 import { replayShieldNotFound } from './replay'
-import { transformSyncData } from '../transform'
+import { transformSyncRow } from '../transform'
 import { fail, ok, type Insert, type TableHandler } from './types'
 
 export const handleMaintenanceRecords: TableHandler = async ctx => {
@@ -12,7 +12,7 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
   const checks = ctx.checks.maintenance
 
   if (op === 'insert') {
-    const values = transformSyncData<Insert<typeof maintenanceRecords>>(data)
+    const values = transformSyncRow(maintenanceRecords, data)
     const generatorId = values.generatorId as string
     const templateId = values.templateId as string
 
@@ -24,7 +24,11 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
 
     await db
       .insert(maintenanceRecords)
-      .values({ ...values, id, performedByUserId: userId })
+      .values({
+        ...values,
+        id,
+        performedByUserId: userId
+      } as Insert<typeof maintenanceRecords>)
       .onConflictDoNothing()
     return ok
   }

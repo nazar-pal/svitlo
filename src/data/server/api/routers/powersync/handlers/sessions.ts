@@ -4,7 +4,7 @@ import { generatorSessions } from '@/data/server/db-schema'
 import { createServerAuthz } from '@/data/server/authz'
 
 import { replayShieldNotFound } from './replay'
-import { transformSyncData } from '../transform'
+import { transformSyncRow } from '../transform'
 import { fail, ok, type Insert, type TableHandler } from './types'
 
 export const handleGeneratorSessions: TableHandler = async ctx => {
@@ -12,7 +12,7 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
   const checks = ctx.checks.sessions
 
   if (op === 'insert') {
-    const values = transformSyncData<Insert<typeof generatorSessions>>(data)
+    const values = transformSyncRow(generatorSessions, data)
     const generatorId = values.generatorId as string
 
     const result = await checks.startSession(userId, generatorId)
@@ -43,7 +43,11 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     // case as a no-op instead of crashing the handler.
     await db
       .insert(generatorSessions)
-      .values({ ...values, id, startedByUserId: userId })
+      .values({
+        ...values,
+        id,
+        startedByUserId: userId
+      } as Insert<typeof generatorSessions>)
       .onConflictDoNothing()
     return ok
   }

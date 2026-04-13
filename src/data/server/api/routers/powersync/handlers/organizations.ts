@@ -4,7 +4,7 @@ import { updateOrganizationSchema } from '@/data/shared/validation'
 import { organizations } from '@/data/server/db-schema'
 
 import { replayShieldNotFound } from './replay'
-import { transformSyncData } from '../transform'
+import { transformSyncRow } from '../transform'
 import { fail, ok, type Insert, type TableHandler } from './types'
 
 export const handleOrganizations: TableHandler = async ctx => {
@@ -12,10 +12,14 @@ export const handleOrganizations: TableHandler = async ctx => {
   const checks = ctx.checks.organizations
 
   if (op === 'insert') {
-    const values = transformSyncData<Insert<typeof organizations>>(data)
+    const values = transformSyncRow(organizations, data)
     await db
       .insert(organizations)
-      .values({ ...values, id, adminUserId: userId })
+      .values({
+        ...values,
+        id,
+        adminUserId: userId
+      } as Insert<typeof organizations>)
       .onConflictDoNothing()
     return ok
   }
@@ -28,7 +32,7 @@ export const handleOrganizations: TableHandler = async ctx => {
     if (shielded.status === 'consume') return shielded.result
 
     const parsed = updateOrganizationSchema.safeParse(
-      transformSyncData<Partial<Insert<typeof organizations>>>(data)
+      transformSyncRow(organizations, data)
     )
     if (!parsed.success)
       return fail(`Invalid organization update: ${parsed.error.message}`)

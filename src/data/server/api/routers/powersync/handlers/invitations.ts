@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { invitations } from '@/data/server/db-schema'
 
 import { replayShieldAlreadyExists, replayShieldNotFound } from './replay'
-import { transformSyncData } from '../transform'
+import { transformSyncRow } from '../transform'
 import { fail, ok, type Insert, type TableHandler } from './types'
 
 export const handleInvitations: TableHandler = async ctx => {
@@ -11,7 +11,7 @@ export const handleInvitations: TableHandler = async ctx => {
   const checks = ctx.checks.invitations
 
   if (op === 'insert') {
-    const values = transformSyncData<Insert<typeof invitations>>(data)
+    const values = transformSyncRow(invitations, data)
     const orgId = values.organizationId as string
     const inviteeEmail = values.inviteeEmail as string
 
@@ -23,7 +23,7 @@ export const handleInvitations: TableHandler = async ctx => {
 
     await db
       .insert(invitations)
-      .values({ ...values, id })
+      .values({ ...values, id } as Insert<typeof invitations>)
       .onConflictDoNothing()
     return ok
   }

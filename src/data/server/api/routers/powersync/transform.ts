@@ -1,50 +1,53 @@
-import { getTableColumns, is } from 'drizzle-orm'
-import { PgTable } from 'drizzle-orm/pg-core'
-import * as serverSchema from '@/data/server/db-schema'
+import { getTableColumns, type InferInsertModel } from 'drizzle-orm'
+import type { PgTable } from 'drizzle-orm/pg-core'
 
-const TIMESTAMP_FIELDS = new Set<string>()
-const BOOLEAN_FIELDS = new Set<string>()
-const NUMBER_FIELDS = new Set<string>()
-
-for (const value of Object.values(serverSchema)) {
-  if (!is(value, PgTable)) continue
-  for (const col of Object.values(getTableColumns(value))) {
-    if (col.dataType === 'date') TIMESTAMP_FIELDS.add(col.name)
-    else if (col.dataType === 'boolean') BOOLEAN_FIELDS.add(col.name)
-    else if (col.dataType === 'number') NUMBER_FIELDS.add(col.name)
-  }
+interface ColumnMeta {
+  tsKey: string
+  dataType: string
 }
 
-function snakeToCamel(s: string): string {
-  return s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())
+const columnMapCache = new WeakMap<PgTable, Map<string, ColumnMeta>>()
+
+function getColumnMap(table: PgTable): Map<string, ColumnMeta> {
+  const cached = columnMapCache.get(table)
+  if (cached) return cached
+  const map = new Map<string, ColumnMeta>()
+  for (const [tsKey, col] of Object.entries(getTableColumns(table)))
+    map.set(col.name, { tsKey, dataType: col.dataType })
+  columnMapCache.set(table, map)
+  return map
 }
 
-function convertValue(key: string, value: unknown): unknown {
+function convertValue(dataType: string, value: unknown): unknown {
   if (value == null) return null
-  if (TIMESTAMP_FIELDS.has(key)) return new Date(value as string)
-  if (BOOLEAN_FIELDS.has(key))
+  if (dataType === 'date') return new Date(value as string)
+  if (dataType === 'boolean')
     return value === '1' || value === 1 || value === true
-  if (NUMBER_FIELDS.has(key)) return Number(value)
+  if (dataType === 'number') return Number(value)
   return value
 }
 
 /**
- * Convert PowerSync upload data (snake_case keys, string values)
- * into Drizzle-compatible format (camelCase keys, proper types).
+ * Convert a PowerSync upload row (snake_case keys, string values) for a
+ * specific table into a Drizzle-compatible partial insert object.
  *
- * Strips `id` since it's always passed separately by the caller.
- *
- * Generic parameter lets callers specify the Drizzle insert/update type
- * so `.values()` and `.set()` calls typecheck without inline assertions.
- * Runtime correctness is guaranteed by the client Zod schemas + DB constraints.
+ * Coercion is driven by each column's Drizzle `dataType` on *this* table, so
+ * column-name collisions between tables cannot silently miscoerce. Snake →
+ * camel mapping comes from `getTableColumns(table)` rather than a regex, and
+ * keys that don't correspond to a column on this table are dropped (Zod
+ * schemas upstream or Drizzle itself would strip them anyway).
  */
-export function transformSyncData<T = Record<string, unknown>>(
+export function transformSyncRow<T extends PgTable>(
+  table: T,
   data: Record<string, unknown>
-): T {
+): Partial<InferInsertModel<T>> {
+  const columnMap = getColumnMap(table)
   const result: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(data)) {
     if (key === 'id') continue
-    result[snakeToCamel(key)] = convertValue(key, value)
+    const meta = columnMap.get(key)
+    if (!meta) continue
+    result[meta.tsKey] = convertValue(meta.dataType, value)
   }
-  return result as T
+  return result as Partial<InferInsertModel<T>>
 }

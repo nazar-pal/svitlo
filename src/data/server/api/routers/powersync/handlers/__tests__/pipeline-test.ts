@@ -1,7 +1,13 @@
+import { pgTable, text } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 
 import { defineTableHandler } from '../pipeline'
 import type { WriteContext } from '../types'
+
+const widgets = pgTable('widgets', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull()
+})
 
 function makeCtx(overrides: Partial<WriteContext> = {}): WriteContext {
   return {
@@ -20,7 +26,7 @@ function makeCtx(overrides: Partial<WriteContext> = {}): WriteContext {
 describe('defineTableHandler', () => {
   it('formats schema parse failures as Invalid {op} {table}: {zod message}', async () => {
     const handler = defineTableHandler({
-      table: 'widgets',
+      table: widgets,
       insert: {
         schema: z.object({ name: z.string().min(1, { error: 'REQUIRED' }) }),
         apply: async () => {}
@@ -37,7 +43,7 @@ describe('defineTableHandler', () => {
   it('returns fail(code) when check fails without a shield', async () => {
     const applied = jest.fn()
     const handler = defineTableHandler({
-      table: 'widgets',
+      table: widgets,
       update: {
         check: async () => ({ ok: false, code: 'FORBIDDEN' }),
         apply: async () => {
@@ -53,7 +59,7 @@ describe('defineTableHandler', () => {
   it('shield.notFound consumes matching code as silent ok', async () => {
     const applied = jest.fn()
     const handler = defineTableHandler({
-      table: 'widgets',
+      table: widgets,
       delete: {
         check: async () => ({ ok: false, code: 'WIDGET_NOT_FOUND' }),
         shield: { kind: 'notFound', code: 'WIDGET_NOT_FOUND' },
@@ -70,7 +76,7 @@ describe('defineTableHandler', () => {
   it('shield.alreadyExists consumes matching code as silent ok', async () => {
     const applied = jest.fn()
     const handler = defineTableHandler({
-      table: 'widgets',
+      table: widgets,
       insert: {
         check: async () => ({ ok: false, code: 'WIDGET_EXISTS' }),
         shield: { kind: 'alreadyExists', code: 'WIDGET_EXISTS' },
@@ -87,7 +93,7 @@ describe('defineTableHandler', () => {
   it('passes the unwrapped check success to apply and defaults to ok', async () => {
     const applied = jest.fn()
     const handler = defineTableHandler({
-      table: 'widgets',
+      table: widgets,
       update: {
         schema: z.object({ name: z.string() }),
         check: async () => ({ ok: true as const, meta: 'from-check' }),
@@ -106,7 +112,7 @@ describe('defineTableHandler', () => {
 
   it('propagates errors thrown by apply', async () => {
     const handler = defineTableHandler({
-      table: 'widgets',
+      table: widgets,
       insert: {
         apply: async () => {
           throw new Error('boom')
@@ -118,7 +124,7 @@ describe('defineTableHandler', () => {
 
   it('rejects ops the table does not declare', async () => {
     const handler = defineTableHandler({
-      table: 'widgets',
+      table: widgets,
       insert: { apply: async () => {} }
     })
     const result = await handler(makeCtx({ op: 'delete' }))

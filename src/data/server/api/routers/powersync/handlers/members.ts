@@ -13,7 +13,7 @@ import {
 } from '@/data/shared/members'
 
 import { replayShieldNotFound } from './replay'
-import { transformSyncData } from '../transform'
+import { transformSyncRow } from '../transform'
 import { fail, ok, type Db, type Insert, type TableHandler } from './types'
 
 function createServerMemberWritePort(db: Db): MemberWritePort {
@@ -65,14 +65,14 @@ export const handleOrganizationMembers: TableHandler = async ctx => {
   const authz = createServerAuthz(db)
 
   if (op === 'insert') {
-    const values = transformSyncData<Insert<typeof organizationMembers>>(data)
+    const values = transformSyncRow(organizationMembers, data)
     const orgId = values.organizationId as string
     const memberUserId = values.userId as string
 
     if (await authz.isOrgAdmin(userId, orgId)) {
       await db
         .insert(organizationMembers)
-        .values({ ...values, id })
+        .values({ ...values, id } as Insert<typeof organizationMembers>)
         .onConflictDoNothing()
       return ok
     }
@@ -90,7 +90,7 @@ export const handleOrganizationMembers: TableHandler = async ctx => {
 
       await db
         .insert(organizationMembers)
-        .values({ ...values, id })
+        .values({ ...values, id } as Insert<typeof organizationMembers>)
         .onConflictDoNothing()
       await db.delete(invitations).where(eq(invitations.id, invitation.id))
       return ok

@@ -7,7 +7,7 @@ import { defineTableHandler } from './pipeline'
 import type { Insert } from './types'
 
 export const handleMaintenanceTemplates = defineTableHandler({
-  table: 'maintenance_templates',
+  table: maintenanceTemplates,
   insert: {
     // No `schema:` by design — the PG CHECK constraint
     // `trigger_fields_match_type` (plus the positive-number / non-empty-name
