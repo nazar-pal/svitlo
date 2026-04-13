@@ -147,6 +147,40 @@ describe('createGeneratorWithMaintenance', () => {
     expect(gens).toHaveLength(0)
   })
 
+  it('trims template taskName on insert', async () => {
+    const result = await createGeneratorWithMaintenance(
+      IDS.adminUser,
+      {
+        organizationId: IDS.org,
+        title: 'Trim Gen',
+        model: 'Test',
+        maxConsecutiveRunHours: 8,
+        requiredRestHours: 4,
+        runWarningThresholdPct: 80
+      },
+      [
+        {
+          taskName: '  Oil Change  ',
+          triggerType: 'hours',
+          triggerHoursInterval: 100
+        }
+      ]
+    )
+    expect(result.ok).toBe(true)
+
+    const [gen] = h.db
+      .select()
+      .from(generators)
+      .where(eq(generators.title, 'Trim Gen'))
+      .all()
+    const [template] = h.db
+      .select()
+      .from(maintenanceTemplates)
+      .where(eq(maintenanceTemplates.generatorId, gen.id))
+      .all()
+    expect(template.taskName).toBe('Oil Change')
+  })
+
   it('includes template taskName in validation error', async () => {
     const result = await createGeneratorWithMaintenance(
       IDS.adminUser,

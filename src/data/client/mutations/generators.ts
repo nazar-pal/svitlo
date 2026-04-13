@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import type { z } from 'zod'
 
 import { generators, maintenanceTemplates } from '@/data/client/db-schema'
 import {
@@ -9,8 +10,7 @@ import {
   type InsertMaintenanceTemplateInput,
   type UpdateGeneratorInput
 } from '@/data/shared/validation'
-import { failFromZod } from '@/data/shared/errors-from-zod'
-import { fail, ok, type MutationResult } from '@/data/shared/result'
+import { fail } from '@/data/shared/result'
 
 import type { MutationContext } from './context'
 import { defineMutation } from './pipeline'
@@ -32,72 +32,65 @@ export function createGeneratorMutations(ctx: MutationContext) {
       }
     }),
 
-    // Stays imperative: the pre-`writeTx` validation loop emits the
-    // parameterized `MAINTENANCE_TASK_VALIDATION_FAILED` code with
-    // `{ taskName }`, which the `defineMutation` check model (scoped to
-    // param-free codes) cannot express.
-    async createGeneratorWithMaintenance(
-      userId: string,
-      input: InsertGeneratorInput,
-      maintenanceInputs: Omit<InsertMaintenanceTemplateInput, 'generatorId'>[]
-    ): Promise<MutationResult> {
-      const parsed = insertGeneratorSchema.safeParse(input)
-      if (!parsed.success) return failFromZod(parsed.error)
-
-      const check = await ctx.checks.generators.createGenerator(
-        userId,
-        parsed.data.organizationId
-      )
-      if (!check.ok) return fail(check.code)
-
-      const generatorId = ctx.newId()
-      const now = ctx.now().toISOString()
-
-      for (const mi of maintenanceInputs) {
-        const mParsed = insertMaintenanceTemplateSchema.safeParse({
-          ...mi,
-          generatorId
-        })
-        if (!mParsed.success)
-          return fail('MAINTENANCE_TASK_VALIDATION_FAILED', {
-            taskName: mi.taskName
+    createGeneratorWithMaintenance: defineMutation<
+      [
+        string,
+        InsertGeneratorInput,
+        Omit<InsertMaintenanceTemplateInput, 'generatorId'>[]
+      ],
+      z.output<typeof insertGeneratorSchema>
+    >(ctx, {
+      parse: ([, input]) => insertGeneratorSchema.safeParse(input),
+      validate: ([, , maintenanceInputs]) => {
+        for (const mi of maintenanceInputs) {
+          const r = insertMaintenanceTemplateSchema.safeParse({
+            ...mi,
+            generatorId: 'placeholder'
           })
-      }
+          if (!r.success)
+            return fail('MAINTENANCE_TASK_VALIDATION_FAILED', {
+              taskName: mi.taskName
+            })
+        }
+      },
+      check: (c, [userId], parsed) =>
+        c.checks.generators.createGenerator(userId, parsed.organizationId),
+      tx: true,
+      apply: async ({ ctx: c, db, args: [, , maintenanceInputs], parsed }) => {
+        const generatorId = c.newId()
+        const now = c.now().toISOString()
 
-      await ctx.writeTx(async tx => {
-        await tx.insert(generators).values({
+        await db.insert(generators).values({
           id: generatorId,
-          organizationId: parsed.data.organizationId,
-          title: parsed.data.title,
-          model: parsed.data.model,
-          description: parsed.data.description ?? null,
-          maxConsecutiveRunHours: parsed.data.maxConsecutiveRunHours,
-          requiredRestHours: parsed.data.requiredRestHours,
-          runWarningThresholdPct: parsed.data.runWarningThresholdPct,
+          organizationId: parsed.organizationId,
+          title: parsed.title,
+          model: parsed.model,
+          description: parsed.description ?? null,
+          maxConsecutiveRunHours: parsed.maxConsecutiveRunHours,
+          requiredRestHours: parsed.requiredRestHours,
+          runWarningThresholdPct: parsed.runWarningThresholdPct,
           createdAt: now
         })
 
         for (const mi of maintenanceInputs) {
-          const mParsed = insertMaintenanceTemplateSchema.parse({
+          const m = insertMaintenanceTemplateSchema.parse({
             ...mi,
             generatorId
           })
-          await tx.insert(maintenanceTemplates).values({
-            id: ctx.newId(),
+          await db.insert(maintenanceTemplates).values({
+            id: c.newId(),
             generatorId,
-            taskName: mParsed.taskName,
-            description: mParsed.description ?? null,
-            triggerType: mParsed.triggerType,
-            triggerHoursInterval: mParsed.triggerHoursInterval ?? null,
-            triggerCalendarDays: mParsed.triggerCalendarDays ?? null,
-            isOneTime: mParsed.isOneTime ? 1 : 0,
+            taskName: m.taskName,
+            description: m.description ?? null,
+            triggerType: m.triggerType,
+            triggerHoursInterval: m.triggerHoursInterval ?? null,
+            triggerCalendarDays: m.triggerCalendarDays ?? null,
+            isOneTime: m.isOneTime ? 1 : 0,
             createdAt: now
           })
         }
-      })
-
-      return ok
-    },
+      }
+    }),
 
     deleteGenerator: defineMutation<[string, string]>(ctx, {
       check: (c, [userId, generatorId]) =>

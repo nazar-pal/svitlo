@@ -96,4 +96,55 @@ describe('defineMutation', () => {
     const result = await mutation()
     expect(result).toEqual(fail('ORGANIZATION_NOT_FOUND'))
   })
+
+  it('forwards validate failure and skips check + apply', async () => {
+    const checked = jest.fn()
+    const applied = jest.fn()
+    const mutation = defineMutation<[string]>(h.ctx, {
+      validate: ([v]) =>
+        v === 'bad'
+          ? fail('MAINTENANCE_TASK_VALIDATION_FAILED', { taskName: v })
+          : undefined,
+      check: async () => {
+        checked()
+        return { ok: true as const }
+      },
+      apply: async () => {
+        applied()
+      }
+    })
+    const result = await mutation('bad')
+    expect(result).toEqual(
+      fail('MAINTENANCE_TASK_VALIDATION_FAILED', { taskName: 'bad' })
+    )
+    expect(checked).not.toHaveBeenCalled()
+    expect(applied).not.toHaveBeenCalled()
+  })
+
+  it('forwards a parameterized check failure with params intact', async () => {
+    const applied = jest.fn()
+    const mutation = defineMutation<
+      [],
+      undefined,
+      {
+        ok: false
+        code: 'MAINTENANCE_TASK_VALIDATION_FAILED'
+        params: { taskName: string }
+      }
+    >(h.ctx, {
+      check: async () => ({
+        ok: false,
+        code: 'MAINTENANCE_TASK_VALIDATION_FAILED',
+        params: { taskName: 'oil' }
+      }),
+      apply: async () => {
+        applied()
+      }
+    })
+    const result = await mutation()
+    expect(result).toEqual(
+      fail('MAINTENANCE_TASK_VALIDATION_FAILED', { taskName: 'oil' })
+    )
+    expect(applied).not.toHaveBeenCalled()
+  })
 })

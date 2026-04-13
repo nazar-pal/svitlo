@@ -1,22 +1,25 @@
 import type { z } from 'zod'
 
-import type { ParamFreeMutationErrorCode } from '@/data/shared/errors'
+import type {
+  MutationError,
+  ParamFreeMutationErrorCode
+} from '@/data/shared/errors'
 import { failFromZod } from '@/data/shared/errors-from-zod'
-import { fail, ok, type MutationResult } from '@/data/shared/result'
+import { ok, type MutationResult } from '@/data/shared/result'
 import type { ClientDb } from '@/lib/powersync/database'
 
 import type { MutationContext } from './context'
 
 type OkBranch<T> = Extract<T, { ok: true }>
 
-// Every client lifecycle check returns either `{ ok: true, ...data }` — extra
-// fields are forwarded to `apply` via `checkOk` — or `{ ok: false; code }`
-// where `code` is a param-free MutationError code. The parameterized codes
-// live on the imperative side (see escape-hatch comments in members.ts /
-// generators.ts).
+// Fail branch splits by whether the code takes params: bare codes may use
+// the wide `ParamFreeMutationErrorCode` union (so `PolicyResult`-shaped
+// checks assign directly); parameterized codes must supply their typed
+// `params`. A check cannot return a parameterized code without them.
 type CheckOutcome =
   | { ok: true }
   | { ok: false; code: ParamFreeMutationErrorCode }
+  | ({ ok: false } & Extract<MutationError, { params: unknown }>)
 
 interface MutationDef<
   TArgs extends readonly unknown[],
@@ -24,6 +27,10 @@ interface MutationDef<
   TCheck extends CheckOutcome
 > {
   parse?: (args: TArgs) => z.ZodSafeParseResult<TParsed>
+  // Short-circuit only: return a `fail(...)` to abort, or nothing to
+  // continue. `validate` cannot forward data to `apply` — use `check` for
+  // that.
+  validate?: (args: TArgs, parsed: TParsed) => MutationResult | void
   check?: (
     ctx: MutationContext,
     args: TArgs,
@@ -43,21 +50,11 @@ interface MutationDef<
  * Declarative pipeline for client mutations — the client-side mirror of
  * `defineTableHandler` in `src/data/server/api/routers/powersync/handlers/pipeline.ts`.
  *
- * Each mutation declares the three knobs that differ between mutations —
- * Zod parse (optional), lifecycle check (optional), and the DB-writing
- * `apply` callback — plus an opt-in `tx` flag. Parse-error formatting,
- * check-failure forwarding, and the default `ok` return are handled here.
- *
- * Mutations that stay imperative:
- *   - `generators.createGeneratorWithMaintenance` — runs a pre-`writeTx`
- *     validation loop over `maintenanceInputs` that emits the parameterized
- *     `MAINTENANCE_TASK_VALIDATION_FAILED` code with `{ taskName }`. The
- *     pipeline's single-check model is scoped to param-free codes.
- *   - `members.removeMember` / `members.leaveOrganization` — thread
- *     `check.member` + `check.adminUserId` through
- *     `transferAssignmentsAndRemoveMember(createClientMemberWritePort(tx, ctx))`.
- *     The port needs the `tx` handle before `apply` runs, which doesn't fit
- *     the `apply({ db, checkOk })` shape.
+ * Each mutation declares the knobs that differ between mutations — Zod
+ * parse (optional), a sync post-parse `validate` phase (optional), the
+ * lifecycle `check` (optional), and the DB-writing `apply` callback — plus
+ * an opt-in `tx` flag. Parse-error formatting, validate/check-failure
+ * forwarding, and the default `ok` return are handled here.
  */
 export function defineMutation<
   TArgs extends readonly unknown[],
@@ -75,10 +72,18 @@ export function defineMutation<
       parsed = r.data
     }
 
+    if (def.validate) {
+      const v = def.validate(args, parsed)
+      if (v && !v.ok) return v
+    }
+
     let checkOk = undefined as unknown as OkBranch<TCheck>
     if (def.check) {
       const result = await def.check(ctx, args, parsed)
-      if (!result.ok) return fail(result.code)
+      if (!result.ok) {
+        const { ok: _ok, ...error } = result
+        return { ok: false, error: error as unknown as MutationError }
+      }
       checkOk = result as OkBranch<TCheck>
     }
 
