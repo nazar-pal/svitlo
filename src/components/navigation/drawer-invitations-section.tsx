@@ -9,38 +9,36 @@ import { getAllOrganizations, getAllUsers } from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { usePendingInvitations } from '@/lib/hooks/use-pending-invitations'
 import { useTranslation } from '@/lib/i18n'
+import {
+  resolveInvitationDetails,
+  type InvitationDetails
+} from '@/lib/organization/resolve-invitation-details'
 
 export function DrawerInvitationsSection() {
   const foregroundColor = useThemeColor('foreground')
-  const [selectedInvitationIds, setSelectedInvitationIds] = useState<string[]>(
-    []
-  )
+  const [selectedInvitations, setSelectedInvitations] = useState<
+    InvitationDetails[]
+  >([])
   const { t } = useTranslation()
   const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
   const pendingInvitations = usePendingInvitations()
   const { data: allUsers } = useDrizzleQuery(getAllUsers())
 
-  function getOrgName(orgId: string): string {
-    return allOrgs.find(o => o.id === orgId)?.name ?? t('common.unknown')
-  }
-
-  function getInviterName(userId: string): string {
-    return allUsers.find(u => u.id === userId)?.name ?? t('common.unknown')
-  }
-
   if (pendingInvitations.length === 0) return null
+
+  const resolved = pendingInvitations.map(inv =>
+    resolveInvitationDetails(inv, allOrgs, allUsers, t)
+  )
 
   return (
     <>
       <View className="gap-2">
         <SectionHeader title={t('drawer.invitations')} />
         <ListGroup>
-          {pendingInvitations.map((inv, index) => (
-            <View key={inv.id}>
+          {resolved.map((details, index) => (
+            <View key={details.id}>
               {index > 0 ? <Separator className="mx-4" /> : null}
-              <ListGroup.Item
-                onPress={() => setSelectedInvitationIds([inv.id])}
-              >
+              <ListGroup.Item onPress={() => setSelectedInvitations([details])}>
                 <ListGroup.ItemPrefix>
                   <SymbolView
                     name="envelope.fill"
@@ -49,13 +47,9 @@ export function DrawerInvitationsSection() {
                   />
                 </ListGroup.ItemPrefix>
                 <ListGroup.ItemContent>
-                  <ListGroup.ItemTitle>
-                    {getOrgName(inv.organizationId)}
-                  </ListGroup.ItemTitle>
+                  <ListGroup.ItemTitle>{details.orgName}</ListGroup.ItemTitle>
                   <ListGroup.ItemDescription>
-                    {t('drawer.invitedBy', {
-                      name: getInviterName(inv.invitedByUserId)
-                    })}
+                    {t('drawer.invitedBy', { name: details.inviterName })}
                   </ListGroup.ItemDescription>
                 </ListGroup.ItemContent>
                 <ListGroup.ItemSuffix
@@ -68,8 +62,8 @@ export function DrawerInvitationsSection() {
       </View>
 
       <InvitationDialog
-        invitationIds={selectedInvitationIds}
-        onClose={() => setSelectedInvitationIds([])}
+        invitations={selectedInvitations}
+        onClose={() => setSelectedInvitations([])}
       />
     </>
   )

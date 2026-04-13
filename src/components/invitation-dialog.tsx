@@ -1,17 +1,15 @@
 import { Button, Dialog } from 'heroui-native'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { View } from 'react-native'
 import Animated, { Keyframe } from 'react-native-reanimated'
 
 import { BlurDialogOverlay } from '@/components/blur-dialog-overlay'
 
 import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
-import { getAllOrganizations, getAllUsers } from '@/data/client/queries'
 import { alertOnError } from '@/lib/alerts'
 import { notifySuccess, notifyWarning } from '@/lib/haptics'
-import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useTranslation } from '@/lib/i18n'
-import { usePendingInvitations } from '@/lib/hooks/use-pending-invitations'
+import type { InvitationDetails } from '@/lib/organization/resolve-invitation-details'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 import { useLocalUser } from '@/lib/powersync'
 
@@ -26,12 +24,12 @@ const slideOutToLeft = new Keyframe({
 }).duration(200)
 
 interface InvitationDialogProps {
-  invitationIds: string[]
+  invitations: InvitationDetails[]
   onClose: () => void
 }
 
 export function InvitationDialog({
-  invitationIds,
+  invitations,
   onClose
 }: InvitationDialogProps) {
   const { t } = useTranslation()
@@ -40,39 +38,10 @@ export function InvitationDialog({
   const userEmail = localUser?.email ?? ''
   const [step, setStep] = useState(0)
 
-  const pendingInvitations = usePendingInvitations()
-  const { data: allOrgs } = useDrizzleQuery(getAllOrganizations())
-  const { data: allUsers } = useDrizzleQuery(getAllUsers())
-
-  const isOpen = invitationIds.length > 0
-  const total = invitationIds.length
+  const isOpen = invitations.length > 0
+  const total = invitations.length
   const clampedStep = Math.min(step, Math.max(total - 1, 0))
-  const currentId = invitationIds[clampedStep]
-
-  // Cache resolved details so they survive the invitation being deleted after accept/decline
-  const detailsCacheRef = useRef(
-    new Map<string, { orgName: string; inviterName: string }>()
-  )
-
-  for (const id of invitationIds) {
-    if (detailsCacheRef.current.has(id)) continue
-    const inv = pendingInvitations.find(i => i.id === id)
-    if (!inv) continue
-    detailsCacheRef.current.set(id, {
-      orgName:
-        allOrgs.find(o => o.id === inv.organizationId)?.name ??
-        t('common.unknown'),
-      inviterName:
-        allUsers.find(u => u.id === inv.invitedByUserId)?.name ??
-        t('common.unknown')
-    })
-  }
-
-  if (!isOpen) detailsCacheRef.current.clear()
-
-  const details = currentId ? detailsCacheRef.current.get(currentId) : undefined
-  const orgName = details?.orgName ?? t('common.unknown')
-  const inviterName = details?.inviterName ?? t('common.unknown')
+  const current = invitations[clampedStep]
 
   function advance() {
     if (step + 1 < total) setStep(prev => prev + 1)
@@ -85,16 +54,16 @@ export function InvitationDialog({
   }
 
   async function handleAccept() {
-    if (!currentId) return
-    const result = await acceptInvitation(userId, userEmail, currentId)
+    if (!current) return
+    const result = await acceptInvitation(userId, userEmail, current.id)
     if (alertOnError(result)) return
     advance()
     notifySuccess()
   }
 
   async function handleDecline() {
-    if (!currentId) return
-    const result = await declineInvitation(userEmail, currentId)
+    if (!current) return
+    const result = await declineInvitation(userEmail, current.id)
     if (alertOnError(result)) return
     advance()
     notifyWarning()
@@ -113,7 +82,7 @@ export function InvitationDialog({
           <Dialog.Close variant="ghost" className="self-end" />
           <View className="overflow-hidden">
             <Animated.View
-              key={currentId}
+              key={current?.id}
               entering={
                 total > 1 && clampedStep > 0 ? slideInFromRight : undefined
               }
@@ -121,11 +90,11 @@ export function InvitationDialog({
             >
               <View className="mb-5 gap-1.5">
                 <Dialog.Title>{t('organization.orgInvitation')}</Dialog.Title>
-                {details && (
+                {current && (
                   <Dialog.Description>
                     {t('organization.invitedToJoin', {
-                      inviter: inviterName,
-                      org: orgName
+                      inviter: current.inviterName,
+                      org: current.orgName
                     })}
                   </Dialog.Description>
                 )}
@@ -152,9 +121,9 @@ export function InvitationDialog({
           </View>
           {total > 1 && (
             <View className="mt-4 flex-row justify-center gap-1.5">
-              {invitationIds.map((id, i) => (
+              {invitations.map((inv, i) => (
                 <View
-                  key={id}
+                  key={inv.id}
                   className={`size-1.5 rounded-full ${i === clampedStep ? 'bg-accent' : 'bg-muted/30'}`}
                 />
               ))}
