@@ -13,6 +13,7 @@ export function ModalCloseButton() {
       <SwiftButton
         label={t('common.close')}
         systemImage="xmark"
+        role="cancel"
         onPress={() => router.back()}
         modifiers={[labelStyle('iconOnly'), font({ size: 20 })]}
       />
