@@ -29,7 +29,7 @@ export function HeaderSubmitButton({
         modifiers={[
           labelStyle('iconOnly'),
           font({ size: 20 }),
-          ...(isDisabled ? [disabled(true)] : [])
+          ...(isDisabled ? [disabled()] : [])
         ]}
       />
     </Host>
