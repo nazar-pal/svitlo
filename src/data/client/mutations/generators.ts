@@ -70,12 +70,7 @@ export function createGeneratorMutations(ctx: MutationContext) {
 
       tx: true,
 
-      apply: async ({
-        ctx: c,
-        db,
-        parsed,
-        validated: templates
-      }) => {
+      apply: async ({ ctx: c, db, parsed, validated: templates }) => {
         const generatorId = c.newId()
         const now = c.now().toISOString()
 
