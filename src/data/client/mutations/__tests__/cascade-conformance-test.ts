@@ -5,7 +5,7 @@ import { generateDrizzleJson } from 'drizzle-kit/api'
 import * as clientSchema from '@/data/client/db-schema'
 import * as serverSchema from '@/data/server/db-schema'
 
-import { CASCADE_EDGES } from '../cascade'
+import { CASCADE_EDGES } from '../cascade-edges.generated'
 
 interface SnapshotForeignKey {
   tableFrom: string
@@ -26,7 +26,7 @@ const clientTableNames = new Set<string>(
     .map(t => getTableName(t as SQLiteTable))
 )
 
-function toCanonical(
+function canonical(
   child: string,
   childCol: string,
   parent: string,
@@ -35,10 +35,9 @@ function toCanonical(
   return `${child}.${childCol} -> ${parent}.${parentCol}`
 }
 
-describe('cascade edge conformance', () => {
-  it('CASCADE_EDGES matches every onDelete cascade FK between client tables', () => {
+describe('cascade-edges.generated.ts freshness', () => {
+  it('matches every onDelete cascade FK between client tables in the server schema', () => {
     const snapshot = generateDrizzleJson(serverSchema)
-
     const serverEdges: string[] = []
     for (const tableData of Object.values(snapshot.tables)) {
       const table = tableData as SnapshotTable
@@ -47,7 +46,7 @@ describe('cascade edge conformance', () => {
         if (!clientTableNames.has(fk.tableFrom)) continue
         if (!clientTableNames.has(fk.tableTo)) continue
         serverEdges.push(
-          toCanonical(
+          canonical(
             fk.tableFrom,
             fk.columnsFrom[0],
             fk.tableTo,
@@ -57,8 +56,8 @@ describe('cascade edge conformance', () => {
       }
     }
 
-    const clientEdges = CASCADE_EDGES.map(e =>
-      toCanonical(
+    const generatedEdges = CASCADE_EDGES.map(e =>
+      canonical(
         getTableName(e.child),
         e.childFk.name,
         getTableName(e.parent),
@@ -66,6 +65,13 @@ describe('cascade edge conformance', () => {
       )
     )
 
-    expect(clientEdges.sort()).toEqual(serverEdges.sort())
+    try {
+      expect(generatedEdges.sort()).toEqual(serverEdges.sort())
+    } catch (err) {
+      throw new Error(
+        'cascade-edges.generated.ts is stale — run `bun run gen:cascade-edges`\n' +
+          (err instanceof Error ? err.message : String(err))
+      )
+    }
   })
 })

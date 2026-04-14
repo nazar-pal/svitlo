@@ -13,6 +13,7 @@
     "auth:secret": "bunx auth@latest secret",
     "db:generate": "bunx drizzle-kit generate",
     "db:migrate": "bunx drizzle-kit migrate",
+    "gen:cascade-edges": "bun run scripts/generate-cascade-edges.ts",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md}\"",
