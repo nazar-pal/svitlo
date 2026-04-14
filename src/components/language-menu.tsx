@@ -1,3 +1,4 @@
+import { type LocaleChoice, useTranslation } from '@/lib/i18n'
 import {
   Host,
   Picker,
@@ -6,21 +7,25 @@ import {
 } from '@expo/ui/swift-ui'
 import { labelStyle, tag } from '@expo/ui/swift-ui/modifiers'
 
-import { type LocaleChoice, useTranslation } from '@/lib/i18n'
-
-const CHOICE_LABELS = {
+const TRIGGER_LABELS: Record<LocaleChoice, string> = {
   en: 'EN',
   uk: 'UK',
   auto: 'Auto'
-} as const
+}
 
 export function LanguageMenu() {
   const { choice, setLocaleChoice, t } = useTranslation()
 
+  const options: { value: LocaleChoice; label: string }[] = [
+    { value: 'uk', label: 'Українська' },
+    { value: 'en', label: 'English' },
+    { value: 'auto', label: t('drawer.deviceLanguage') }
+  ]
+
   return (
     <Host matchContents>
       <SwiftMenu
-        label={CHOICE_LABELS[choice]}
+        label={TRIGGER_LABELS[choice]}
         systemImage="globe"
         modifiers={[labelStyle('iconOnly')]}
       >
@@ -28,12 +33,8 @@ export function LanguageMenu() {
           selection={choice}
           onSelectionChange={setLocaleChoice}
         >
-          {[
-            ['uk', 'Українська'],
-            ['en', 'English'],
-            ['auto', t('drawer.deviceLanguage')]
-          ].map(([value, label]) => (
-            <SwiftText key={value} modifiers={[tag(value as LocaleChoice)]}>
+          {options.map(({ value, label }) => (
+            <SwiftText key={value} modifiers={[tag(value)]}>
               {label}
             </SwiftText>
           ))}
