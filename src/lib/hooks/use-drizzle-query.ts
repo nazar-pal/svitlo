@@ -129,7 +129,7 @@ import { db as drizzleDb } from '../powersync/database'
  * Only the implementation at the bottom is emitted at runtime; the overloads above are
  * type-only and exist to give you precise return types at compile-time.
  */
-type DrizzleCompilable<RowType> = {
+export interface DrizzleCompilable<RowType> {
   execute: () => Promise<RowType | RowType[]>
   toSQL: () => Query
 }

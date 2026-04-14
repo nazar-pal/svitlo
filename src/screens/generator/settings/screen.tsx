@@ -20,7 +20,7 @@ import {
 } from '@/data/client/queries'
 import { updateGeneratorSchema } from '@/data/shared/validation'
 import { runMutation } from '@/lib/alerts'
-import { useAuthedParams } from '@/lib/hooks/use-authed-params'
+import { useAuthedEntity } from '@/lib/hooks/use-authed-entity'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { getUserName } from '@/lib/utils/get-user-name'
@@ -29,14 +29,9 @@ import { useTranslation } from '@/lib/i18n'
 import { AssignedMembersSection } from '@/components/assigned-members-section'
 
 export default function GeneratorSettingsScreen() {
-  const ctx = useAuthedParams(['id'])
-  const { data: gens } = useDrizzleQuery(
-    ctx ? getGenerator(ctx.params.id) : undefined
-  )
-  const generator = gens[0]
-  if (!ctx || !generator) return null
-
-  return <SettingsForm userId={ctx.userId} generator={generator} />
+  const loaded = useAuthedEntity(['id'], params => getGenerator(params.id))
+  if (!loaded) return null
+  return <SettingsForm userId={loaded.userId} generator={loaded.entity} />
 }
 
 interface SettingsFormProps {

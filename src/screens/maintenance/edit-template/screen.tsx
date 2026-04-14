@@ -10,9 +10,8 @@ import type { MaintenanceTemplate } from '@/data/client/db-schema/maintenance'
 import { getMaintenanceTemplate } from '@/data/client/queries'
 import { updateMaintenanceTemplateSchema } from '@/data/shared/validation'
 import { selection } from '@/lib/haptics'
-import { useAuthedParams } from '@/lib/hooks/use-authed-params'
+import { useAuthedEntity } from '@/lib/hooks/use-authed-entity'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
-import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
   TRIGGER_TYPES,
   isTriggerType,
@@ -23,16 +22,11 @@ import {
 import { useTriggerLabels } from '@/lib/maintenance/use-trigger-labels'
 
 export default function EditMaintenanceTemplateScreen() {
-  const ctx = useAuthedParams(['id', 'templateId'])
-
-  const { data: templateData } = useDrizzleQuery(
-    ctx ? getMaintenanceTemplate(ctx.params.templateId) : undefined
+  const loaded = useAuthedEntity(['id', 'templateId'], params =>
+    getMaintenanceTemplate(params.templateId)
   )
-  const template = templateData[0]
-
-  if (!ctx || !template) return null
-
-  return <EditForm userId={ctx.userId} template={template} />
+  if (!loaded) return null
+  return <EditForm userId={loaded.userId} template={loaded.entity} />
 }
 
 interface EditFormProps {

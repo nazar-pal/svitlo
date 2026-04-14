@@ -12,21 +12,16 @@ import {
   getMaintenanceRecord,
   getMaintenanceTemplate
 } from '@/data/client/queries'
-import { useAuthedParams } from '@/lib/hooks/use-authed-params'
+import { useAuthedEntity } from '@/lib/hooks/use-authed-entity'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 
 export default function EditMaintenanceScreen() {
-  const ctx = useAuthedParams(['recordId'])
-
-  const { data: recordData } = useDrizzleQuery(
-    ctx ? getMaintenanceRecord(ctx.params.recordId) : undefined
+  const loaded = useAuthedEntity(['recordId'], params =>
+    getMaintenanceRecord(params.recordId)
   )
-  const record = recordData[0]
-
-  if (!ctx || !record) return null
-
-  return <EditForm userId={ctx.userId} record={record} />
+  if (!loaded) return null
+  return <EditForm userId={loaded.userId} record={loaded.entity} />
 }
 
 interface EditFormProps {

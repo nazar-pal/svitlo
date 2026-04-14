@@ -10,21 +10,16 @@ import type { GeneratorSession } from '@/data/client/db-schema'
 import { isPolicyAllowed } from '@/data/client/policy-hooks-shared'
 import { getGenerator, getGeneratorSession } from '@/data/client/queries'
 import { useCanUpdateSession } from '@/data/client/sessions/policy-hooks'
-import { useAuthedParams } from '@/lib/hooks/use-authed-params'
+import { useAuthedEntity } from '@/lib/hooks/use-authed-entity'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 
 export default function EditSessionScreen() {
-  const ctx = useAuthedParams(['sessionId'])
-
-  const { data: sessionData } = useDrizzleQuery(
-    ctx ? getGeneratorSession(ctx.params.sessionId) : undefined
+  const loaded = useAuthedEntity(['sessionId'], params =>
+    getGeneratorSession(params.sessionId)
   )
-  const session = sessionData[0]
-
-  if (!ctx || !session) return null
-
-  return <EditForm userId={ctx.userId} session={session} />
+  if (!loaded) return null
+  return <EditForm userId={loaded.userId} session={loaded.entity} />
 }
 
 interface EditFormProps {
