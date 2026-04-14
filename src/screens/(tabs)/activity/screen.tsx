@@ -131,25 +131,23 @@ export default function ActivityScreen() {
     )
   }
 
-  const handleFilterChange = (i: number) => {
-    selection()
-    setFilter(FILTERS[i]!)
-    if (isScrolledDown.current)
-      scrollRef.current?.scrollToOffset({
-        offset: -30 - insets.top,
-        animated: true
-      })
-  }
-
   const pickerContent = (
     <Host matchContents style={{ height: 31 }}>
-      <Picker
-        selection={FILTERS.indexOf(filter)}
-        onSelectionChange={handleFilterChange}
+      <Picker<Filter>
+        selection={filter}
+        onSelectionChange={value => {
+          selection()
+          setFilter(value)
+          if (isScrolledDown.current)
+            scrollRef.current?.scrollToOffset({
+              offset: -30 - insets.top,
+              animated: true
+            })
+        }}
         modifiers={[pickerStyle('segmented')]}
       >
-        {FILTERS.map((f, i) => (
-          <SwiftText key={f} modifiers={[tag(i)]}>
+        {FILTERS.map(f => (
+          <SwiftText key={f} modifiers={[tag(f)]}>
             {filterLabel(f)}
           </SwiftText>
         ))}
