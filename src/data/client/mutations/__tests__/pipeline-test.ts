@@ -121,6 +121,32 @@ describe('defineMutation', () => {
     expect(applied).not.toHaveBeenCalled()
   })
 
+  it('forwards { validated } from validate to apply', async () => {
+    const applied = jest.fn()
+    const mutation = defineMutation(h.ctx, {
+      validate: ([items]: [string[]]) => ({
+        validated: items.map(s => s.trim())
+      }),
+      apply: async ({ validated }) => {
+        applied(validated)
+      }
+    })
+    await mutation(['  foo  ', '  bar  '])
+    expect(applied).toHaveBeenCalledWith(['foo', 'bar'])
+  })
+
+  it('leaves validated as undefined when validate returns void', async () => {
+    const applied = jest.fn()
+    const mutation = defineMutation<[]>(h.ctx, {
+      validate: () => undefined,
+      apply: async ({ validated }) => {
+        applied(validated)
+      }
+    })
+    await mutation()
+    expect(applied).toHaveBeenCalledWith(undefined)
+  })
+
   it('forwards a parameterized check failure with params intact', async () => {
     const applied = jest.fn()
     const mutation = defineMutation<

@@ -4,8 +4,9 @@ import {
   Menu as SwiftMenu
 } from '@expo/ui/swift-ui'
 import { labelStyle } from '@expo/ui/swift-ui/modifiers'
+import type { DrawerContentComponentProps } from '@react-navigation/drawer'
 import { DrawerActions } from '@react-navigation/native'
-import { useNavigation, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { ListGroup, Separator, useThemeColor } from 'heroui-native'
 import { useState } from 'react'
@@ -20,9 +21,12 @@ import { useTranslation } from '@/lib/i18n'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
 
-export function DrawerOrgSection() {
+interface DrawerOrgSectionProps {
+  navigation: DrawerContentComponentProps['navigation']
+}
+
+export function DrawerOrgSection({ navigation }: DrawerOrgSectionProps) {
   const router = useRouter()
-  const navigation = useNavigation()
   const { userOrgs, isAdmin } = useUserOrgs()
   const { selectedOrgId, setSelectedOrgId } = useSelectedOrg()
   const foregroundColor = useThemeColor('foreground')

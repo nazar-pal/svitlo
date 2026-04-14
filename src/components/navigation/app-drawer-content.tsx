@@ -8,7 +8,7 @@ import { DrawerHeader } from './drawer-header'
 import { DrawerInvitationsSection } from './drawer-invitations-section'
 import { DrawerOrgSection } from './drawer-org-section'
 
-export function AppDrawerContent(_props: DrawerContentComponentProps) {
+export function AppDrawerContent(props: DrawerContentComponentProps) {
   return (
     <SafeAreaView testID="drawer-content" className="bg-background flex-1">
       <DrawerHeader />
@@ -17,7 +17,7 @@ export function AppDrawerContent(_props: DrawerContentComponentProps) {
         contentContainerClassName="gap-7 px-5"
         showsVerticalScrollIndicator={false}
       >
-        <DrawerOrgSection />
+        <DrawerOrgSection navigation={props.navigation} />
         <DrawerInvitationsSection />
       </ScrollView>
       <DrawerFooter />

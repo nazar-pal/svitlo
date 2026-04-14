@@ -21,16 +21,19 @@ type CheckOutcome =
   | { ok: false; code: ParamFreeMutationErrorCode }
   | ({ ok: false } & Extract<MutationError, { params: unknown }>)
 
+type ValidateOutcome<TVali> =
+  | MutationResult // fail → abort
+  | { validated: TVali } // continue, forward data to apply
+  | void // continue, no data forwarded
+
 interface MutationDef<
   TArgs extends readonly unknown[],
   TParsed,
-  TCheck extends CheckOutcome
+  TCheck extends CheckOutcome,
+  TVali = undefined
 > {
   parse?: (args: TArgs) => z.ZodSafeParseResult<TParsed>
-  // Short-circuit only: return a `fail(...)` to abort, or nothing to
-  // continue. `validate` cannot forward data to `apply` — use `check` for
-  // that.
-  validate?: (args: TArgs, parsed: TParsed) => MutationResult | void
+  validate?: (args: TArgs, parsed: TParsed) => ValidateOutcome<TVali>
   check?: (
     ctx: MutationContext,
     args: TArgs,
@@ -41,6 +44,7 @@ interface MutationDef<
     db: ClientDb
     args: TArgs
     parsed: TParsed
+    validated: TVali
     checkOk: OkBranch<TCheck>
   }) => Promise<MutationResult | void>
   tx?: boolean
@@ -59,10 +63,11 @@ interface MutationDef<
 export function defineMutation<
   TArgs extends readonly unknown[],
   TParsed = undefined,
-  TCheck extends CheckOutcome = CheckOutcome
+  TCheck extends CheckOutcome = CheckOutcome,
+  TVali = undefined
 >(
   ctx: MutationContext,
-  def: MutationDef<TArgs, TParsed, TCheck>
+  def: MutationDef<TArgs, TParsed, TCheck, TVali>
 ): (...args: TArgs) => Promise<MutationResult> {
   return async (...args) => {
     let parsed = undefined as unknown as TParsed
@@ -72,9 +77,16 @@ export function defineMutation<
       parsed = r.data
     }
 
+    let validated = undefined as unknown as TVali
     if (def.validate) {
       const v = def.validate(args, parsed)
-      if (v && !v.ok) return v
+      if (v) {
+        if ('validated' in v) {
+          validated = (v as { validated: TVali }).validated
+        } else if (!v.ok) {
+          return v
+        }
+      }
     }
 
     let checkOk = undefined as unknown as OkBranch<TCheck>
@@ -87,7 +99,8 @@ export function defineMutation<
       checkOk = result as OkBranch<TCheck>
     }
 
-    const run = (db: ClientDb) => def.apply({ ctx, db, args, parsed, checkOk })
+    const run = (db: ClientDb) =>
+      def.apply({ ctx, db, args, parsed, validated, checkOk })
 
     const applied = def.tx
       ? await ctx.writeTx(tx => run(tx))
