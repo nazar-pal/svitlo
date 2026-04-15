@@ -559,8 +559,11 @@ export const en = {
     waitlistErrorTooMany: 'Too many attempts. Please try again later.',
     waitlistErrorGeneric: 'Something went wrong. Please try again.',
     notifyMeSubmitting: 'Sending...',
-    iosStatus: 'iOS — In App Review',
-    androidStatus: 'Android — Coming Soon',
+    testflightCta: 'Try on TestFlight',
+    testflightNote: 'Free beta access — no App Store needed.',
+    waitlistAltLabel: 'On Android? Get notified at launch.',
+    or: 'or',
+    opensInNewTab: 'opens in a new tab',
     screenshotHome: 'Svitlo app home screen showing generator details',
     screenshotRunning: 'Svitlo app showing an active generator session',
     screenshotMembers: 'Svitlo app showing team member management'

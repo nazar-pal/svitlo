@@ -210,6 +210,136 @@ body {
   cursor: not-allowed;
 }
 
+.landing-platform-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 28px;
+  width: 100%;
+  max-width: 460px;
+}
+
+.landing-testflight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.landing-testflight-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 18px 32px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-indigo));
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow:
+    0 12px 34px color-mix(in srgb, var(--brand-blue) 40%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.landing-testflight-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow:
+    0 16px 40px color-mix(in srgb, var(--brand-blue) 50%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+.landing-testflight-btn:active {
+  transform: scale(0.985);
+}
+.landing-testflight-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.landing-testflight-note {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.65);
+  text-align: center;
+}
+
+.landing-or-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.landing-or-divider::before,
+.landing-or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.12),
+    transparent
+  );
+}
+
+.landing-android-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(8px);
+}
+.landing-android-card-header {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  font-weight: 500;
+}
+.landing-android-card-header svg {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.landing-android-card .landing-waitlist {
+  max-width: none;
+}
+.landing-android-card .landing-waitlist-form {
+  box-shadow: none;
+}
+.landing-android-card .landing-waitlist-input {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+.landing-android-card .landing-waitlist-btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: none;
+}
+.landing-android-card .landing-waitlist-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+@media (max-width: 420px) {
+  .landing-android-card .landing-waitlist-btn {
+    border-left: 1px solid rgba(255, 255, 255, 0.15);
+    border-top: none;
+  }
+}
+
 .landing-waitlist-success {
   margin: 0;
   padding: 16px 24px;
@@ -230,27 +360,6 @@ body {
 }
 
 /* ── Landing — platform badges ── */
-
-.landing-platform-badges {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.landing-platform-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(8px);
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 13px;
-  font-weight: 500;
-}
 
 @media (max-width: 420px) {
   .landing-waitlist-form {

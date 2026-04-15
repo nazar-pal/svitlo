@@ -1,6 +1,6 @@
 import './landing.css'
 
-import { type FormEvent, type ReactNode, useRef, useState } from 'react'
+import { type FormEvent, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { z } from 'zod'
 
@@ -109,6 +109,8 @@ const fadeInUp = (delay = 0) => ({
 })
 
 const emailSchema = z.email()
+
+const TESTFLIGHT_URL = 'https://testflight.apple.com/join/tGuCtZVp'
 
 type FormState = 'idle' | 'submitting' | 'success' | 'error'
 let waitlistSubmitted = false
@@ -224,22 +226,71 @@ function WaitlistForm({ variant }: { variant: 'hero' | 'cta' }) {
   )
 }
 
-function PlatformBadges({ children }: { children: ReactNode }) {
-  return <div className="landing-platform-badges">{children}</div>
+function PlatformActions({ variant }: { variant: 'hero' | 'cta' }) {
+  const { t } = useTranslation()
+  return (
+    <div className="landing-platform-actions">
+      <div className="landing-testflight">
+        <a
+          href={TESTFLIGHT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${t('landing.testflightCta')} (${t('landing.opensInNewTab')})`}
+          className="landing-testflight-btn"
+        >
+          <AppleIcon />
+          <span>{t('landing.testflightCta')}</span>
+          <ExternalLinkIcon />
+        </a>
+        <p className="landing-testflight-note">{t('landing.testflightNote')}</p>
+      </div>
+
+      <div className="landing-or-divider" role="separator">
+        <span>{t('landing.or')}</span>
+      </div>
+
+      <div className="landing-android-card">
+        <div className="landing-android-card-header">
+          <AndroidIcon />
+          <span>{t('landing.waitlistAltLabel')}</span>
+        </div>
+        <WaitlistForm variant={variant} />
+      </div>
+    </div>
+  )
 }
 
-function PlatformBadge({ icon, label }: { icon: ReactNode; label: string }) {
+function ExternalLinkIcon() {
   return (
-    <span className="landing-platform-badge">
-      {icon}
-      {label}
-    </span>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      style={{ opacity: 0.85 }}
+    >
+      <path d="M7 17L17 7" />
+      <path d="M8 7h9v9" />
+    </svg>
   )
 }
 
 function AppleIcon() {
   return (
-    <svg width="14" height="17" viewBox="0 0 384 512" fill="currentColor">
+    <svg
+      width="14"
+      height="17"
+      viewBox="0 0 384 512"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+    >
       <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
     </svg>
   )
@@ -247,7 +298,14 @@ function AppleIcon() {
 
 function AndroidIcon() {
   return (
-    <svg width="16" height="17" viewBox="0 0 576 512" fill="currentColor">
+    <svg
+      width="16"
+      height="17"
+      viewBox="0 0 576 512"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+    >
       <path d="M420.55 301.93a24 24 0 1 1 24-24 24 24 0 0 1-24 24m-265.1 0a24 24 0 1 1 24-24 24 24 0 0 1-24 24m273.7-144.48l47.94-83a10 10 0 1 0-17.27-10l-48.54 84.07a301 301 0 0 0-123.13-26.08A300.62 300.62 0 0 0 164.82 148.5l-48.54-84.07a10 10 0 0 0-17.27 10l47.94 83C64.53 202.22 8.24 285.55 0 384h576c-8.24-98.45-64.54-181.78-146.85-226.55" />
     </svg>
   )
@@ -392,18 +450,7 @@ export default function LandingScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.45 }}
         >
-          <WaitlistForm variant="hero" />
-
-          <PlatformBadges>
-            <PlatformBadge
-              icon={<AppleIcon />}
-              label={t('landing.iosStatus')}
-            />
-            <PlatformBadge
-              icon={<AndroidIcon />}
-              label={t('landing.androidStatus')}
-            />
-          </PlatformBadges>
+          <PlatformActions variant="hero" />
 
           <a
             href="#features"
@@ -699,7 +746,7 @@ export default function LandingScreen() {
             {t('landing.free')}
           </p>
 
-          <WaitlistForm variant="cta" />
+          <PlatformActions variant="cta" />
 
           <div
             style={{
