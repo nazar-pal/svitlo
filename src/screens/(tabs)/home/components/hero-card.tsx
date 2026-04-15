@@ -1,8 +1,9 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { SymbolView } from 'expo-symbols'
 import { useThemeColor } from 'heroui-native'
-import { Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
+import { NativeTapOverlay } from '@/components/native-tap-overlay'
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator } from '@/data/client/db-schema'
 import { startSession, stopSession } from '@/data/client/mutations'
@@ -340,8 +341,7 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
           ) : null}
         </View>
 
-        {/* Elastic center: tappable status visualization */}
-        <Pressable
+        <NativeTapOverlay
           onPress={
             status === 'running'
               ? handleStop
@@ -350,47 +350,47 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
                 : handleStart
           }
           disabled={actionDisabled}
-          accessibilityRole="button"
           accessibilityLabel={
             status === 'running'
               ? t('generator.stopGenerator')
               : t('generator.startGenerator')
           }
-          accessibilityState={{ disabled: actionDisabled }}
-          className="flex-1 items-center justify-center gap-5 active:opacity-80 disabled:opacity-50"
+          className="flex-1 items-center justify-center gap-5 active:opacity-80"
         >
-          {status === 'running' ? (
-            <RunningDisplay
-              startedAt={openSession?.startedAt ?? null}
-              consecutiveRunHours={consecutiveRunHours}
-              maxConsecutiveRunHours={generator.maxConsecutiveRunHours}
-              runWarningThresholdPct={generator.runWarningThresholdPct}
-              isVisible={isVisible}
-            />
-          ) : status === 'resting' ? (
-            <RestingDisplay
-              restEndsAt={restEndsAt}
-              requiredRestHours={generator.requiredRestHours}
-              isVisible={isVisible}
-            />
-          ) : (
-            <>
-              <View className="size-40 items-center justify-center">
-                {isVisible ? <IdlePulse /> : null}
-                <View className="border-accent/20 bg-accent/8 size-30 items-center justify-center rounded-full border">
-                  <SymbolView
-                    name="bolt.fill"
-                    size={52}
-                    tintColor={accentColor}
-                  />
+          <View className="w-full items-center justify-center gap-5">
+            {status === 'running' ? (
+              <RunningDisplay
+                startedAt={openSession?.startedAt ?? null}
+                consecutiveRunHours={consecutiveRunHours}
+                maxConsecutiveRunHours={generator.maxConsecutiveRunHours}
+                runWarningThresholdPct={generator.runWarningThresholdPct}
+                isVisible={isVisible}
+              />
+            ) : status === 'resting' ? (
+              <RestingDisplay
+                restEndsAt={restEndsAt}
+                requiredRestHours={generator.requiredRestHours}
+                isVisible={isVisible}
+              />
+            ) : (
+              <>
+                <View className="size-40 items-center justify-center">
+                  {isVisible ? <IdlePulse /> : null}
+                  <View className="border-accent/20 bg-accent/8 size-30 items-center justify-center rounded-full border">
+                    <SymbolView
+                      name="bolt.fill"
+                      size={52}
+                      tintColor={accentColor}
+                    />
+                  </View>
                 </View>
-              </View>
-              <Text className="text-accent text-base font-medium">
-                {t('generator.readyToRun')}
-              </Text>
-            </>
-          )}
-        </Pressable>
+                <Text className="text-accent text-base font-medium">
+                  {t('generator.readyToRun')}
+                </Text>
+              </>
+            )}
+          </View>
+        </NativeTapOverlay>
 
         {/* Info rows */}
         <View className="bg-default/40 gap-px overflow-hidden rounded-2xl">
