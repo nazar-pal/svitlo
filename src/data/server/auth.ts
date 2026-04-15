@@ -1,7 +1,6 @@
-import { and, isNull, sql } from 'drizzle-orm'
-
 import { db } from '@/data/server'
 import * as schema from '@/data/server/db-schema'
+import { backfillPendingInvitationsForUser } from '@/data/server/invitations/backfill'
 import { env } from '@/env'
 import { DEFAULT_LOCAL_API_URL } from '@/lib/config/const'
 import { expo } from '@better-auth/expo'
@@ -82,15 +81,7 @@ export const auth = betterAuth({
             createdAt: new Date()
           })
 
-          await db
-            .update(schema.invitations)
-            .set({ inviteeUserId: user.id })
-            .where(
-              and(
-                sql`LOWER(${schema.invitations.inviteeEmail}) = ${user.email.toLowerCase()}`,
-                isNull(schema.invitations.inviteeUserId)
-              )
-            )
+          await backfillPendingInvitationsForUser(db, user)
         }
       }
     }
