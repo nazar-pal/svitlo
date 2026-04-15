@@ -350,20 +350,16 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
                 : handleStart
           }
           disabled={actionDisabled}
+          accessibilityLabel={
+            status === 'running'
+              ? t('generator.stopGenerator')
+              : t('generator.startGenerator')
+          }
           className={`flex-1 items-center justify-center gap-5 ${
             actionDisabled ? 'opacity-50' : ''
           }`}
         >
-          <View
-            accessibilityRole="button"
-            accessibilityLabel={
-              status === 'running'
-                ? t('generator.stopGenerator')
-                : t('generator.startGenerator')
-            }
-            accessibilityState={{ disabled: actionDisabled }}
-            className="w-full items-center justify-center gap-5"
-          >
+          <View className="w-full items-center justify-center gap-5">
             {status === 'running' ? (
               <RunningDisplay
                 startedAt={openSession?.startedAt ?? null}
