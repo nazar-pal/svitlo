@@ -74,8 +74,21 @@ copy or copy edits will silently break text-based assertions.
 
 Exceptions:
 
-- System UI strings ("Open", "Continue", "Delete" in iOS alerts) — these are
-  not under our control and have no testID.
+- React Native `Alert.alert` buttons (e.g. the destructive confirm in
+  `delete-generator.yaml`) — RN's `Alert` API does not accept `testID`, so
+  the button label is the only selector. These labels are translated via
+  i18next, but `subflows/launch-dev-app.yaml` forces the app locale to
+  English with `-AppleLanguages (en)` / `-AppleLocale en_US` launch
+  arguments, so `t('common.delete')` deterministically renders as "Delete"
+  on any simulator. Remaining risk: an English copy edit (e.g. "Delete" →
+  "Remove") would silently break the flow. Accept this rather than
+  replacing `Alert.alert` with a custom dialog.
+- System UI strings outside the app ("Open" in the iOS "Open in App?"
+  dialog, "Continue" in the expo-dev-client onboarding overlay) — these
+  follow the simulator locale, not the app locale, and the launch-argument
+  trick above does not reach them. For non-English simulators, run
+  `maestro start-device --platform ios --device-locale en_US` before the
+  suite. See the inline comment in `subflows/launch-dev-app.yaml`.
 - SwiftUI Menus rendered via `@expo/ui` (e.g. the org row ellipsis menu) —
   the native `MenuView.swift` does not currently apply
   `accessibilityIdentifier` from the JS `testID` prop, so menu triggers must
