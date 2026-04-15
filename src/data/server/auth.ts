@@ -1,5 +1,6 @@
 import { db } from '@/data/server'
 import * as schema from '@/data/server/db-schema'
+import { backfillPendingInvitationsForUser } from '@/data/server/invitations/backfill'
 import { env } from '@/env'
 import { DEFAULT_LOCAL_API_URL } from '@/lib/config/const'
 import { expo } from '@better-auth/expo'
@@ -79,6 +80,8 @@ export const auth = betterAuth({
             adminUserId: user.id,
             createdAt: new Date()
           })
+
+          await backfillPendingInvitationsForUser(db, user)
         }
       }
     }

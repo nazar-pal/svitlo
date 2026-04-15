@@ -24,6 +24,7 @@ export const invitations = sqliteTable('invitations', {
   id: textId(),
   organizationId: text('organization_id').notNull(),
   inviteeEmail: text('invitee_email').notNull(),
+  inviteeUserId: text('invitee_user_id'),
   invitedByUserId: text('invited_by_user_id').notNull(),
   createdAt: textTimestamp('created_at')
 })

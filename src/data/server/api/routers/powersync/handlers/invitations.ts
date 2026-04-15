@@ -1,6 +1,6 @@
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
-import { invitations } from '@/data/server/db-schema'
+import { invitations, user } from '@/data/server/db-schema'
 
 import { replayShieldAlreadyExists, replayShieldNotFound } from './replay'
 import { transformSyncRow } from '../transform'
@@ -21,9 +21,18 @@ export const handleInvitations: TableHandler = async ctx => {
     )
     if (shielded.status === 'consume') return shielded.result
 
+    const existingUser = await db.query.user.findFirst({
+      where: eq(sql`LOWER(${user.email})`, inviteeEmail.toLowerCase()),
+      columns: { id: true }
+    })
+
     await db
       .insert(invitations)
-      .values({ ...values, id } as Insert<typeof invitations>)
+      .values({
+        ...values,
+        id,
+        inviteeUserId: existingUser?.id ?? null
+      } as Insert<typeof invitations>)
       .onConflictDoNothing()
     return ok
   }

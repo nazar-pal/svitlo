@@ -118,8 +118,8 @@ describe('buildMemberList', () => {
       adminUserId: 'admin',
       members: [],
       invitations: [
-        { id: 'i1', inviteeEmail: 'someone@test.com' },
-        { id: 'i2', inviteeEmail: 'other@test.com' }
+        { id: 'i1', inviteeEmail: 'someone@test.com', inviteeUserId: null },
+        { id: 'i2', inviteeEmail: 'other@test.com', inviteeUserId: null }
       ],
       currentUserId: 'admin',
       searchQuery: 'SOMEONE',
@@ -134,7 +134,9 @@ describe('buildMemberList', () => {
     const result = buildMemberList({
       adminUserId: 'admin',
       members: [{ id: 'm1', userId: 'bob' }],
-      invitations: [{ id: 'i1', inviteeEmail: 'x@test.com' }],
+      invitations: [
+        { id: 'i1', inviteeEmail: 'x@test.com', inviteeUserId: null }
+      ],
       currentUserId: 'admin',
       searchQuery: '',
       getUserInfo: makeGetUserInfo(USERS)
@@ -149,7 +151,9 @@ describe('buildMemberList', () => {
     const empty = buildMemberList({
       adminUserId: 'admin',
       members: [{ id: 'm1', userId: 'bob' }],
-      invitations: [{ id: 'i1', inviteeEmail: 'x@test.com' }],
+      invitations: [
+        { id: 'i1', inviteeEmail: 'x@test.com', inviteeUserId: null }
+      ],
       currentUserId: 'admin',
       searchQuery: 'nomatches',
       getUserInfo: makeGetUserInfo(USERS)
@@ -159,7 +163,9 @@ describe('buildMemberList', () => {
     const partialMatch = buildMemberList({
       adminUserId: 'admin',
       members: [{ id: 'm1', userId: 'bob' }],
-      invitations: [{ id: 'i1', inviteeEmail: 'x@test.com' }],
+      invitations: [
+        { id: 'i1', inviteeEmail: 'x@test.com', inviteeUserId: null }
+      ],
       currentUserId: 'admin',
       searchQuery: 'bob',
       getUserInfo: makeGetUserInfo(USERS)

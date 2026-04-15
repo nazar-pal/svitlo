@@ -305,6 +305,11 @@ function PendingInvitationRow({
       </ListGroup.ItemPrefix>
       <ListGroup.ItemContent>
         <ListGroup.ItemTitle>{invitation.inviteeEmail}</ListGroup.ItemTitle>
+        <ListGroup.ItemDescription>
+          {invitation.inviteeUserId
+            ? t('members.invitationWaitingToAccept')
+            : t('members.invitationWaitingToJoin')}
+        </ListGroup.ItemDescription>
       </ListGroup.ItemContent>
       {canCancel && (
         <Button

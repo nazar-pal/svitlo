@@ -14,6 +14,7 @@ export interface MemberListMember {
 export interface MemberListInvitation {
   id: string
   inviteeEmail: string
+  inviteeUserId: string | null
 }
 
 export interface BuildMemberListInput {

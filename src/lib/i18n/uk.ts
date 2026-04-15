@@ -120,6 +120,8 @@ export const uk = {
     admin: 'Адмін',
     you: 'Ви',
     pendingInvitations: 'Очікувані запрошення',
+    invitationWaitingToAccept: 'Очікує прийняття',
+    invitationWaitingToJoin: 'Очікує реєстрації',
     removeMember: 'Прибрати учасника',
     removeMemberDesc:
       'Учасника буде прибрано, а його генератори перепризначено вам.'
