@@ -104,6 +104,8 @@ export const en = {
     admin: 'Admin',
     you: 'You',
     pendingInvitations: 'Pending Invitations',
+    invitationWaitingToAccept: 'Waiting for user to accept',
+    invitationWaitingToJoin: 'Waiting for user to sign up',
     removeMember: 'Remove Member',
     removeMemberDesc:
       'This will remove the member and reassign their generators to you.'

@@ -1,3 +1,5 @@
+import { and, isNull, sql } from 'drizzle-orm'
+
 import { db } from '@/data/server'
 import * as schema from '@/data/server/db-schema'
 import { env } from '@/env'
@@ -79,6 +81,16 @@ export const auth = betterAuth({
             adminUserId: user.id,
             createdAt: new Date()
           })
+
+          await db
+            .update(schema.invitations)
+            .set({ inviteeUserId: user.id })
+            .where(
+              and(
+                sql`LOWER(${schema.invitations.inviteeEmail}) = ${user.email.toLowerCase()}`,
+                isNull(schema.invitations.inviteeUserId)
+              )
+            )
         }
       }
     }

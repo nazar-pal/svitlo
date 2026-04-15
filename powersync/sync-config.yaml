@@ -87,12 +87,12 @@ streams:
         WHERE organization_id IN member_org_ids
       # Invitations for admin orgs
       - >
-        SELECT id, organization_id, invitee_email, invited_by_user_id, created_at
+        SELECT id, organization_id, invitee_email, invitee_user_id, invited_by_user_id, created_at
         FROM invitations
         WHERE organization_id IN admin_orgs
       # Invitations addressed to user's email
       - >
-        SELECT id, organization_id, invitee_email, invited_by_user_id, created_at
+        SELECT id, organization_id, invitee_email, invitee_user_id, invited_by_user_id, created_at
         FROM invitations
         WHERE LOWER(invitee_email) IN (SELECT LOWER(email) FROM "user" WHERE id = auth.user_id())
 

@@ -28,6 +28,27 @@ describe('handleInvitations', () => {
     })
     expect(row).toBeDefined()
     expect(row!.inviteeEmail).toBe('new@test.com')
+    expect(row!.inviteeUserId).toBeNull()
+  })
+
+  it('insert: resolves inviteeUserId when invitee already has an account', async () => {
+    const newId = crypto.randomUUID()
+    const result = await handleInvitations(
+      fixture.makeCtx({
+        op: 'insert',
+        id: newId,
+        data: {
+          organization_id: IDS.org,
+          invitee_email: 'OUTSIDER@test.com',
+          invited_by_user_id: IDS.admin
+        }
+      })
+    )
+    expect(result.ok).toBe(true)
+    const row = await fixture.testDb.db.query.invitations.findFirst({
+      where: eq(invitations.id, newId)
+    })
+    expect(row!.inviteeUserId).toBe(IDS.outsider)
   })
 
   it('insert: non-admin denied', async () => {
