@@ -112,6 +112,32 @@ function fakeDatabase(
   } as unknown as AbstractPowerSyncDatabase
 }
 
+// Simulates a real sync queue across multiple uploadData() calls.
+// `getNextCrudTransaction()` returns the head of the queue. A transaction
+// is only removed once its own `complete()` is awaited — mirroring the
+// PowerSync SDK, which keeps re-delivering the same tx until `complete()`
+// advances the queue. Tests can peek at `pending` to assert drain state.
+function fakeQueuedDatabase(queue: FakeCrudOp[][]): {
+  db: AbstractPowerSyncDatabase
+  pending: () => number
+  snapshot: ReturnType<typeof fakeCrudTransaction>[]
+} {
+  const live = queue.map(ops => {
+    const tx = fakeCrudTransaction(ops)
+    tx.complete = jest.fn().mockImplementation(async () => {
+      if (live[0] === tx) live.shift()
+    }) as unknown as typeof tx.complete
+    return tx
+  })
+  const snapshot = [...live]
+  const db = {
+    getNextCrudTransaction: jest
+      .fn()
+      .mockImplementation(async () => live[0] ?? null)
+  } as unknown as AbstractPowerSyncDatabase
+  return { db, pending: () => live.length, snapshot }
+}
+
 // ── Lifecycle ───────────────────────────────────────────────────────────────
 
 let consoleErrorSpy: jest.SpyInstance
@@ -487,6 +513,104 @@ describe('createPowerSyncConnector — uploadData', () => {
         timestamp: 1_700_000_000_000
       }
     ])
+  })
+
+  it('processes a mixed batch: issues every write, completes once, sinks only rejections', async () => {
+    // A single crud transaction with several ops — some succeed, one is
+    // structurally rejected. All writes must be issued in order, the
+    // rejection recorded, and the transaction completed exactly once so
+    // the sync queue advances past every op together.
+    const transport = fakeTransport({
+      applyWrite: async write =>
+        write.id === 'g2'
+          ? {
+              ok: false,
+              rejection: { table: 'generator', message: 'fk missing' }
+            }
+          : { ok: true }
+    })
+    const connector = createPowerSyncConnector({ transport, outbox })
+    const tx = fakeCrudTransaction([
+      { op: UpdateType.PUT, table: 'generator', id: 'g1', opData: { n: 1 } },
+      { op: UpdateType.PUT, table: 'generator', id: 'g2', opData: { n: 2 } },
+      { op: UpdateType.PATCH, table: 'generator', id: 'g3', opData: { n: 3 } }
+    ])
+
+    await connector.uploadData(fakeDatabase(tx))
+
+    expect(transport.calls.writes.map(w => w.id)).toEqual(['g1', 'g2', 'g3'])
+    expect(tx.complete).toHaveBeenCalledTimes(1)
+    expect(outbox.getRejections()).toEqual([
+      {
+        table: 'generator',
+        op: 'insert',
+        id: 'g2',
+        reason: 'fk missing',
+        timestamp: 1_700_000_000_000
+      }
+    ])
+  })
+
+  it('offline→online recovery: SDK retry drains the same tx after a transient network error', async () => {
+    // Simulates PowerSync's retry-with-backoff contract end-to-end across
+    // two uploadData calls. First call throws (network) and must not
+    // advance the queue. The SDK calls us again once connectivity is
+    // back; the same transaction is re-delivered, succeeds, and the
+    // queue drains.
+    let offline = true
+    const transport = fakeTransport({
+      applyWrite: async () => {
+        if (offline) throw new Error('network timeout')
+        return { ok: true }
+      }
+    })
+    const connector = createPowerSyncConnector({ transport, outbox })
+    const { db, pending, snapshot } = fakeQueuedDatabase([
+      [{ op: UpdateType.PUT, table: 'generator', id: 'g1', opData: { n: 1 } }]
+    ])
+
+    await expect(connector.uploadData(db)).rejects.toThrow('network timeout')
+    expect(pending()).toBe(1)
+    expect(snapshot[0].complete).not.toHaveBeenCalled()
+
+    offline = false
+    await connector.uploadData(db)
+
+    expect(pending()).toBe(0)
+    expect(snapshot[0].complete).toHaveBeenCalledTimes(1)
+    expect(transport.calls.writes.map(w => w.id)).toEqual(['g1', 'g1'])
+    expect(outbox.getRejections()).toEqual([])
+  })
+
+  it('multi-transaction drain: each uploadData call completes one tx, queue advances in order', async () => {
+    // PowerSync delivers one crud transaction per uploadData call. After
+    // connectivity returns, the SDK calls uploadData repeatedly until
+    // getNextCrudTransaction yields null. This test drives that loop and
+    // asserts ordering + single-complete-per-tx semantics.
+    const transport = fakeTransport()
+    const connector = createPowerSyncConnector({ transport, outbox })
+    const { db, pending, snapshot } = fakeQueuedDatabase([
+      [{ op: UpdateType.PUT, table: 'generator', id: 'g1', opData: {} }],
+      [{ op: UpdateType.PATCH, table: 'generator', id: 'g2', opData: {} }],
+      [{ op: UpdateType.DELETE, table: 'generator', id: 'g3' }]
+    ])
+
+    await connector.uploadData(db)
+    expect(pending()).toBe(2)
+    await connector.uploadData(db)
+    expect(pending()).toBe(1)
+    await connector.uploadData(db)
+    expect(pending()).toBe(0)
+
+    // One final no-op call after drain — exercises the early-return path.
+    await connector.uploadData(db)
+
+    expect(transport.calls.writes.map(w => ({ id: w.id, op: w.op }))).toEqual([
+      { id: 'g1', op: 'insert' },
+      { id: 'g2', op: 'update' },
+      { id: 'g3', op: 'delete' }
+    ])
+    for (const tx of snapshot) expect(tx.complete).toHaveBeenCalledTimes(1)
   })
 
   it('regression guard: unknown error re-throws without completing or sinking', async () => {
