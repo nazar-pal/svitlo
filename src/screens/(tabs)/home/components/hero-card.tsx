@@ -1,7 +1,17 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { SymbolView } from 'expo-symbols'
 import { useThemeColor } from 'heroui-native'
-import { Pressable, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
+import {
+  Host,
+  Button as SwiftButton,
+  Rectangle as SwiftRectangle
+} from '@expo/ui/swift-ui'
+import {
+  buttonStyle,
+  disabled as disabledModifier,
+  opacity
+} from '@expo/ui/swift-ui/modifiers'
 
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator } from '@/data/client/db-schema'
@@ -29,6 +39,8 @@ import { formatHours } from '@/lib/utils/time'
 
 import { formatAssignedNames } from '../lib/format-assigned-names'
 import { IdlePulse } from './idle-pulse'
+
+const INVISIBLE_MODIFIERS = [opacity(0.001)]
 
 export interface HeroCardItem {
   generator: Generator
@@ -340,16 +352,8 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
           ) : null}
         </View>
 
-        {/* Elastic center: tappable status visualization */}
-        <Pressable
-          onPress={
-            status === 'running'
-              ? handleStop
-              : status === 'resting'
-                ? () => confirmRestingStart(handleStart)
-                : handleStart
-          }
-          disabled={actionDisabled}
+        {/* SwiftUI Button overlay absorbs iOS 26 menu-dismiss taps. */}
+        <View
           accessibilityRole="button"
           accessibilityLabel={
             status === 'running'
@@ -357,7 +361,9 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
               : t('generator.startGenerator')
           }
           accessibilityState={{ disabled: actionDisabled }}
-          className="flex-1 items-center justify-center gap-5 active:opacity-80 disabled:opacity-50"
+          className={`flex-1 items-center justify-center gap-5 ${
+            actionDisabled ? 'opacity-50' : ''
+          }`}
         >
           {status === 'running' ? (
             <RunningDisplay
@@ -390,7 +396,27 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
               </Text>
             </>
           )}
-        </Pressable>
+          <Host
+            style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
+            matchContents={false}
+          >
+            <SwiftButton
+              onPress={
+                status === 'running'
+                  ? handleStop
+                  : status === 'resting'
+                    ? () => confirmRestingStart(handleStart)
+                    : handleStart
+              }
+              modifiers={[
+                buttonStyle('plain'),
+                disabledModifier(actionDisabled)
+              ]}
+            >
+              <SwiftRectangle modifiers={INVISIBLE_MODIFIERS} />
+            </SwiftButton>
+          </Host>
+        </View>
 
         {/* Info rows */}
         <View className="bg-default/40 gap-px overflow-hidden rounded-2xl">

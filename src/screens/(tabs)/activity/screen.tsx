@@ -1,5 +1,16 @@
-import { Host, Picker, Text as SwiftText } from '@expo/ui/swift-ui'
-import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers'
+import {
+  Host,
+  Picker,
+  Button as SwiftButton,
+  Rectangle as SwiftRectangle,
+  Text as SwiftText
+} from '@expo/ui/swift-ui'
+import {
+  buttonStyle,
+  opacity,
+  pickerStyle,
+  tag
+} from '@expo/ui/swift-ui/modifiers'
 import { useScrollToTop } from '@react-navigation/native'
 import { parseISO } from 'date-fns'
 import { BlurView } from 'expo-blur'
@@ -8,7 +19,7 @@ import { Stack, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { Chip, ListGroup, Separator, useThemeColor } from 'heroui-native'
 import { useRef, useState } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { FlatList } from 'react-native-gesture-handler'
 import type { SwipeableRowRef } from '@/components/swipeable-row'
 import Animated, {
@@ -90,6 +101,12 @@ export default function ActivityScreen() {
   const renderItem = ({ item }: { item: ActivityItem }) => {
     if (item.type === 'session') {
       const canEdit = !item.isInProgress
+      const onPress = canEdit
+        ? () => {
+            openRowRef.current?.close()
+            router.push(`/activity/edit-session?sessionId=${item.id}`)
+          }
+        : undefined
       return (
         <SwipeableRow
           onDelete={
@@ -97,36 +114,29 @@ export default function ActivityScreen() {
           }
           openRowRef={openRowRef}
         >
-          <SessionItem
-            item={item}
-            mutedColor={mutedColor}
-            successColor={successColor}
-            onPress={
-              canEdit
-                ? () => {
-                    openRowRef.current?.close()
-                    router.push(`/activity/edit-session?sessionId=${item.id}`)
-                  }
-                : undefined
-            }
-          />
+          <NativeTapOverlay onPress={onPress}>
+            <SessionItem
+              item={item}
+              mutedColor={mutedColor}
+              successColor={successColor}
+            />
+          </NativeTapOverlay>
         </SwipeableRow>
       )
     }
 
+    const onPress = () => {
+      openRowRef.current?.close()
+      router.push(`/activity/edit-maintenance?recordId=${item.id}`)
+    }
     return (
       <SwipeableRow
         onDelete={() => confirmDeleteRecord(userId, item.id)}
         openRowRef={openRowRef}
       >
-        <MaintenanceItem
-          item={item}
-          warningColor={warningColor}
-          onPress={() => {
-            openRowRef.current?.close()
-            router.push(`/activity/edit-maintenance?recordId=${item.id}`)
-          }}
-        />
+        <NativeTapOverlay onPress={onPress}>
+          <MaintenanceItem item={item} warningColor={warningColor} />
+        </NativeTapOverlay>
       </SwipeableRow>
     )
   }
@@ -257,18 +267,16 @@ export default function ActivityScreen() {
 function SessionItem({
   item,
   mutedColor,
-  successColor,
-  onPress
+  successColor
 }: {
   item: Extract<ActivityItem, { type: 'session' }>
   mutedColor: string
   successColor: string
-  onPress?: () => void
 }) {
   const { t } = useTranslation()
   return (
     <Animated.View entering={FadeIn.duration(200)}>
-      <ListGroup.Item onPress={onPress}>
+      <ListGroup.Item>
         <ListGroup.ItemPrefix>
           <SymbolView
             name="bolt.fill"
@@ -298,17 +306,15 @@ function SessionItem({
 
 function MaintenanceItem({
   item,
-  warningColor,
-  onPress
+  warningColor
 }: {
   item: Extract<ActivityItem, { type: 'maintenance' }>
   warningColor: string
-  onPress?: () => void
 }) {
   const { t } = useTranslation()
   return (
     <Animated.View entering={FadeIn.duration(200)}>
-      <ListGroup.Item onPress={onPress}>
+      <ListGroup.Item>
         <ListGroup.ItemPrefix>
           <SymbolView name="wrench.fill" size={16} tintColor={warningColor} />
         </ListGroup.ItemPrefix>
@@ -326,5 +332,33 @@ function MaintenanceItem({
         </Chip>
       </ListGroup.Item>
     </Animated.View>
+  )
+}
+
+const PLAIN_BUTTON_MODIFIERS = [buttonStyle('plain')]
+const INVISIBLE_MODIFIERS = [opacity(0.001)]
+
+// SwiftUI Button overlay absorbs iOS 26 menu-dismiss taps.
+function NativeTapOverlay({
+  onPress,
+  children
+}: {
+  onPress?: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <View>
+      {children}
+      {onPress ? (
+        <Host
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
+          matchContents={false}
+        >
+          <SwiftButton onPress={onPress} modifiers={PLAIN_BUTTON_MODIFIERS}>
+            <SwiftRectangle modifiers={INVISIBLE_MODIFIERS} />
+          </SwiftButton>
+        </Host>
+      ) : null}
+    </View>
   )
 }
