@@ -13,11 +13,11 @@ import {
   opacity
 } from '@expo/ui/swift-ui/modifiers'
 
-// Workaround for iOS 26 menu-dismiss tap-through.
-// https://github.com/expo/expo/issues/44144 — remove when Expo ships a fix.
-// SwiftUI Button absorbs the dismissal tap so it doesn't leak to the JS
-// Pressable underneath. Only mounted on iOS 26+, where the regression exists —
-// earlier iOS and Android use a plain Pressable and pay zero native-host cost.
+// Workaround for an iOS 26 regression where a SwiftUI Menu's dismissal tap
+// leaks to the JS Pressable underneath, firing its onPress. An invisible
+// SwiftUI Button absorbs that tap at the native responder level. Only mounted
+// on iOS 26+; earlier iOS and Android use a plain Pressable and pay zero
+// native-host cost. Remove when Expo patches the underlying behavior.
 
 const NEEDS_OVERLAY =
   Platform.OS === 'ios' && parseInt(String(Platform.Version), 10) >= 26
@@ -45,6 +45,8 @@ export function NativeTapOverlay({
   accessibilityHint,
   children
 }: Props) {
+  const dimmedClassName = disabled ? `${className ?? ''} opacity-50` : className
+
   if (!NEEDS_OVERLAY || !onPress)
     return (
       <Pressable
@@ -54,7 +56,7 @@ export function NativeTapOverlay({
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
         accessibilityState={{ disabled: !!disabled }}
-        className={className}
+        className={dimmedClassName}
       >
         {children}
       </Pressable>
@@ -70,7 +72,7 @@ export function NativeTapOverlay({
   ]
 
   return (
-    <View className={className}>
+    <View className={dimmedClassName}>
       {children}
       <Host style={HOST_STYLE} matchContents={false}>
         <SwiftButton onPress={onPress} modifiers={modifiers}>

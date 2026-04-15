@@ -355,9 +355,7 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
               ? t('generator.stopGenerator')
               : t('generator.startGenerator')
           }
-          className={`flex-1 items-center justify-center gap-5 active:opacity-80 ${
-            actionDisabled ? 'opacity-50' : ''
-          }`}
+          className="flex-1 items-center justify-center gap-5 active:opacity-80"
         >
           <View className="w-full items-center justify-center gap-5">
             {status === 'running' ? (
