@@ -21,7 +21,7 @@ This is a mobile app built with Expo (always the latest SDK) and React Native us
 - **Auth:** BetterAuth (email/password + Apple Sign-In)
 - **Sync:** PowerSync Sync Streams (NOT legacy Sync Rules)
 - **Data fetching in components:** Direct PowerSync hooks (`useQuery`, `useSuspenseQuery`, `useStatus`)
-- **Network mocking:** MSW (Mock Service Worker) — preferred approach
+- **Network mocking:** prefer injecting a fake transport port (a typed interface the code under test depends on) over intercepting `fetch`. Under `jest-expo` on Expo SDK 54/55, MSW and `@orpc/client` are both ESM-only and the `jest-expo` resolver reaches into their source (`msw/src/*.ts`), which then fails on ESM-only subdeps like `rettime`. There is no clean MSW-on-jest-expo setup as of SDK 55 — see [MSW React Native integration](https://mswjs.io/docs/integrations/react-native/) (still marked "potentially incomplete") and [mswjs/msw#1926](https://github.com/mswjs/msw/issues/1926). oRPC's own [testing guide](https://orpc.dev/docs/advanced/testing-mocking) recommends using the **server-side client** (invoke the router in-process) rather than round-tripping the RPC wire format. Apply this: when a module calls `rpcClient`, give it a `Transport` port and have production wire it to `rpcClient`; tests inject a plain object.
 - **E2E:** Maestro — iOS simulator via dev build + Metro, flows under `.maestro/flows/`, subflows under `.maestro/subflows/`, config in `.maestro/config.yaml`, `bun run e2e*` scripts in `package.json`
 
 ## Step 1: Discover the current setup
@@ -133,7 +133,7 @@ The project already has upload queue tests. Verify they are thorough.
 Check for:
 - Tests that write data locally and inspect the queue via `db.getUploadQueueStats()` (returns `{ count, size }`)
 - Tests that verify individual CRUD operations via `db.getNextCrudTransaction()` — checking `op` type (`PUT`, `PATCH`, `DELETE`), table name, and `opData` payload
-- Tests for the `uploadData` / `BackendConnector` implementation — ideally against MSW-mocked HTTP endpoints (if MSW is set up) or at minimum against manually mocked responses
+- Tests for the `uploadData` / `BackendConnector` implementation — drive through an injected transport port (see section 2.6). Do NOT mock `fetch` or reimplement the oRPC wire format.
 - Tests that call `transaction.complete()` after processing and verify the queue drains
 - Tests for upload failure scenarios — server rejects a write, network timeout, partial batch failure
 
@@ -190,25 +190,37 @@ A component that fetches data with `useQuery`, transforms it slightly, and rende
 - https://callstack.github.io/react-native-testing-library/
 - https://docs.expo.dev/router/reference/testing/
 
-### 2.6 Network mocking with MSW
+### 2.6 Network mocking — prefer injectable transports over intercepting fetch
 
-**Best practice:** Use MSW to intercept HTTP requests at the network level. This exercises the full client-side stack (oRPC client → fetch → serialization) rather than bypassing it with manual mocks.
+**Best practice for this stack:** Do NOT intercept `fetch`. Instead, extract a narrow transport port (a typed interface) around every external boundary and inject a fake in tests. This gives higher fidelity for *your* code than network mocking, without fighting Jest/ESM.
 
-Check for:
-- MSW is installed and configured with a `setupServer()` for Node.js/Jest
-- Handlers exist for oRPC API endpoints (the routes the `uploadData` connector and any other API calls hit)
-- Tests use `server.use()` for per-test handler overrides (error responses, timeouts, partial failures)
-- The upload queue tests use MSW handlers rather than manually mocking fetch
+Why not MSW (today, on Expo 54/55)?
 
-**If MSW is not set up yet**, this is a high-priority addition. The agent should:
-1. Install `msw`
-2. Create a handlers file with default success responses for the oRPC endpoints
-3. Create a `server.ts` setup file with `setupServer(...handlers)`
-4. Wire it into Jest setup (`beforeAll` → `server.listen()`, `afterEach` → `server.resetHandlers()`, `afterAll` → `server.close()`)
-5. Migrate any existing manual fetch mocks to MSW handlers
+- `msw` v2 depends on `rettime` (ESM-only, `.mjs`-only) and its `setup-api.ts` is TypeScript source. `jest-expo`'s resolver picks `msw/src/*.ts` over `msw/lib/*.js` even with `customExportConditions: ['node']`, then fails on `rettime`'s ESM require. There is no public working setup for MSW under `jest-expo` on SDK 54/55. Verified against: [MSW RN docs](https://mswjs.io/docs/integrations/react-native/) (still "potentially incomplete"), [mswjs/msw#1926](https://github.com/mswjs/msw/issues/1926), [expo/expo#37261](https://github.com/expo/expo/issues/37261) (jest-expo ESM fragility).
+- `@orpc/client` is ESM-only and cannot be `require()`d under Jest 29's CJS runtime. The oRPC team's [own testing guide](https://orpc.dev/docs/advanced/testing-mocking) tells you to skip the wire format and use server-side clients.
+- Reimplementing the wire format with a hand-rolled fake RPC client (the path this repo started on) is brittle: it tests code you don't own (the vendor's serialization) and drifts on vendor upgrades. Delete it.
+
+What to do instead:
+
+1. **Define a transport port at the boundary.** For the PowerSync connector, this is `interface SyncTransport { fetchToken(): Promise<PowerSyncCredentials>; applyWrite(write: CrudWrite): Promise<ApplyWriteResult> }`. Production wires it to `rpcClient.powersync.*`; tests pass a plain object with `jest.fn()`s or hand-written stubs.
+2. **Test the boundary you own.** Verify that the module *calls* the transport with the right shape, *handles* every documented response shape (success, structured rejection, unknown error), and returns/throws correctly. Do NOT assert that `{ json: ... }` envelopes are built correctly — that's the RPC library's job.
+3. **Keep the transport narrow.** A good transport has one to three methods, mirrors the domain, and is trivially fakeable. If you find yourself mocking 15 fields on a fake transport, the port is probably wrong.
+4. **For server-side router tests, import the router directly.** Call handlers with a constructed context (fake session, PGlite-backed DB). No HTTP involved.
+
+Anti-patterns to flag:
+
+- A test that mocks `fetch` with a hand-rolled interceptor to verify the wire format (e.g. `createFetchInterceptor`, `mockTestFetch`). Delete — it tests the library, not your code.
+- A test that reimplements a vendor client's serialization to avoid loading the real one (`createTestRpcClient` / manual `{ json: ... }` wrapping). Delete.
+- A test that mocks `@/data/client/rpc-client` with ad-hoc shapes in every test file. Extract the transport interface once, use it everywhere, mock one thing.
+- Any attempt to add `msw` to the `jest-expo` project. It will not work cleanly on SDK 54/55; don't burn hours on the resolver.
+
+When MSW *is* worth the effort:
+
+- A separate integration project with its own runner (e.g. Vitest with `environment: 'node'`) that runs *outside* `jest-expo`. MSW + real `@orpc/client` + real RPCLink works there. Only justified if you have a specific wire-format regression guard you cannot otherwise obtain, which for most apps you don't. Don't introduce a second runner speculatively.
 
 **Docs:**
-- https://mswjs.io/docs/getting-started
+- https://orpc.dev/docs/advanced/testing-mocking
+- https://mswjs.io/docs/integrations/react-native/ (for context on why native MSW is still rough)
 
 ### 2.7 Native module mocking
 
@@ -243,7 +255,7 @@ Check that:
 
 Check for:
 - Tests that verify the app works fully offline (reads from local SQLite, writes to upload queue) without any network calls
-- Tests for offline → online transition (queue drains, data reaches server via MSW-mocked endpoints)
+- Tests for offline → online transition (queue drains, data reaches the injected transport fake — see section 2.6)
 - Tests for online → offline transition (writes continue locally, no errors thrown)
 - Network state abstraction — connectivity detection should be injectable so tests can toggle online/offline programmatically
 - PowerSync `useStatus()` hook drives correct UI state in offline scenarios
@@ -287,7 +299,7 @@ Do NOT write automated tests against Sync Streams internals — there's no stabl
 **Recommended distribution for this stack:**
 - ~45% unit tests (extracted pure utility functions, data transformations, validation — zero mocking)
 - ~25% hook integration tests (`renderHook` with real PowerSync DB — one provider wrapper, no native mocks — HIGHEST VALUE)
-- ~15% data layer integration tests (CRUD, upload queue, server-side via PGlite + MSW)
+- ~15% data layer integration tests (CRUD + upload queue via an injected transport port; server-side router tests invoke handlers in-process with a PGlite-backed context)
 - ~10% E2E tests (Maestro for critical user journeys — covers all native behavior)
 - ~5% or less: full component render tests (only 2-3 complex screens with significant conditional rendering)
 - Static analysis foundation (TypeScript strict mode + ESLint)
@@ -393,9 +405,9 @@ After auditing, produce a prioritized list of improvements ordered by impact:
 **Priority 2 (High — significant quality improvement):**
 - Add `renderHook` tests for custom PowerSync hooks with real test DB (section 2.5)
 - Add unit tests for newly extracted utility functions
-- Set up MSW if not already configured (section 2.6)
+- Extract transport ports at every external boundary (oRPC, auth, network, etc.) and drive tests through injected fakes (section 2.6)
+- Delete hand-rolled fetch interceptors and vendor-wire-format reimplementations
 - Add offline-first scenario tests (section 2.8)
-- Migrate any existing manual fetch mocks to MSW handlers
 
 **Priority 3 (Medium — good practices):**
 - Improve native module mocking completeness (section 2.7) — but ONLY for the few screens that warrant full component tests
