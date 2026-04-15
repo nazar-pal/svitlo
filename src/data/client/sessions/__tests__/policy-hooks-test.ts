@@ -60,6 +60,7 @@ beforeAll(async () => {
 })
 
 beforeEach(() => {
+  jest.resetAllMocks()
   resetDatabase(mockSqlite)
 })
 

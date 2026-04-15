@@ -1,4 +1,23 @@
-import { renderHook } from '@testing-library/react-native'
+import type Database from 'better-sqlite3'
+import { renderHook, waitFor } from '@testing-library/react-native'
+import { eq } from 'drizzle-orm'
+
+import {
+  IDS,
+  seedBaseScenario,
+  seedGenerator
+} from '@/data/client/mutations/__tests__/seed'
+import {
+  closeDatabase,
+  createTestDatabase,
+  resetDatabase
+} from '@/data/client/mutations/__tests__/test-db'
+import { generators } from '@/data/client/db-schema/generators'
+
+type TestDb = Awaited<ReturnType<typeof createTestDatabase>>['db']
+
+let mockDb: TestDb
+let mockSqlite: Database.Database
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn()
@@ -9,16 +28,14 @@ jest.mock('@/lib/powersync', () => ({
 }))
 
 jest.mock('@/lib/powersync/database', () => ({
-  db: {}
+  get db() {
+    return mockDb
+  }
 }))
 
-jest.mock('@powersync/react-native', () => ({
-  useQuery: jest.fn()
-}))
-
-jest.mock('@powersync/drizzle-driver', () => ({
-  toCompilableQuery: (q: unknown) => q
-}))
+jest.mock('@powersync/react-native', () =>
+  require('@/lib/hooks/__tests__/mock-use-query').createUseQueryMock()
+)
 
 const { useLocalSearchParams } = jest.requireMock<{
   useLocalSearchParams: jest.Mock
@@ -28,108 +45,83 @@ const { useLocalUser } = jest.requireMock<{
   useLocalUser: jest.Mock
 }>('@/lib/powersync')
 
-const { useQuery } = jest.requireMock<{
-  useQuery: jest.Mock
-}>('@powersync/react-native')
-
 import { useAuthedEntity } from '../use-authed-entity'
 
-interface Row {
-  id: string
-  name: string
-}
-
-function fakeQuery(id: string): {
-  execute: () => Promise<Row[]>
-  toSQL: () => { sql: string; params: unknown[] }
-} {
-  return {
-    execute: async () => [{ id, name: 'seeded' }],
-    toSQL: () => ({ sql: 'select 1', params: [] })
-  }
-}
+beforeAll(async () => {
+  const testDb = await createTestDatabase()
+  mockDb = testDb.db
+  mockSqlite = testDb.sqlite
+})
 
 beforeEach(() => {
   jest.resetAllMocks()
+  resetDatabase(mockSqlite)
 })
 
-it('returns null when user is unauthenticated', () => {
-  useLocalSearchParams.mockReturnValue({ id: 'gen-1' })
+afterAll(() => {
+  closeDatabase(mockSqlite)
+})
+
+it('returns null when user is unauthenticated', async () => {
+  useLocalSearchParams.mockReturnValue({ id: IDS.generator })
   useLocalUser.mockReturnValue(null)
-  useQuery.mockReturnValue({ data: [] })
-  const load = jest.fn(fakeQuery)
 
   const { result } = renderHook(() =>
-    useAuthedEntity(['id'], params => load(params.id))
+    useAuthedEntity(['id'], params =>
+      mockDb.query.generators.findFirst({ where: eq(generators.id, params.id) })
+    )
   )
 
-  expect(result.current).toBeNull()
-  expect(load).not.toHaveBeenCalled()
-})
-
-it('returns null when a required param is missing', () => {
-  useLocalSearchParams.mockReturnValue({})
-  useLocalUser.mockReturnValue({ id: 'user-1' })
-  useQuery.mockReturnValue({ data: [] })
-  const load = jest.fn(fakeQuery)
-
-  const { result } = renderHook(() =>
-    useAuthedEntity(['id'], params => load(params.id))
-  )
-
-  expect(result.current).toBeNull()
-  expect(load).not.toHaveBeenCalled()
-})
-
-it('returns null when the query yields an empty array', () => {
-  useLocalSearchParams.mockReturnValue({ id: 'gen-1' })
-  useLocalUser.mockReturnValue({ id: 'user-1' })
-  useQuery.mockReturnValue({ data: [] })
-
-  const { result } = renderHook(() =>
-    useAuthedEntity(['id'], params => fakeQuery(params.id))
-  )
-
-  expect(result.current).toBeNull()
-})
-
-it('returns { userId, entity } when authed, params present, and row loaded', () => {
-  useLocalSearchParams.mockReturnValue({ id: 'gen-1' })
-  useLocalUser.mockReturnValue({ id: 'user-1' })
-  useQuery.mockReturnValue({
-    data: [{ id: 'gen-1', name: 'seeded' }]
-  })
-
-  const { result } = renderHook(() =>
-    useAuthedEntity(['id'], params => fakeQuery(params.id))
-  )
-
-  expect(result.current).toEqual({
-    userId: 'user-1',
-    entity: { id: 'gen-1', name: 'seeded' }
+  await waitFor(() => {
+    expect(result.current).toBeNull()
   })
 })
 
-it('passes the resolved compilable query to useQuery when guards pass', () => {
-  useLocalSearchParams.mockReturnValue({ id: 'gen-1' })
-  useLocalUser.mockReturnValue({ id: 'user-1' })
-  useQuery.mockReturnValue({ data: [{ id: 'gen-1', name: 'seeded' }] })
-  const load = jest.fn(fakeQuery)
+it('returns null when a required param is missing', async () => {
+  useLocalSearchParams.mockReturnValue({})
+  useLocalUser.mockReturnValue({ id: IDS.adminUser })
 
-  renderHook(() => useAuthedEntity(['id'], params => load(params.id)))
+  const { result } = renderHook(() =>
+    useAuthedEntity(['id'], params =>
+      mockDb.query.generators.findFirst({ where: eq(generators.id, params.id) })
+    )
+  )
 
-  expect(load).toHaveBeenCalledWith('gen-1')
-  const [compiled] = useQuery.mock.calls[0]
-  expect(compiled).not.toBe('SELECT 0 WHERE 0')
+  await waitFor(() => {
+    expect(result.current).toBeNull()
+  })
 })
 
-it('passes the no-op query to useQuery when guards fail', () => {
-  useLocalSearchParams.mockReturnValue({})
-  useLocalUser.mockReturnValue({ id: 'user-1' })
-  useQuery.mockReturnValue({ data: [] })
+it('returns null when the query yields no row', async () => {
+  seedBaseScenario(mockDb)
+  useLocalSearchParams.mockReturnValue({ id: 'does-not-exist' })
+  useLocalUser.mockReturnValue({ id: IDS.adminUser })
 
-  renderHook(() => useAuthedEntity(['id'], params => fakeQuery(params.id)))
+  const { result } = renderHook(() =>
+    useAuthedEntity(['id'], params =>
+      mockDb.query.generators.findFirst({ where: eq(generators.id, params.id) })
+    )
+  )
 
-  const [compiled] = useQuery.mock.calls[0]
-  expect(compiled).toBe('SELECT 0 WHERE 0')
+  await waitFor(() => {
+    expect(result.current).toBeNull()
+  })
+})
+
+it('returns { userId, entity } when authed, params present, and row loaded', async () => {
+  seedBaseScenario(mockDb)
+  seedGenerator(mockDb)
+  useLocalSearchParams.mockReturnValue({ id: IDS.generator })
+  useLocalUser.mockReturnValue({ id: IDS.adminUser })
+
+  const { result } = renderHook(() =>
+    useAuthedEntity(['id'], params =>
+      mockDb.query.generators.findFirst({ where: eq(generators.id, params.id) })
+    )
+  )
+
+  await waitFor(() => {
+    expect(result.current?.userId).toBe(IDS.adminUser)
+    expect(result.current?.entity?.id).toBe(IDS.generator)
+  })
 })

@@ -81,9 +81,8 @@ describe('getGeneratorFacts', () => {
   })
 
   // Postgres's onDelete: 'restrict' FK prevents constructing a generator whose
-  // organization row is missing, so we can't exercise the LEFT JOIN orphan
-  // branch here with a real PG instance. The logic is covered by the stub
-  // provider in src/data/shared/authz/__tests__/checks-test.ts
+  // organization row is missing, so the LEFT JOIN orphan branch is unreachable
+  // against real PG. That branch is covered by the stub provider in
+  // src/data/shared/authz/__tests__/checks-test.ts
   // ("grants access to an orphan generator when the user has an assignment").
-  it.skip('returns orgAdminUserId: null when the generator is orphaned', () => {})
 })
