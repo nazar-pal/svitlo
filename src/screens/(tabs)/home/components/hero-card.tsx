@@ -1,18 +1,9 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { SymbolView } from 'expo-symbols'
 import { useThemeColor } from 'heroui-native'
-import { StyleSheet, Text, View } from 'react-native'
-import {
-  Host,
-  Button as SwiftButton,
-  Rectangle as SwiftRectangle
-} from '@expo/ui/swift-ui'
-import {
-  buttonStyle,
-  disabled as disabledModifier,
-  opacity
-} from '@expo/ui/swift-ui/modifiers'
+import { Text, View } from 'react-native'
 
+import { NativeTapOverlay } from '@/components/native-tap-overlay'
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator } from '@/data/client/db-schema'
 import { startSession, stopSession } from '@/data/client/mutations'
@@ -39,8 +30,6 @@ import { formatHours } from '@/lib/utils/time'
 
 import { formatAssignedNames } from '../lib/format-assigned-names'
 import { IdlePulse } from './idle-pulse'
-
-const INVISIBLE_MODIFIERS = [opacity(0.001)]
 
 export interface HeroCardItem {
   generator: Generator
@@ -352,71 +341,62 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
           ) : null}
         </View>
 
-        {/* SwiftUI Button overlay absorbs iOS 26 menu-dismiss taps. */}
-        <View
-          accessibilityRole="button"
-          accessibilityLabel={
+        <NativeTapOverlay
+          onPress={
             status === 'running'
-              ? t('generator.stopGenerator')
-              : t('generator.startGenerator')
+              ? handleStop
+              : status === 'resting'
+                ? () => confirmRestingStart(handleStart)
+                : handleStart
           }
-          accessibilityState={{ disabled: actionDisabled }}
+          disabled={actionDisabled}
           className={`flex-1 items-center justify-center gap-5 ${
             actionDisabled ? 'opacity-50' : ''
           }`}
         >
-          {status === 'running' ? (
-            <RunningDisplay
-              startedAt={openSession?.startedAt ?? null}
-              consecutiveRunHours={consecutiveRunHours}
-              maxConsecutiveRunHours={generator.maxConsecutiveRunHours}
-              runWarningThresholdPct={generator.runWarningThresholdPct}
-              isVisible={isVisible}
-            />
-          ) : status === 'resting' ? (
-            <RestingDisplay
-              restEndsAt={restEndsAt}
-              requiredRestHours={generator.requiredRestHours}
-              isVisible={isVisible}
-            />
-          ) : (
-            <>
-              <View className="size-40 items-center justify-center">
-                {isVisible ? <IdlePulse /> : null}
-                <View className="border-accent/20 bg-accent/8 size-30 items-center justify-center rounded-full border">
-                  <SymbolView
-                    name="bolt.fill"
-                    size={52}
-                    tintColor={accentColor}
-                  />
-                </View>
-              </View>
-              <Text className="text-accent text-base font-medium">
-                {t('generator.readyToRun')}
-              </Text>
-            </>
-          )}
-          <Host
-            style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
-            matchContents={false}
+          <View
+            accessibilityRole="button"
+            accessibilityLabel={
+              status === 'running'
+                ? t('generator.stopGenerator')
+                : t('generator.startGenerator')
+            }
+            accessibilityState={{ disabled: actionDisabled }}
+            className="w-full items-center justify-center gap-5"
           >
-            <SwiftButton
-              onPress={
-                status === 'running'
-                  ? handleStop
-                  : status === 'resting'
-                    ? () => confirmRestingStart(handleStart)
-                    : handleStart
-              }
-              modifiers={[
-                buttonStyle('plain'),
-                disabledModifier(actionDisabled)
-              ]}
-            >
-              <SwiftRectangle modifiers={INVISIBLE_MODIFIERS} />
-            </SwiftButton>
-          </Host>
-        </View>
+            {status === 'running' ? (
+              <RunningDisplay
+                startedAt={openSession?.startedAt ?? null}
+                consecutiveRunHours={consecutiveRunHours}
+                maxConsecutiveRunHours={generator.maxConsecutiveRunHours}
+                runWarningThresholdPct={generator.runWarningThresholdPct}
+                isVisible={isVisible}
+              />
+            ) : status === 'resting' ? (
+              <RestingDisplay
+                restEndsAt={restEndsAt}
+                requiredRestHours={generator.requiredRestHours}
+                isVisible={isVisible}
+              />
+            ) : (
+              <>
+                <View className="size-40 items-center justify-center">
+                  {isVisible ? <IdlePulse /> : null}
+                  <View className="border-accent/20 bg-accent/8 size-30 items-center justify-center rounded-full border">
+                    <SymbolView
+                      name="bolt.fill"
+                      size={52}
+                      tintColor={accentColor}
+                    />
+                  </View>
+                </View>
+                <Text className="text-accent text-base font-medium">
+                  {t('generator.readyToRun')}
+                </Text>
+              </>
+            )}
+          </View>
+        </NativeTapOverlay>
 
         {/* Info rows */}
         <View className="bg-default/40 gap-px overflow-hidden rounded-2xl">

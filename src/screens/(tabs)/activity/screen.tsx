@@ -1,16 +1,5 @@
-import {
-  Host,
-  Picker,
-  Button as SwiftButton,
-  Rectangle as SwiftRectangle,
-  Text as SwiftText
-} from '@expo/ui/swift-ui'
-import {
-  buttonStyle,
-  opacity,
-  pickerStyle,
-  tag
-} from '@expo/ui/swift-ui/modifiers'
+import { Host, Picker, Text as SwiftText } from '@expo/ui/swift-ui'
+import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers'
 import { useScrollToTop } from '@react-navigation/native'
 import { parseISO } from 'date-fns'
 import { BlurView } from 'expo-blur'
@@ -19,7 +8,7 @@ import { Stack, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { Chip, ListGroup, Separator, useThemeColor } from 'heroui-native'
 import { useRef, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { View } from 'react-native'
 import { FlatList } from 'react-native-gesture-handler'
 import type { SwipeableRowRef } from '@/components/swipeable-row'
 import Animated, {
@@ -36,6 +25,7 @@ import { scheduleOnRN } from 'react-native-worklets'
 
 import { EmptyState } from '@/components/empty-state'
 import { GeneratorScopeMenu } from '@/components/generator-scope-menu'
+import { NativeTapOverlay } from '@/components/native-tap-overlay'
 import { SwipeableRow } from '@/components/swipeable-row'
 import { formatDate, useTranslation } from '@/lib/i18n'
 import { confirmDeleteRecord, confirmDeleteSession } from '@/lib/alerts'
@@ -332,33 +322,5 @@ function MaintenanceItem({
         </Chip>
       </ListGroup.Item>
     </Animated.View>
-  )
-}
-
-const PLAIN_BUTTON_MODIFIERS = [buttonStyle('plain')]
-const INVISIBLE_MODIFIERS = [opacity(0.001)]
-
-// SwiftUI Button overlay absorbs iOS 26 menu-dismiss taps.
-function NativeTapOverlay({
-  onPress,
-  children
-}: {
-  onPress?: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <View>
-      {children}
-      {onPress ? (
-        <Host
-          style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
-          matchContents={false}
-        >
-          <SwiftButton onPress={onPress} modifiers={PLAIN_BUTTON_MODIFIERS}>
-            <SwiftRectangle modifiers={INVISIBLE_MODIFIERS} />
-          </SwiftButton>
-        </Host>
-      ) : null}
-    </View>
   )
 }
