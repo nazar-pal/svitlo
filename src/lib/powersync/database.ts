@@ -6,29 +6,7 @@ import { OPSqliteOpenFactory } from '@powersync/op-sqlite'
 import { PowerSyncDatabase } from '@powersync/react-native'
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
 
-import {
-  user,
-  organizations,
-  organizationMembers,
-  invitations,
-  generators,
-  generatorUserAssignments,
-  generatorSessions,
-  maintenanceTemplates,
-  maintenanceRecords
-} from '../../data/client/db-schema'
-
-const tables = {
-  user,
-  organizations,
-  organizationMembers,
-  invitations,
-  generators,
-  generatorUserAssignments,
-  generatorSessions,
-  maintenanceTemplates,
-  maintenanceRecords
-}
+import { tables } from './tables'
 
 const factory = new OPSqliteOpenFactory({ dbFilename: 'svitlo.db' })
 const schema = new DrizzleAppSchema(tables)

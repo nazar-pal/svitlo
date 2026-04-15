@@ -25,6 +25,7 @@ import { scheduleOnRN } from 'react-native-worklets'
 
 import { EmptyState } from '@/components/empty-state'
 import { GeneratorScopeMenu } from '@/components/generator-scope-menu'
+import { NativeTapOverlay } from '@/components/native-tap-overlay'
 import { SwipeableRow } from '@/components/swipeable-row'
 import { formatDate, useTranslation } from '@/lib/i18n'
 import { confirmDeleteRecord, confirmDeleteSession } from '@/lib/alerts'
@@ -90,6 +91,12 @@ export default function ActivityScreen() {
   const renderItem = ({ item }: { item: ActivityItem }) => {
     if (item.type === 'session') {
       const canEdit = !item.isInProgress
+      const onPress = canEdit
+        ? () => {
+            openRowRef.current?.close()
+            router.push(`/activity/edit-session?sessionId=${item.id}`)
+          }
+        : undefined
       return (
         <SwipeableRow
           onDelete={
@@ -97,59 +104,56 @@ export default function ActivityScreen() {
           }
           openRowRef={openRowRef}
         >
-          <SessionItem
-            item={item}
-            mutedColor={mutedColor}
-            successColor={successColor}
-            onPress={
-              canEdit
-                ? () => {
-                    openRowRef.current?.close()
-                    router.push(`/activity/edit-session?sessionId=${item.id}`)
-                  }
-                : undefined
-            }
-          />
+          <NativeTapOverlay
+            onPress={onPress}
+            accessibilityLabel={`${item.isInProgress ? t('activity.active') : t('activity.run')} · ${item.generatorTitle} · ${item.userName}`}
+          >
+            <SessionItem
+              item={item}
+              mutedColor={mutedColor}
+              successColor={successColor}
+            />
+          </NativeTapOverlay>
         </SwipeableRow>
       )
     }
 
+    const onPress = () => {
+      openRowRef.current?.close()
+      router.push(`/activity/edit-maintenance?recordId=${item.id}`)
+    }
     return (
       <SwipeableRow
         onDelete={() => confirmDeleteRecord(userId, item.id)}
         openRowRef={openRowRef}
       >
-        <MaintenanceItem
-          item={item}
-          warningColor={warningColor}
-          onPress={() => {
-            openRowRef.current?.close()
-            router.push(`/activity/edit-maintenance?recordId=${item.id}`)
-          }}
-        />
+        <NativeTapOverlay
+          onPress={onPress}
+          accessibilityLabel={`${t('activity.maintenance')} · ${item.generatorTitle} · ${item.templateName}`}
+        >
+          <MaintenanceItem item={item} warningColor={warningColor} />
+        </NativeTapOverlay>
       </SwipeableRow>
     )
   }
 
-  const handleFilterChange = (i: number) => {
-    selection()
-    setFilter(FILTERS[i]!)
-    if (isScrolledDown.current)
-      scrollRef.current?.scrollToOffset({
-        offset: -30 - insets.top,
-        animated: true
-      })
-  }
-
   const pickerContent = (
     <Host matchContents style={{ height: 31 }}>
-      <Picker
-        selection={FILTERS.indexOf(filter)}
-        onSelectionChange={handleFilterChange}
+      <Picker<Filter>
+        selection={filter}
+        onSelectionChange={value => {
+          selection()
+          setFilter(value)
+          if (isScrolledDown.current)
+            scrollRef.current?.scrollToOffset({
+              offset: -30 - insets.top,
+              animated: true
+            })
+        }}
         modifiers={[pickerStyle('segmented')]}
       >
-        {FILTERS.map((f, i) => (
-          <SwiftText key={f} modifiers={[tag(i)]}>
+        {FILTERS.map(f => (
+          <SwiftText key={f} modifiers={[tag(f)]}>
             {filterLabel(f)}
           </SwiftText>
         ))}
@@ -259,18 +263,16 @@ export default function ActivityScreen() {
 function SessionItem({
   item,
   mutedColor,
-  successColor,
-  onPress
+  successColor
 }: {
   item: Extract<ActivityItem, { type: 'session' }>
   mutedColor: string
   successColor: string
-  onPress?: () => void
 }) {
   const { t } = useTranslation()
   return (
     <Animated.View entering={FadeIn.duration(200)}>
-      <ListGroup.Item onPress={onPress}>
+      <ListGroup.Item>
         <ListGroup.ItemPrefix>
           <SymbolView
             name="bolt.fill"
@@ -300,17 +302,15 @@ function SessionItem({
 
 function MaintenanceItem({
   item,
-  warningColor,
-  onPress
+  warningColor
 }: {
   item: Extract<ActivityItem, { type: 'maintenance' }>
   warningColor: string
-  onPress?: () => void
 }) {
   const { t } = useTranslation()
   return (
     <Animated.View entering={FadeIn.duration(200)}>
-      <ListGroup.Item onPress={onPress}>
+      <ListGroup.Item>
         <ListGroup.ItemPrefix>
           <SymbolView name="wrench.fill" size={16} tintColor={warningColor} />
         </ListGroup.ItemPrefix>
