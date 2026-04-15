@@ -19,7 +19,8 @@ import {
 // Pressable underneath. Only mounted on iOS 26+, where the regression exists —
 // earlier iOS and Android use a plain Pressable and pay zero native-host cost.
 
-const NEEDS_OVERLAY = Platform.OS === 'ios' && Number(Platform.Version) >= 26
+const NEEDS_OVERLAY =
+  Platform.OS === 'ios' && parseInt(String(Platform.Version), 10) >= 26
 
 const INVISIBLE = [opacity(0.001)]
 const HOST_STYLE = [

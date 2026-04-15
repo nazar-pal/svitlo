@@ -104,7 +104,10 @@ export default function ActivityScreen() {
           }
           openRowRef={openRowRef}
         >
-          <NativeTapOverlay onPress={onPress}>
+          <NativeTapOverlay
+            onPress={onPress}
+            accessibilityLabel={`${item.isInProgress ? t('activity.active') : t('activity.run')} · ${item.generatorTitle} · ${item.userName}`}
+          >
             <SessionItem
               item={item}
               mutedColor={mutedColor}
@@ -124,7 +127,10 @@ export default function ActivityScreen() {
         onDelete={() => confirmDeleteRecord(userId, item.id)}
         openRowRef={openRowRef}
       >
-        <NativeTapOverlay onPress={onPress}>
+        <NativeTapOverlay
+          onPress={onPress}
+          accessibilityLabel={`${t('activity.maintenance')} · ${item.generatorTitle} · ${item.templateName}`}
+        >
           <MaintenanceItem item={item} warningColor={warningColor} />
         </NativeTapOverlay>
       </SwipeableRow>
