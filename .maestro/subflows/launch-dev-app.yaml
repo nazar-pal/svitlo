@@ -3,9 +3,18 @@ appId: com.devnazar.svitlo.dev
 # Reusable subflow: Launch development build with clean state.
 # clearState + clearKeychain wipe app data before launchApp starts it.
 
+# Force English app locale via iOS launch arguments. clearState wipes the
+# user's stored locale choice, so the app falls back to `auto` (device
+# locale) on fresh runs. These process-level args override
+# `[NSLocale preferredLanguages]` for this launch, which is what
+# expo-localization reads — so taps on translated strings stay
+# deterministic even on a Ukrainian simulator.
 - launchApp:
     clearState: true
     clearKeychain: true
+    arguments:
+      '-AppleLanguages': '(en)'
+      '-AppleLocale': 'en_US'
 
 # Deep link to dev server, bypassing the launcher screen
 - openLink: svitlo://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
@@ -24,7 +33,12 @@ appId: com.devnazar.svitlo.dev
     timeout: 45000
 - tapOn: 'Continue'
 
-# Dismiss the Expo dev menu that sometimes opens after onboarding
+# Dismiss the Expo dev menu that sometimes opens after onboarding.
+# Note: the iOS "Open in App?" system dialog above follows the
+# simulator locale (not our app's locale). For deterministic runs on
+# non-English simulators, either run with `maestro start-device
+# --device-locale en_US`, or accept that the `when visible: 'Open'`
+# guard is a no-op and the deep link still opens.
 - runFlow:
     when:
       visible: 'Reload'

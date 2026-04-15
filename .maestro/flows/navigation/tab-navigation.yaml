@@ -11,10 +11,9 @@ tags:
 - runFlow: ../../subflows/setup-signed-in-user.yaml
 
 # Tab labels are tapped by visible text because expo-router's NativeTabs
-# (unstable-native-tabs) does not currently propagate a testID to the native
-# UITabBarItem — there's no id selector available for individual tabs.
-# These taps assume the simulator is running in English. To run in another
-# locale, relaunch the device with `maestro start-device --device-locale xx_XX`.
+# does not propagate a testID to the native UITabBarItem — there's no
+# id selector available for individual tabs. Flows assume an English
+# simulator; enforce at the launcher (`maestro start-device --device-locale en_US`).
 
 # Navigate to Maintenance tab
 - tapOn: 'Maintenance'
