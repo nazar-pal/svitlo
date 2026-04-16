@@ -4,9 +4,8 @@ import { Text } from 'react-native'
 import { useTranslation } from '@/lib/i18n'
 import { FormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
-import { useCanCreateInvitation } from '@/data/client/invitations/policy-hooks'
 import { createInvitation } from '@/data/client/mutations'
-import { isPolicyAllowed } from '@/data/client/policy-hooks-shared'
+import { isPolicyAllowed, policies, usePolicy } from '@/data/client/use-policy'
 import { insertInvitationSchema } from '@/data/shared/validation'
 import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
@@ -34,8 +33,12 @@ function InviteForm({ userId, orgId }: { userId: string; orgId: string }) {
 
   const emailBinding = bind.text('inviteeEmail')
 
-  const normalizedEmail = emailBinding.value.trim().toLowerCase() || undefined
-  const policy = useCanCreateInvitation(userId, orgId, normalizedEmail)
+  const normalizedEmail = emailBinding.value.trim().toLowerCase()
+  const policy = usePolicy(policies.invitations.createInvitation, {
+    callerUserId: userId,
+    organizationId: orgId,
+    inviteeEmail: normalizedEmail
+  })
 
   return (
     <FormScreen

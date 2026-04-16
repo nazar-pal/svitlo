@@ -14,7 +14,10 @@ export const handleGenerators = defineTableHandler({
     schema: insertGeneratorSchema,
     errorLabel: 'generator insert',
     check: ({ userId, checks }, parsed) =>
-      checks.generators.createGenerator(userId, parsed.organizationId),
+      checks.generators.createGenerator({
+        userId,
+        organizationId: parsed.organizationId
+      }),
     apply: async ({ db, id }, parsed) => {
       await db
         .insert(generators)
@@ -26,7 +29,7 @@ export const handleGenerators = defineTableHandler({
     schema: updateGeneratorSchema,
     errorLabel: 'generator update',
     check: ({ userId, id, checks }) =>
-      checks.generators.updateGenerator(userId, id),
+      checks.generators.updateGenerator({ userId, generatorId: id }),
     apply: async ({ db, id }, parsed) => {
       if (Object.keys(parsed).length > 0)
         await db.update(generators).set(parsed).where(eq(generators.id, id))
@@ -34,7 +37,7 @@ export const handleGenerators = defineTableHandler({
   },
   delete: {
     check: ({ userId, id, checks }) =>
-      checks.generators.deleteGenerator(userId, id),
+      checks.generators.deleteGenerator({ userId, generatorId: id }),
     shield: { kind: 'notFound', code: 'GENERATOR_NOT_FOUND' },
     apply: async ({ db, id }) => {
       await db.delete(generators).where(eq(generators.id, id))

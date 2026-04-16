@@ -1,7 +1,9 @@
 import { eq } from 'drizzle-orm'
 
 import { generatorSessions } from '@/data/server/db-schema'
-import { createServerAuthz } from '@/data/server/authz'
+import { serverLookup } from '@/data/server/registry'
+import * as authz from '@/data/shared/authz/decisions'
+import { runDecisionAsync } from '@/data/shared/facts/async-adapter'
 
 import { replayShieldNotFound } from './replay'
 import { transformSyncRow } from '../transform'
@@ -15,7 +17,7 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     const values = transformSyncRow(generatorSessions, data)
     const generatorId = values.generatorId as string
 
-    const result = await checks.startSession(userId, generatorId)
+    const result = await checks.startSession({ userId, generatorId })
     if (!result.ok) {
       // Lost-ack replay: PowerSync resends the same CRUD entry (same `id`,
       // same user) when the client never saw the original upload ack. When
@@ -60,12 +62,13 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     if ('started_at' in data) {
       const startedAt = data.started_at as string
       const stoppedAt = data.stopped_at as string
-      const result = await checks.updateSession(
+      const result = await checks.updateSession({
         userId,
-        id,
-        { startedAt, stoppedAt },
-        ctx.now()
-      )
+        sessionId: id,
+        startedAt,
+        stoppedAt,
+        now: ctx.now()
+      })
       if (!result.ok) return fail(result.code)
 
       await db
@@ -78,7 +81,7 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
       return ok
     }
 
-    const result = await checks.stopSession(userId, id)
+    const result = await checks.stopSession({ userId, sessionId: id })
     if (!result.ok) return fail(result.code)
 
     const fields: Partial<Insert<typeof generatorSessions>> = {}
@@ -99,7 +102,7 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
 
   if (op === 'delete') {
     const shielded = replayShieldNotFound(
-      await checks.deleteSession(userId, id),
+      await checks.deleteSession({ userId, sessionId: id }),
       'SESSION_NOT_FOUND'
     )
     if (shielded.status === 'consume') return shielded.result
@@ -109,9 +112,14 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     // behaviour; the server layers an ownership rule on top as defence in
     // depth for the sync protocol. Reuse the session the policy already
     // fetched — no second `findSession` round trip.
-    const authz = createServerAuthz(db)
-    const { session } = shielded.data
-    const isAdmin = await authz.isGeneratorOrgAdmin(userId, session.generatorId)
+    const session = shielded.data.facts.session
+    if (!session) return fail('SESSION_NOT_FOUND')
+    const adminCheck = await runDecisionAsync(
+      authz.isGeneratorOrgAdmin,
+      { userId, generatorId: session.generatorId },
+      serverLookup(db)
+    )
+    const isAdmin = adminCheck.ok
     if (!isAdmin && session.startedByUserId !== userId)
       return fail('Can only delete your own sessions')
 

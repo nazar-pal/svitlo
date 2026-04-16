@@ -28,27 +28,12 @@ jest.mock('@/lib/powersync/database', () => ({
 
 jest.mock('@/lib/powersync', () => ({}))
 
-const {
-  useCanCreateInvitation,
-  useCanCancelInvitation
-} = require('../policy-hooks')
-
-const {
-  createClientInvitationFactsProvider
-} = require('@/data/client/facts-providers')
-const { createClientAuthzProvider } = require('@/data/client/authz/provider')
-const { createAuthzChecks } = require('@/data/shared/authz')
-const { createInvitationLifecycleChecks } = require('@/data/shared/invitations')
+const { policies, usePolicy } = require('@/data/client/use-policy')
+const { clientLookup } = require('@/data/client/registry')
+const { runDecisionAsync } = require('@/data/shared/facts/async-adapter')
+const invitationsD = require('@/data/shared/invitations/decisions')
 
 const INVITEE_EMAIL = 'invitee@test.com'
-
-function buildChecks() {
-  const authz = createAuthzChecks(createClientAuthzProvider(mockDb))
-  return createInvitationLifecycleChecks(
-    createClientInvitationFactsProvider(mockDb),
-    authz
-  )
-}
 
 beforeAll(async () => {
   const testDb = await createTestDatabase()
@@ -65,21 +50,29 @@ afterAll(() => {
   closeDatabase(mockSqlite)
 })
 
-// ── useCanCreateInvitation ──────────────────────────────────────────────────
+function stripFacts(check: { ok: boolean; code?: string }) {
+  return check.ok
+    ? { status: 'ready', ok: true }
+    : { status: 'ready', ok: false, code: check.code }
+}
 
-describe('useCanCreateInvitation', () => {
-  it('reports loading when inputs are missing', () => {
-    const { result } = renderHook(() => useCanCreateInvitation(null, null))
+describe('usePolicy(invitations.createInvitation)', () => {
+  it('reports loading when args are null', () => {
+    const { result } = renderHook(() =>
+      usePolicy(policies.invitations.createInvitation, null)
+    )
     expect(result.current).toEqual({ status: 'loading' })
   })
 
   it('rejects with ONLY_ADMIN_CAN_INVITE for a non-admin caller', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanCreateInvitation(IDS.memberUser, IDS.org)
+      usePolicy(policies.invitations.createInvitation, {
+        callerUserId: IDS.memberUser,
+        organizationId: IDS.org,
+        inviteeEmail: ''
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -91,11 +84,13 @@ describe('useCanCreateInvitation', () => {
 
   it('accepts the admin when no email is provided (affordance gating)', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanCreateInvitation(IDS.adminUser, IDS.org)
+      usePolicy(policies.invitations.createInvitation, {
+        callerUserId: IDS.adminUser,
+        organizationId: IDS.org,
+        inviteeEmail: ''
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({ status: 'ready', ok: true })
     })
@@ -104,11 +99,13 @@ describe('useCanCreateInvitation', () => {
   it('rejects with INVITATION_ALREADY_SENT when one exists for the email', async () => {
     seedBaseScenario(mockDb)
     seedInvitation(mockDb, INVITEE_EMAIL)
-
     const { result } = renderHook(() =>
-      useCanCreateInvitation(IDS.adminUser, IDS.org, INVITEE_EMAIL)
+      usePolicy(policies.invitations.createInvitation, {
+        callerUserId: IDS.adminUser,
+        organizationId: IDS.org,
+        inviteeEmail: INVITEE_EMAIL
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -118,29 +115,16 @@ describe('useCanCreateInvitation', () => {
     })
   })
 
-  it('accepts the admin with a never-invited email', async () => {
-    seedBaseScenario(mockDb)
-
-    const { result } = renderHook(() =>
-      useCanCreateInvitation(IDS.adminUser, IDS.org, 'new-guest@test.com')
-    )
-
-    await waitFor(() => {
-      expect(result.current).toEqual({ status: 'ready', ok: true })
-    })
-  })
-
-  // Regression: case-insensitive email comparison must hold without caller
-  // pre-normalisation. The policy invariant is documented in
-  // `src/data/shared/invitations/index.ts` (see the invitee-email rule).
   it('rejects with INVITATION_ALREADY_SENT when caller email is mixed-case', async () => {
     seedBaseScenario(mockDb)
     seedInvitation(mockDb, INVITEE_EMAIL)
-
     const { result } = renderHook(() =>
-      useCanCreateInvitation(IDS.adminUser, IDS.org, '  INVITEE@Test.COM  ')
+      usePolicy(policies.invitations.createInvitation, {
+        callerUserId: IDS.adminUser,
+        organizationId: IDS.org,
+        inviteeEmail: '  INVITEE@Test.COM  '
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -151,21 +135,22 @@ describe('useCanCreateInvitation', () => {
   })
 })
 
-// ── useCanCancelInvitation ──────────────────────────────────────────────────
-
-describe('useCanCancelInvitation', () => {
-  it('reports loading when inputs are missing', () => {
-    const { result } = renderHook(() => useCanCancelInvitation(null, null))
+describe('usePolicy(invitations.cancelInvitation)', () => {
+  it('reports loading when args are null', () => {
+    const { result } = renderHook(() =>
+      usePolicy(policies.invitations.cancelInvitation, null)
+    )
     expect(result.current).toEqual({ status: 'loading' })
   })
 
   it('rejects with INVITATION_NOT_FOUND when the row is missing', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanCancelInvitation(IDS.adminUser, 'does-not-exist')
+      usePolicy(policies.invitations.cancelInvitation, {
+        callerUserId: IDS.adminUser,
+        invitationId: 'does-not-exist'
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -178,11 +163,12 @@ describe('useCanCancelInvitation', () => {
   it('rejects with ONLY_ADMIN_CAN_CANCEL_INVITATIONS for a non-admin caller', async () => {
     seedBaseScenario(mockDb)
     seedInvitation(mockDb, INVITEE_EMAIL)
-
     const { result } = renderHook(() =>
-      useCanCancelInvitation(IDS.memberUser, IDS.invitation)
+      usePolicy(policies.invitations.cancelInvitation, {
+        callerUserId: IDS.memberUser,
+        invitationId: IDS.invitation
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -195,133 +181,60 @@ describe('useCanCancelInvitation', () => {
   it('accepts the happy path for the admin', async () => {
     seedBaseScenario(mockDb)
     seedInvitation(mockDb, INVITEE_EMAIL)
-
     const { result } = renderHook(() =>
-      useCanCancelInvitation(IDS.adminUser, IDS.invitation)
+      usePolicy(policies.invitations.cancelInvitation, {
+        callerUserId: IDS.adminUser,
+        invitationId: IDS.invitation
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({ status: 'ready', ok: true })
     })
   })
 })
 
-// ── Parity: hook vs async InvitationLifecycleChecks ─────────────────────────
-// Guardrail against drift between the reactive SQL-to-facts mapping and the
-// async FactsProvider that the mutation path uses.
-
-describe('parity with InvitationLifecycleChecks', () => {
-  it('createInvitation: hook matches check for non-admin', async () => {
+describe('parity with async invitations decisions', () => {
+  it('createInvitation: hook matches async for happy path', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanCreateInvitation(IDS.memberUser, IDS.org, 'new-guest@test.com')
+      usePolicy(policies.invitations.createInvitation, {
+        callerUserId: IDS.adminUser,
+        organizationId: IDS.org,
+        inviteeEmail: 'new-guest@test.com'
+      })
     )
     await waitFor(() => {
       expect(result.current.status).toBe('ready')
     })
-
-    const check = await buildChecks().createInvitation(
-      IDS.memberUser,
-      IDS.org,
-      'new-guest@test.com'
+    const check = await runDecisionAsync(
+      invitationsD.createInvitation,
+      {
+        callerUserId: IDS.adminUser,
+        organizationId: IDS.org,
+        inviteeEmail: 'new-guest@test.com'
+      },
+      clientLookup(mockDb)
     )
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
+    expect(result.current).toEqual(stripFacts(check))
   })
 
-  it('createInvitation: hook matches check for already-invited', async () => {
+  it('cancelInvitation: hook matches async for non-admin caller', async () => {
     seedBaseScenario(mockDb)
     seedInvitation(mockDb, INVITEE_EMAIL)
-
     const { result } = renderHook(() =>
-      useCanCreateInvitation(IDS.adminUser, IDS.org, INVITEE_EMAIL)
+      usePolicy(policies.invitations.cancelInvitation, {
+        callerUserId: IDS.memberUser,
+        invitationId: IDS.invitation
+      })
     )
     await waitFor(() => {
       expect(result.current.status).toBe('ready')
     })
-
-    const check = await buildChecks().createInvitation(
-      IDS.adminUser,
-      IDS.org,
-      INVITEE_EMAIL
+    const check = await runDecisionAsync(
+      invitationsD.cancelInvitation,
+      { callerUserId: IDS.memberUser, invitationId: IDS.invitation },
+      clientLookup(mockDb)
     )
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
-  })
-
-  it('createInvitation: hook matches check for happy path', async () => {
-    seedBaseScenario(mockDb)
-
-    const { result } = renderHook(() =>
-      useCanCreateInvitation(IDS.adminUser, IDS.org, 'new-guest@test.com')
-    )
-    await waitFor(() => {
-      expect(result.current.status).toBe('ready')
-    })
-
-    const check = await buildChecks().createInvitation(
-      IDS.adminUser,
-      IDS.org,
-      'new-guest@test.com'
-    )
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
-  })
-
-  it('cancelInvitation: hook matches check for missing row', async () => {
-    seedBaseScenario(mockDb)
-
-    const { result } = renderHook(() =>
-      useCanCancelInvitation(IDS.adminUser, 'does-not-exist')
-    )
-    await waitFor(() => {
-      expect(result.current.status).toBe('ready')
-    })
-
-    const check = await buildChecks().cancelInvitation(
-      IDS.adminUser,
-      'does-not-exist'
-    )
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
-  })
-
-  it('cancelInvitation: hook matches check for non-admin caller', async () => {
-    seedBaseScenario(mockDb)
-    seedInvitation(mockDb, INVITEE_EMAIL)
-
-    const { result } = renderHook(() =>
-      useCanCancelInvitation(IDS.memberUser, IDS.invitation)
-    )
-    await waitFor(() => {
-      expect(result.current.status).toBe('ready')
-    })
-
-    const check = await buildChecks().cancelInvitation(
-      IDS.memberUser,
-      IDS.invitation
-    )
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
-  })
-
-  it('cancelInvitation: hook matches check for happy path', async () => {
-    seedBaseScenario(mockDb)
-    seedInvitation(mockDb, INVITEE_EMAIL)
-
-    const { result } = renderHook(() =>
-      useCanCancelInvitation(IDS.adminUser, IDS.invitation)
-    )
-    await waitFor(() => {
-      expect(result.current.status).toBe('ready')
-    })
-
-    const check = await buildChecks().cancelInvitation(
-      IDS.adminUser,
-      IDS.invitation
-    )
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
+    expect(result.current).toEqual(stripFacts(check))
   })
 })

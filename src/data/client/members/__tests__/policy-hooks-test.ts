@@ -24,22 +24,10 @@ jest.mock('@/lib/powersync/database', () => ({
 
 jest.mock('@/lib/powersync', () => ({}))
 
-const { useCanRemoveMember } = require('../policy-hooks')
-
-const {
-  createClientMemberFactsProvider
-} = require('@/data/client/facts-providers')
-const { createClientAuthzProvider } = require('@/data/client/authz/provider')
-const { createAuthzChecks } = require('@/data/shared/authz')
-const { createMemberLifecycleChecks } = require('@/data/shared/members')
-
-function buildChecks() {
-  const authz = createAuthzChecks(createClientAuthzProvider(mockDb))
-  return createMemberLifecycleChecks(
-    createClientMemberFactsProvider(mockDb),
-    authz
-  )
-}
+const { policies, usePolicy } = require('@/data/client/use-policy')
+const { clientLookup } = require('@/data/client/registry')
+const { runDecisionAsync } = require('@/data/shared/facts/async-adapter')
+const membersD = require('@/data/shared/members/decisions')
 
 beforeAll(async () => {
   const testDb = await createTestDatabase()
@@ -56,24 +44,28 @@ afterAll(() => {
   closeDatabase(mockSqlite)
 })
 
-// ── useCanRemoveMember ──────────────────────────────────────────────────────
+function stripFacts(check: { ok: boolean; code?: string }) {
+  return check.ok
+    ? { status: 'ready', ok: true }
+    : { status: 'ready', ok: false, code: check.code }
+}
 
-describe('useCanRemoveMember', () => {
-  it('reports loading when inputs are missing', () => {
-    const { result } = renderHook(() => useCanRemoveMember(null, null))
+describe('usePolicy(members.removeMember)', () => {
+  it('reports loading when args are null', () => {
+    const { result } = renderHook(() =>
+      usePolicy(policies.members.removeMember, null)
+    )
     expect(result.current).toEqual({ status: 'loading' })
   })
 
-  // Regression lock: `removeMemberPolicy` short-circuits on `!member` before
-  // the authz lookup. The hook must match; otherwise it would wait on an
-  // authz subscription that gets a null orgId and stays loading forever.
   it('rejects with MEMBER_NOT_FOUND when the row is missing', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanRemoveMember(IDS.adminUser, 'does-not-exist')
+      usePolicy(policies.members.removeMember, {
+        callerUserId: IDS.adminUser,
+        memberId: 'does-not-exist'
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -85,11 +77,12 @@ describe('useCanRemoveMember', () => {
 
   it('rejects with ONLY_ADMIN_CAN_REMOVE_MEMBERS for a non-admin caller', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanRemoveMember(IDS.outsiderUser, IDS.membership)
+      usePolicy(policies.members.removeMember, {
+        callerUserId: IDS.outsiderUser,
+        memberId: IDS.membership
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -101,77 +94,58 @@ describe('useCanRemoveMember', () => {
 
   it('accepts the happy path for the admin', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanRemoveMember(IDS.adminUser, IDS.membership)
+      usePolicy(policies.members.removeMember, {
+        callerUserId: IDS.adminUser,
+        memberId: IDS.membership
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({ status: 'ready', ok: true })
     })
   })
 })
 
-// ── Parity: hook vs async MemberLifecycleChecks ─────────────────────────────
-// Guardrail against drift between the reactive SQL-to-facts mapping and the
-// async FactsProvider that the mutation path uses.
-
-describe('parity with MemberLifecycleChecks', () => {
-  it('removeMember: hook matches check for MEMBER_NOT_FOUND', async () => {
+// Parity: reactive `PolicyView` is the `ok/code` projection of the async
+// `CheckResult<Facts>`. Strip facts before comparing — `removeMember`
+// carries `member` + `authzOrg` on success, which the reactive view
+// deliberately drops.
+describe('parity with async members decisions', () => {
+  it('removeMember: hook matches async for MEMBER_NOT_FOUND', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanRemoveMember(IDS.adminUser, 'does-not-exist')
+      usePolicy(policies.members.removeMember, {
+        callerUserId: IDS.adminUser,
+        memberId: 'does-not-exist'
+      })
     )
     await waitFor(() => {
       expect(result.current.status).toBe('ready')
     })
-
-    const check = await buildChecks().removeMember(
-      IDS.adminUser,
-      'does-not-exist'
+    const check = await runDecisionAsync(
+      membersD.removeMember,
+      { callerUserId: IDS.adminUser, memberId: 'does-not-exist' },
+      clientLookup(mockDb)
     )
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
+    expect(result.current).toEqual(stripFacts(check))
   })
 
-  it('removeMember: hook matches check for non-admin caller', async () => {
+  it('removeMember: hook matches async for happy path (projected)', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanRemoveMember(IDS.outsiderUser, IDS.membership)
+      usePolicy(policies.members.removeMember, {
+        callerUserId: IDS.adminUser,
+        memberId: IDS.membership
+      })
     )
     await waitFor(() => {
       expect(result.current.status).toBe('ready')
     })
-
-    const check = await buildChecks().removeMember(
-      IDS.outsiderUser,
-      IDS.membership
+    const check = await runDecisionAsync(
+      membersD.removeMember,
+      { callerUserId: IDS.adminUser, memberId: IDS.membership },
+      clientLookup(mockDb)
     )
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
-  })
-
-  // The async check carries `member` + `adminUserId` on success so the
-  // mutation can drive the transfer-and-delete side effect. The hook
-  // projects that away (`PolicyView` is narrower), so compare the ok bit
-  // directly on this branch instead of spreading the full check result.
-  it('removeMember: hook matches check for happy path (projected)', async () => {
-    seedBaseScenario(mockDb)
-
-    const { result } = renderHook(() =>
-      useCanRemoveMember(IDS.adminUser, IDS.membership)
-    )
-    await waitFor(() => {
-      expect(result.current.status).toBe('ready')
-    })
-
-    const check = await buildChecks().removeMember(
-      IDS.adminUser,
-      IDS.membership
-    )
-
     expect(check.ok).toBe(true)
     expect(result.current).toEqual({ status: 'ready', ok: true })
   })

@@ -7,11 +7,7 @@ import { NativeTapOverlay } from '@/components/native-tap-overlay'
 import { SkiaProgressBar } from '@/components/skia-progress-bar'
 import type { Generator } from '@/data/client/db-schema'
 import { startSession, stopSession } from '@/data/client/mutations'
-import { isPolicyAllowed } from '@/data/client/policy-hooks-shared'
-import {
-  useCanStartSession,
-  useCanStopSession
-} from '@/data/client/sessions/policy-hooks'
+import { isPolicyAllowed, policies, usePolicy } from '@/data/client/use-policy'
 import { confirmRestingStart, runMutation } from '@/lib/alerts'
 import {
   GENERATOR_STATUS_KEYS,
@@ -287,10 +283,15 @@ export function HeroCard({ item, userId, isVisible }: HeroCardProps) {
   // without opening a query. The mutation path's `runMutation` stays as a
   // backstop for the race where local state lags a revoked assignment.
   const isRunning = status === 'running'
-  const canStart = useCanStartSession(userId, isRunning ? null : generator.id)
-  const canStop = useCanStopSession(
-    userId,
-    isRunning ? (openSession?.id ?? null) : null
+  const canStart = usePolicy(
+    policies.sessions.startSession,
+    userId && !isRunning ? { userId, generatorId: generator.id } : null
+  )
+  const canStop = usePolicy(
+    policies.sessions.stopSession,
+    userId && isRunning && openSession?.id
+      ? { userId, sessionId: openSession.id }
+      : null
   )
 
   const actionDisabled = !isPolicyAllowed(isRunning ? canStop : canStart)

@@ -12,11 +12,11 @@ export const handleGeneratorUserAssignments = defineTableHandler({
       const values = parsed as Insert<typeof generatorUserAssignments>
       const generatorId = values.generatorId as string
       const targetUserId = (values.userId as string | undefined) ?? userId
-      return checks.assignments.assignUserToGenerator(
-        userId,
+      return checks.assignments.assignUserToGenerator({
+        callerUserId: userId,
         generatorId,
         targetUserId
-      )
+      })
     },
     shield: { kind: 'alreadyExists', code: 'USER_ALREADY_ASSIGNED' },
     apply: async ({ db, id }, parsed) => {
@@ -39,11 +39,11 @@ export const handleGeneratorUserAssignments = defineTableHandler({
         columns: { generatorId: true, userId: true }
       })
       if (!assignment) return { ok: false, code: 'USER_NOT_ASSIGNED' } as const
-      return checks.assignments.unassignUserFromGenerator(
-        userId,
-        assignment.generatorId,
-        assignment.userId
-      )
+      return checks.assignments.unassignUserFromGenerator({
+        callerUserId: userId,
+        generatorId: assignment.generatorId,
+        targetUserId: assignment.userId
+      })
     },
     shield: { kind: 'notFound', code: 'USER_NOT_ASSIGNED' },
     apply: async ({ db, id }) => {

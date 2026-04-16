@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import type { z } from 'zod'
 
 import { generators, maintenanceTemplates } from '@/data/client/db-schema'
-import type { PolicyResult } from '@/data/shared/policy-result'
+import type { CheckFacade } from '@/data/shared/checks'
 import { fail } from '@/data/shared/result'
 import {
   insertGeneratorSchema,
@@ -24,7 +24,7 @@ export function createGeneratorMutations(ctx: MutationContext) {
     >(ctx, {
       parse: ([, , input]) => updateGeneratorSchema.safeParse(input),
       check: (c, [userId, generatorId]) =>
-        c.checks.generators.updateGenerator(userId, generatorId),
+        c.checks.generators.updateGenerator({ userId, generatorId }),
       apply: async ({ db, args: [, generatorId], parsed }) => {
         await db
           .update(generators)
@@ -40,7 +40,7 @@ export function createGeneratorMutations(ctx: MutationContext) {
         Omit<InsertMaintenanceTemplateInput, 'generatorId'>[]
       ],
       z.output<typeof insertGeneratorSchema>,
-      PolicyResult,
+      Awaited<ReturnType<CheckFacade['generators']['createGenerator']>>,
       z.output<typeof insertMaintenanceTemplateSchema>[]
     >(ctx, {
       parse: ([, input]) => insertGeneratorSchema.safeParse(input),
@@ -66,7 +66,10 @@ export function createGeneratorMutations(ctx: MutationContext) {
       },
 
       check: (c, [userId], parsed) =>
-        c.checks.generators.createGenerator(userId, parsed.organizationId),
+        c.checks.generators.createGenerator({
+          userId,
+          organizationId: parsed.organizationId
+        }),
 
       tx: true,
 
@@ -104,7 +107,7 @@ export function createGeneratorMutations(ctx: MutationContext) {
 
     deleteGenerator: defineMutation<[string, string]>(ctx, {
       check: (c, [userId, generatorId]) =>
-        c.checks.generators.deleteGenerator(userId, generatorId),
+        c.checks.generators.deleteGenerator({ userId, generatorId }),
       apply: async ({ db, args: [, generatorId] }) => {
         await db.delete(generators).where(eq(generators.id, generatorId))
       }

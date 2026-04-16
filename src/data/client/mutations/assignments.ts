@@ -8,12 +8,12 @@ import { defineMutation } from './pipeline'
 export function createAssignmentMutations(ctx: MutationContext) {
   return {
     assignUserToGenerator: defineMutation<[string, string, string]>(ctx, {
-      check: (c, [adminUserId, generatorId, targetUserId]) =>
-        c.checks.assignments.assignUserToGenerator(
-          adminUserId,
+      check: (c, [callerUserId, generatorId, targetUserId]) =>
+        c.checks.assignments.assignUserToGenerator({
+          callerUserId,
           generatorId,
           targetUserId
-        ),
+        }),
       apply: async ({ ctx: c, db, args: [, generatorId, targetUserId] }) => {
         await db.insert(generatorUserAssignments).values({
           id: c.newId(),
@@ -25,12 +25,12 @@ export function createAssignmentMutations(ctx: MutationContext) {
     }),
 
     unassignUserFromGenerator: defineMutation<[string, string, string]>(ctx, {
-      check: (c, [adminUserId, generatorId, targetUserId]) =>
-        c.checks.assignments.unassignUserFromGenerator(
-          adminUserId,
+      check: (c, [callerUserId, generatorId, targetUserId]) =>
+        c.checks.assignments.unassignUserFromGenerator({
+          callerUserId,
           generatorId,
           targetUserId
-        ),
+        }),
       apply: async ({ db, args: [, generatorId, targetUserId] }) => {
         await db
           .delete(generatorUserAssignments)

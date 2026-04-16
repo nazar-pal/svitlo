@@ -1,9 +1,4 @@
 import {
-  closeDatabase,
-  createTestDatabase,
-  resetDatabase
-} from '@/data/client/mutations/__tests__/test-db'
-import {
   IDS,
   seedActiveSession,
   seedAssignment,
@@ -14,6 +9,11 @@ import {
   seedMaintenanceTemplate,
   seedStoppedSession
 } from '@/data/client/mutations/__tests__/seed'
+import {
+  closeDatabase,
+  createTestDatabase,
+  resetDatabase
+} from '@/data/client/mutations/__tests__/test-db'
 
 let mockTestDb: Awaited<ReturnType<typeof createTestDatabase>>
 
@@ -27,20 +27,11 @@ jest.mock('@/lib/powersync/database', () => ({
   }
 }))
 
-import {
-  getAssignmentForUserAndGenerator,
-  getGeneratorById,
-  getGeneratorOrgId,
-  getGeneratorSessionById,
-  getInvitationById,
-  getInvitationByOrgAndEmail,
-  getMaintenanceRecordById,
-  getMaintenanceTemplateById,
-  getOpenSessionForGenerator,
-  getOrganizationAdminUserId,
-  getOrgMemberById,
-  getOrgMembershipById
-} from '../index'
+import { clientLookup } from '@/data/client/registry'
+
+function lookup(key: string, input: unknown) {
+  return clientLookup(mockTestDb.db)(key, input)
+}
 
 beforeEach(() => {
   resetDatabase(mockTestDb.sqlite)
@@ -50,185 +41,285 @@ beforeEach(() => {
 
 afterAll(() => closeDatabase(mockTestDb.sqlite))
 
-// ── generators ──────────────────────────────────────────────────────────────
+// These tests exercise the client fact registry the decision adapter
+// consumes. Each entry has a dialect-specific concern — SQLite `EXISTS`
+// returns 0/1, LEFT JOINs can produce null orgAdminUserId for orphan
+// generators, case-insensitive email comparison after the registry
+// normalises the input — so we run them against the real in-memory
+// SQLite db rather than a stub.
 
-describe('getGeneratorById', () => {
-  it('returns the generator row for an existing id', async () => {
-    const row = await getGeneratorById(mockTestDb.db, IDS.generator)
-    expect(row?.id).toBe(IDS.generator)
-    expect(row?.organizationId).toBe(IDS.org)
+// ── generator.* ─────────────────────────────────────────────────────────────
+
+describe('registry: generator.byId', () => {
+  it('returns the row for an existing id', async () => {
+    expect(await lookup('generator.byId', IDS.generator)).toEqual({
+      id: IDS.generator
+    })
   })
 
   it('returns null for a nonexistent id', async () => {
-    expect(await getGeneratorById(mockTestDb.db, 'nope')).toBeNull()
+    expect(await lookup('generator.byId', 'nope')).toBeNull()
   })
 })
 
-describe('getGeneratorOrgId', () => {
+describe('registry: generator.orgId', () => {
   it('returns the organizationId for an existing generator', async () => {
-    expect(await getGeneratorOrgId(mockTestDb.db, IDS.generator)).toBe(IDS.org)
+    expect(await lookup('generator.orgId', IDS.generator)).toBe(IDS.org)
   })
 
   it('returns null for a nonexistent generator', async () => {
-    expect(await getGeneratorOrgId(mockTestDb.db, 'nope')).toBeNull()
+    expect(await lookup('generator.orgId', 'nope')).toBeNull()
   })
 })
 
-describe('getGeneratorSessionById', () => {
-  it('returns an existing session', async () => {
+describe('registry: generator.exists', () => {
+  it('returns true for an existing row', async () => {
+    expect(await lookup('generator.exists', IDS.generator)).toBe(true)
+  })
+
+  it('returns false for a missing row', async () => {
+    expect(await lookup('generator.exists', 'nope')).toBe(false)
+  })
+})
+
+// ── session.* ───────────────────────────────────────────────────────────────
+
+describe('registry: session.byId', () => {
+  it('returns an existing session projection', async () => {
     seedActiveSession(mockTestDb.db)
-    const row = await getGeneratorSessionById(mockTestDb.db, IDS.session.active)
-    expect(row?.id).toBe(IDS.session.active)
+    expect(await lookup('session.byId', IDS.session.active)).toEqual({
+      generatorId: IDS.generator,
+      startedByUserId: IDS.adminUser,
+      isStopped: false
+    })
   })
 
   it('returns null for a nonexistent session', async () => {
-    expect(await getGeneratorSessionById(mockTestDb.db, 'nope')).toBeNull()
+    expect(await lookup('session.byId', 'nope')).toBeNull()
   })
 })
 
-describe('getOpenSessionForGenerator', () => {
-  it('returns the open session for a running generator', async () => {
+describe('registry: session.hasOpenForGenerator', () => {
+  it('returns true while an open session exists', async () => {
     seedActiveSession(mockTestDb.db)
-    const row = await getOpenSessionForGenerator(mockTestDb.db, IDS.generator)
-    expect(row?.id).toBe(IDS.session.active)
-    expect(row?.stoppedAt).toBeNull()
+    expect(await lookup('session.hasOpenForGenerator', IDS.generator)).toBe(
+      true
+    )
   })
 
-  it('returns null when only stopped sessions exist', async () => {
+  it('returns false when only stopped sessions exist', async () => {
     seedStoppedSession(mockTestDb.db)
-    expect(
-      await getOpenSessionForGenerator(mockTestDb.db, IDS.generator)
-    ).toBeNull()
-  })
-
-  it('returns null when no sessions exist', async () => {
-    expect(
-      await getOpenSessionForGenerator(mockTestDb.db, IDS.generator)
-    ).toBeNull()
+    expect(await lookup('session.hasOpenForGenerator', IDS.generator)).toBe(
+      false
+    )
   })
 })
 
-describe('getAssignmentForUserAndGenerator', () => {
-  it('returns the assignment when user is assigned', async () => {
+// ── authz.* ─────────────────────────────────────────────────────────────────
+
+describe('registry: authz.generator', () => {
+  it('coerces the EXISTS subquery to a real boolean (no assignment)', async () => {
+    expect(
+      await lookup('authz.generator', {
+        userId: IDS.memberUser,
+        generatorId: IDS.generator
+      })
+    ).toEqual({ orgAdminUserId: IDS.adminUser, hasAssignment: false })
+  })
+
+  it('coerces the EXISTS subquery to a real boolean (with assignment)', async () => {
     seedAssignment(mockTestDb.db)
-    const row = await getAssignmentForUserAndGenerator(
-      mockTestDb.db,
-      IDS.memberUser,
-      IDS.generator
-    )
-    expect(row?.userId).toBe(IDS.memberUser)
+    expect(
+      await lookup('authz.generator', {
+        userId: IDS.memberUser,
+        generatorId: IDS.generator
+      })
+    ).toEqual({ orgAdminUserId: IDS.adminUser, hasAssignment: true })
   })
 
-  it('returns null when user is not assigned', async () => {
+  it('returns null for a nonexistent generator', async () => {
     expect(
-      await getAssignmentForUserAndGenerator(
-        mockTestDb.db,
-        IDS.memberUser,
-        IDS.generator
-      )
+      await lookup('authz.generator', {
+        userId: IDS.memberUser,
+        generatorId: 'nope'
+      })
     ).toBeNull()
   })
 })
 
-// ── organizations ───────────────────────────────────────────────────────────
-
-describe('getOrganizationAdminUserId', () => {
-  it('returns the admin user id', async () => {
-    expect(await getOrganizationAdminUserId(mockTestDb.db, IDS.org)).toBe(
-      IDS.adminUser
-    )
+describe('registry: authz.org', () => {
+  it('returns the admin for an existing org', async () => {
+    expect(await lookup('authz.org', IDS.org)).toEqual({
+      adminUserId: IDS.adminUser
+    })
   })
 
-  it('returns null for a nonexistent org', async () => {
-    expect(await getOrganizationAdminUserId(mockTestDb.db, 'nope')).toBeNull()
+  it('returns null when the org does not exist', async () => {
+    expect(await lookup('authz.org', 'nope')).toBeNull()
   })
 })
 
-describe('getOrgMemberById', () => {
-  it('returns the membership row when user is a member', async () => {
-    const row = await getOrgMemberById(mockTestDb.db, IDS.memberUser, IDS.org)
-    expect(row?.userId).toBe(IDS.memberUser)
-    expect(row?.organizationId).toBe(IDS.org)
+// ── assignment.* ────────────────────────────────────────────────────────────
+
+describe('registry: assignment.hasForUserAndGenerator', () => {
+  it('returns true when the user is assigned', async () => {
+    seedAssignment(mockTestDb.db)
+    expect(
+      await lookup('assignment.hasForUserAndGenerator', {
+        userId: IDS.memberUser,
+        generatorId: IDS.generator
+      })
+    ).toBe(true)
   })
 
-  it('returns null when user is not a member', async () => {
+  it('returns false otherwise', async () => {
     expect(
-      await getOrgMemberById(mockTestDb.db, IDS.outsiderUser, IDS.org)
+      await lookup('assignment.hasForUserAndGenerator', {
+        userId: IDS.memberUser,
+        generatorId: IDS.generator
+      })
+    ).toBe(false)
+  })
+})
+
+// ── orgMembership.* ─────────────────────────────────────────────────────────
+
+describe('registry: orgMembership.byId', () => {
+  it('returns the row for an existing membership', async () => {
+    const row = await lookup('orgMembership.byId', IDS.membership)
+    expect(row).toEqual({
+      id: IDS.membership,
+      organizationId: IDS.org,
+      userId: IDS.memberUser
+    })
+  })
+
+  it('returns null for a missing id', async () => {
+    expect(await lookup('orgMembership.byId', 'nope')).toBeNull()
+  })
+})
+
+describe('registry: orgMembership.byUserAndOrg', () => {
+  it('returns the row when the user is a member', async () => {
+    const row = await lookup('orgMembership.byUserAndOrg', {
+      userId: IDS.memberUser,
+      organizationId: IDS.org
+    })
+    expect(row).toMatchObject({ userId: IDS.memberUser })
+  })
+
+  it('returns null otherwise', async () => {
+    expect(
+      await lookup('orgMembership.byUserAndOrg', {
+        userId: IDS.outsiderUser,
+        organizationId: IDS.org
+      })
     ).toBeNull()
   })
 })
 
-describe('getOrgMembershipById', () => {
-  it('returns the membership by its primary id', async () => {
-    const row = await getOrgMembershipById(mockTestDb.db, IDS.membership)
-    expect(row?.id).toBe(IDS.membership)
+describe('registry: orgMembership.hasForUserAndOrg', () => {
+  it('returns true for a matching row', async () => {
+    expect(
+      await lookup('orgMembership.hasForUserAndOrg', {
+        userId: IDS.memberUser,
+        organizationId: IDS.org
+      })
+    ).toBe(true)
   })
 
-  it('returns null for a nonexistent membership', async () => {
-    expect(await getOrgMembershipById(mockTestDb.db, 'nope')).toBeNull()
+  it('returns false otherwise', async () => {
+    expect(
+      await lookup('orgMembership.hasForUserAndOrg', {
+        userId: IDS.outsiderUser,
+        organizationId: IDS.org
+      })
+    ).toBe(false)
   })
 })
 
-describe('getInvitationById', () => {
+// ── organization.* ──────────────────────────────────────────────────────────
+
+describe('registry: organization.byId', () => {
+  it('returns the row for an existing org', async () => {
+    expect(await lookup('organization.byId', IDS.org)).toEqual({
+      id: IDS.org,
+      adminUserId: IDS.adminUser
+    })
+  })
+
+  it('returns null for a missing org', async () => {
+    expect(await lookup('organization.byId', 'nope')).toBeNull()
+  })
+})
+
+// ── invitation.* ────────────────────────────────────────────────────────────
+
+describe('registry: invitation.byId', () => {
   it('returns an existing invitation', async () => {
     seedInvitation(mockTestDb.db)
-    const row = await getInvitationById(mockTestDb.db, IDS.invitation)
-    expect(row?.id).toBe(IDS.invitation)
+    const row = await lookup('invitation.byId', IDS.invitation)
+    expect(row).toMatchObject({ organizationId: IDS.org })
   })
 
   it('returns null for a nonexistent invitation', async () => {
-    expect(await getInvitationById(mockTestDb.db, 'nope')).toBeNull()
+    expect(await lookup('invitation.byId', 'nope')).toBeNull()
   })
 })
 
-describe('getInvitationByOrgAndEmail', () => {
+describe('registry: invitation.byOrgAndEmail', () => {
   it('returns the invitation for a matching org + email', async () => {
     seedInvitation(mockTestDb.db, 'invitee@test.com')
-    const row = await getInvitationByOrgAndEmail(
-      mockTestDb.db,
-      IDS.org,
-      'invitee@test.com'
-    )
-    expect(row?.id).toBe(IDS.invitation)
+    const row = await lookup('invitation.byOrgAndEmail', {
+      organizationId: IDS.org,
+      inviteeEmail: 'invitee@test.com'
+    })
+    expect(row).toMatchObject({ inviteeEmail: 'invitee@test.com' })
+  })
+
+  it('normalises caller-supplied email to lowercase (case-insensitive)', async () => {
+    seedInvitation(mockTestDb.db, 'invitee@test.com')
+    const row = await lookup('invitation.byOrgAndEmail', {
+      organizationId: IDS.org,
+      inviteeEmail: '  INVITEE@Test.COM  '
+    })
+    expect(row).toMatchObject({ inviteeEmail: 'invitee@test.com' })
   })
 
   it('returns null when no invitation matches', async () => {
     seedInvitation(mockTestDb.db, 'invitee@test.com')
     expect(
-      await getInvitationByOrgAndEmail(
-        mockTestDb.db,
-        IDS.org,
-        'someone.else@test.com'
-      )
+      await lookup('invitation.byOrgAndEmail', {
+        organizationId: IDS.org,
+        inviteeEmail: 'someone.else@test.com'
+      })
     ).toBeNull()
   })
 })
 
-// ── maintenance ─────────────────────────────────────────────────────────────
+// ── maintenance* ────────────────────────────────────────────────────────────
 
-describe('getMaintenanceTemplateById', () => {
+describe('registry: maintenanceTemplate.byId', () => {
   it('returns an existing template', async () => {
     seedMaintenanceTemplate(mockTestDb.db)
-    const row = await getMaintenanceTemplateById(mockTestDb.db, IDS.template)
-    expect(row?.id).toBe(IDS.template)
-    expect(row?.generatorId).toBe(IDS.generator)
+    const row = await lookup('maintenanceTemplate.byId', IDS.template)
+    expect(row).toMatchObject({ generatorId: IDS.generator })
   })
 
-  it('returns null for a nonexistent template', async () => {
-    expect(await getMaintenanceTemplateById(mockTestDb.db, 'nope')).toBeNull()
+  it('returns null for a missing template', async () => {
+    expect(await lookup('maintenanceTemplate.byId', 'nope')).toBeNull()
   })
 })
 
-describe('getMaintenanceRecordById', () => {
+describe('registry: maintenanceRecord.byId', () => {
   it('returns an existing record', async () => {
     seedMaintenanceTemplate(mockTestDb.db)
     seedMaintenanceRecord(mockTestDb.db)
-    const row = await getMaintenanceRecordById(mockTestDb.db, IDS.record)
-    expect(row?.id).toBe(IDS.record)
-    expect(row?.generatorId).toBe(IDS.generator)
+    const row = await lookup('maintenanceRecord.byId', IDS.record)
+    expect(row).toMatchObject({ generatorId: IDS.generator })
   })
 
-  it('returns null for a nonexistent record', async () => {
-    expect(await getMaintenanceRecordById(mockTestDb.db, 'nope')).toBeNull()
+  it('returns null for a missing record', async () => {
+    expect(await lookup('maintenanceRecord.byId', 'nope')).toBeNull()
   })
 })

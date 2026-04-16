@@ -24,7 +24,8 @@ export function createMaintenanceMutations(ctx: MutationContext) {
     >(ctx, {
       parse: ([, input]) => insertMaintenanceTemplateSchema.safeParse(input),
       check: (c, [userId], parsed) =>
-        c.checks.maintenance.createTemplate(userId, {
+        c.checks.maintenance.createTemplate({
+          userId,
           generatorId: parsed.generatorId
         }),
       apply: async ({ ctx: c, db, parsed }) => {
@@ -48,10 +49,14 @@ export function createMaintenanceMutations(ctx: MutationContext) {
     >(ctx, {
       parse: ([, , input]) => updateMaintenanceTemplateSchema.safeParse(input),
       check: (c, [userId, templateId], parsed) =>
-        c.checks.maintenance.updateTemplate(userId, templateId, {
-          triggerType: parsed.triggerType,
-          triggerHoursInterval: parsed.triggerHoursInterval,
-          triggerCalendarDays: parsed.triggerCalendarDays
+        c.checks.maintenance.updateTemplate({
+          userId,
+          templateId,
+          update: {
+            triggerType: parsed.triggerType,
+            triggerHoursInterval: parsed.triggerHoursInterval,
+            triggerCalendarDays: parsed.triggerCalendarDays
+          }
         }),
       apply: async ({ db, args: [, templateId], parsed }) => {
         const { isOneTime, ...rest } = parsed
@@ -67,7 +72,7 @@ export function createMaintenanceMutations(ctx: MutationContext) {
 
     deleteMaintenanceTemplate: defineMutation<[string, string]>(ctx, {
       check: (c, [userId, templateId]) =>
-        c.checks.maintenance.deleteTemplate(userId, templateId),
+        c.checks.maintenance.deleteTemplate({ userId, templateId }),
       apply: async ({ db, args: [, templateId] }) => {
         await db
           .delete(maintenanceTemplates)
@@ -75,12 +80,13 @@ export function createMaintenanceMutations(ctx: MutationContext) {
       }
     }),
 
-    // No ownership check needed: PowerSync sync rules + client-side filtering
-    // ensure users only see activity for generators they can access (admin or
-    // assigned).
+    // Client gates on generator access only; the server handler layers an
+    // "admin or original recorder" rule on top as defence in depth. Local
+    // optimistic deletes by non-owners will reconcile with a sync-time
+    // rejection. See `handleMaintenanceRecords` for the server check.
     deleteMaintenanceRecord: defineMutation<[string, string]>(ctx, {
       check: (c, [userId, recordId]) =>
-        c.checks.maintenance.deleteRecord(userId, recordId),
+        c.checks.maintenance.deleteRecord({ userId, recordId }),
       apply: async ({ db, args: [, recordId] }) => {
         await db
           .delete(maintenanceRecords)
@@ -88,19 +94,20 @@ export function createMaintenanceMutations(ctx: MutationContext) {
       }
     }),
 
-    // No ownership check needed: PowerSync sync rules + client-side filtering
-    // ensure users only see activity for generators they can access (admin or
-    // assigned).
+    // Client gates on generator access only; the server handler layers an
+    // "admin or original recorder" rule on top as defence in depth. Local
+    // optimistic edits by non-owners will reconcile with a sync-time
+    // rejection. See `handleMaintenanceRecords` for the server check.
     updateMaintenanceRecord: defineMutation<
       [string, string, { performedAt: string; notes: string | null }]
     >(ctx, {
       check: (c, [userId, recordId, input]) =>
-        c.checks.maintenance.updateRecord(
+        c.checks.maintenance.updateRecord({
           userId,
           recordId,
-          { performedAt: input.performedAt },
-          c.now()
-        ),
+          performedAt: input.performedAt,
+          now: c.now()
+        }),
       apply: async ({ db, args: [, recordId, input] }) => {
         await db
           .update(maintenanceRecords)
@@ -118,7 +125,8 @@ export function createMaintenanceMutations(ctx: MutationContext) {
     >(ctx, {
       parse: ([, input]) => insertMaintenanceRecordSchema.safeParse(input),
       check: (c, [userId], parsed) =>
-        c.checks.maintenance.recordMaintenance(userId, {
+        c.checks.maintenance.recordMaintenance({
+          userId,
           generatorId: parsed.generatorId,
           templateId: parsed.templateId
         }),

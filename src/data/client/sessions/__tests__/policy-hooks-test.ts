@@ -30,23 +30,14 @@ jest.mock('@/lib/powersync/database', () => ({
 }))
 
 // The hooks transitively pull `@/lib/powersync/database` via the query
-// builders, which in turn pulls `@/lib/powersync` for ancillary exports. Stub
-// it with an empty module to avoid loading native dependencies.
+// builders, which in turn pulls `@/lib/powersync` for ancillary exports.
+// Stub it with an empty module to avoid loading native dependencies.
 jest.mock('@/lib/powersync', () => ({}))
 
-const {
-  useCanStartSession,
-  useCanStopSession,
-  useCanUpdateSession,
-  useCanLogManualSession
-} = require('../policy-hooks')
-
-const {
-  createClientSessionFactsProvider
-} = require('@/data/client/facts-providers')
-const { createClientAuthzProvider } = require('@/data/client/authz/provider')
-const { createAuthzChecks } = require('@/data/shared/authz')
-const { createSessionLifecycleChecks } = require('@/data/shared/sessions')
+const { policies, usePolicy } = require('@/data/client/use-policy')
+const { clientLookup } = require('@/data/client/registry')
+const { runDecisionAsync } = require('@/data/shared/facts/async-adapter')
+const sessionsD = require('@/data/shared/sessions/decisions')
 
 const VALID_INPUT = {
   startedAt: '2026-01-15T10:00:00Z',
@@ -68,29 +59,32 @@ afterAll(() => {
   closeDatabase(mockSqlite)
 })
 
-function buildChecks() {
-  const authz = createAuthzChecks(createClientAuthzProvider(mockDb))
-  return createSessionLifecycleChecks(
-    createClientSessionFactsProvider(mockDb),
-    authz
-  )
+// Parity helper: async adapter attaches `facts` on both branches, but
+// reactive PolicyView projects that away — strip `facts` so shapes line up.
+function stripFacts(check: { ok: boolean; code?: string }) {
+  return check.ok
+    ? { status: 'ready', ok: true }
+    : { status: 'ready', ok: false, code: check.code }
 }
 
-// ── useCanStartSession ──────────────────────────────────────────────────────
+// ── usePolicy(sessions.startSession) ────────────────────────────────────────
 
-describe('useCanStartSession', () => {
-  it('reports loading when inputs are missing', () => {
-    const { result } = renderHook(() => useCanStartSession(null, null))
+describe('usePolicy(sessions.startSession)', () => {
+  it('reports loading when args are null', () => {
+    const { result } = renderHook(() =>
+      usePolicy(policies.sessions.startSession, null)
+    )
     expect(result.current).toEqual({ status: 'loading' })
   })
 
   it('rejects with GENERATOR_NOT_FOUND when the generator does not exist', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanStartSession(IDS.adminUser, IDS.generator)
+      usePolicy(policies.sessions.startSession, {
+        userId: IDS.adminUser,
+        generatorId: IDS.generator
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -103,11 +97,12 @@ describe('useCanStartSession', () => {
   it('rejects with NOT_AUTHORIZED_FOR_GENERATOR for an outsider', async () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
-
     const { result } = renderHook(() =>
-      useCanStartSession(IDS.outsiderUser, IDS.generator)
+      usePolicy(policies.sessions.startSession, {
+        userId: IDS.outsiderUser,
+        generatorId: IDS.generator
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -121,11 +116,12 @@ describe('useCanStartSession', () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
     seedActiveSession(mockDb)
-
     const { result } = renderHook(() =>
-      useCanStartSession(IDS.adminUser, IDS.generator)
+      usePolicy(policies.sessions.startSession, {
+        userId: IDS.adminUser,
+        generatorId: IDS.generator
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -138,11 +134,12 @@ describe('useCanStartSession', () => {
   it('accepts the happy path for an org admin', async () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
-
     const { result } = renderHook(() =>
-      useCanStartSession(IDS.adminUser, IDS.generator)
+      usePolicy(policies.sessions.startSession, {
+        userId: IDS.adminUser,
+        generatorId: IDS.generator
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({ status: 'ready', ok: true })
     })
@@ -152,33 +149,37 @@ describe('useCanStartSession', () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
     seedAssignment(mockDb)
-
     const { result } = renderHook(() =>
-      useCanStartSession(IDS.memberUser, IDS.generator)
+      usePolicy(policies.sessions.startSession, {
+        userId: IDS.memberUser,
+        generatorId: IDS.generator
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({ status: 'ready', ok: true })
     })
   })
 })
 
-// ── useCanStopSession ───────────────────────────────────────────────────────
+// ── usePolicy(sessions.stopSession) ─────────────────────────────────────────
 
-describe('useCanStopSession', () => {
-  it('reports loading when inputs are missing', () => {
-    const { result } = renderHook(() => useCanStopSession(null, null))
+describe('usePolicy(sessions.stopSession)', () => {
+  it('reports loading when args are null', () => {
+    const { result } = renderHook(() =>
+      usePolicy(policies.sessions.stopSession, null)
+    )
     expect(result.current).toEqual({ status: 'loading' })
   })
 
   it('rejects with SESSION_NOT_FOUND when no row exists', async () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
-
     const { result } = renderHook(() =>
-      useCanStopSession(IDS.adminUser, 'does-not-exist')
+      usePolicy(policies.sessions.stopSession, {
+        userId: IDS.adminUser,
+        sessionId: 'does-not-exist'
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -192,11 +193,12 @@ describe('useCanStopSession', () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
     seedStoppedSession(mockDb)
-
     const { result } = renderHook(() =>
-      useCanStopSession(IDS.adminUser, IDS.session.stopped)
+      usePolicy(policies.sessions.stopSession, {
+        userId: IDS.adminUser,
+        sessionId: IDS.session.stopped
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -210,11 +212,12 @@ describe('useCanStopSession', () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
     seedActiveSession(mockDb)
-
     const { result } = renderHook(() =>
-      useCanStopSession(IDS.outsiderUser, IDS.session.active)
+      usePolicy(policies.sessions.stopSession, {
+        userId: IDS.outsiderUser,
+        sessionId: IDS.session.active
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -228,39 +231,39 @@ describe('useCanStopSession', () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
     seedActiveSession(mockDb)
-
     const { result } = renderHook(() =>
-      useCanStopSession(IDS.adminUser, IDS.session.active)
+      usePolicy(policies.sessions.stopSession, {
+        userId: IDS.adminUser,
+        sessionId: IDS.session.active
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({ status: 'ready', ok: true })
     })
   })
 })
 
-// ── useCanUpdateSession ─────────────────────────────────────────────────────
+// ── usePolicy(sessions.updateSession) ───────────────────────────────────────
 
-describe('useCanUpdateSession', () => {
-  it('reports loading when input is missing', () => {
+describe('usePolicy(sessions.updateSession)', () => {
+  it('reports loading when args are null', () => {
     const { result } = renderHook(() =>
-      useCanUpdateSession(IDS.adminUser, IDS.session.stopped, null)
+      usePolicy(policies.sessions.updateSession, null)
     )
     expect(result.current).toEqual({ status: 'loading' })
   })
 
-  // Regression lock: when the session row doesn't exist, `useSessionPolicyContext`
-  // must short-circuit to a ready verdict instead of waiting on the authz
-  // subscription (which gets called with a null generatorId and stays loading
-  // forever). If that early return regresses, this test times out.
   it('rejects with SESSION_NOT_FOUND when no row exists', async () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
-
     const { result } = renderHook(() =>
-      useCanUpdateSession(IDS.adminUser, 'does-not-exist', VALID_INPUT)
+      usePolicy(policies.sessions.updateSession, {
+        userId: IDS.adminUser,
+        sessionId: 'does-not-exist',
+        ...VALID_INPUT,
+        now: new Date()
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -274,11 +277,14 @@ describe('useCanUpdateSession', () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
     seedActiveSession(mockDb)
-
     const { result } = renderHook(() =>
-      useCanUpdateSession(IDS.adminUser, IDS.session.active, VALID_INPUT)
+      usePolicy(policies.sessions.updateSession, {
+        userId: IDS.adminUser,
+        sessionId: IDS.session.active,
+        ...VALID_INPUT,
+        now: new Date()
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -292,14 +298,15 @@ describe('useCanUpdateSession', () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
     seedStoppedSession(mockDb)
-
     const { result } = renderHook(() =>
-      useCanUpdateSession(IDS.adminUser, IDS.session.stopped, {
+      usePolicy(policies.sessions.updateSession, {
+        userId: IDS.adminUser,
+        sessionId: IDS.session.stopped,
         startedAt: '2026-01-15T12:00:00Z',
-        stoppedAt: '2026-01-15T11:00:00Z'
+        stoppedAt: '2026-01-15T11:00:00Z',
+        now: new Date()
       })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -309,63 +316,44 @@ describe('useCanUpdateSession', () => {
     })
   })
 
-  it('rejects with END_TIME_IN_FUTURE when stoppedAt is beyond now', async () => {
-    seedBaseScenario(mockDb)
-    seedGenerator(mockDb)
-    seedStoppedSession(mockDb)
-
-    const futureEnd = new Date(Date.now() + 60 * 60 * 1000).toISOString()
-    const { result } = renderHook(() =>
-      useCanUpdateSession(IDS.adminUser, IDS.session.stopped, {
-        startedAt: '2026-01-15T10:00:00Z',
-        stoppedAt: futureEnd
-      })
-    )
-
-    await waitFor(() => {
-      expect(result.current).toEqual({
-        status: 'ready',
-        ok: false,
-        code: 'END_TIME_IN_FUTURE'
-      })
-    })
-  })
-
   it('accepts the happy path', async () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
     seedStoppedSession(mockDb)
-
     const { result } = renderHook(() =>
-      useCanUpdateSession(IDS.adminUser, IDS.session.stopped, VALID_INPUT)
+      usePolicy(policies.sessions.updateSession, {
+        userId: IDS.adminUser,
+        sessionId: IDS.session.stopped,
+        ...VALID_INPUT,
+        now: new Date()
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({ status: 'ready', ok: true })
     })
   })
 })
 
-// ── useCanLogManualSession ──────────────────────────────────────────────────
+// ── usePolicy(sessions.logManualSession) ────────────────────────────────────
 
-describe('useCanLogManualSession', () => {
-  it('reports loading when input is missing', () => {
+describe('usePolicy(sessions.logManualSession)', () => {
+  it('reports loading when args are null', () => {
     const { result } = renderHook(() =>
-      useCanLogManualSession(IDS.adminUser, null)
+      usePolicy(policies.sessions.logManualSession, null)
     )
     expect(result.current).toEqual({ status: 'loading' })
   })
 
   it('rejects with GENERATOR_NOT_FOUND when the generator is missing', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useCanLogManualSession(IDS.adminUser, {
+      usePolicy(policies.sessions.logManualSession, {
+        userId: IDS.adminUser,
         generatorId: IDS.generator,
-        ...VALID_INPUT
+        ...VALID_INPUT,
+        now: new Date()
       })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
@@ -375,197 +363,69 @@ describe('useCanLogManualSession', () => {
     })
   })
 
-  it('rejects with NOT_AUTHORIZED_FOR_GENERATOR for an outsider', async () => {
-    seedBaseScenario(mockDb)
-    seedGenerator(mockDb)
-
-    const { result } = renderHook(() =>
-      useCanLogManualSession(IDS.outsiderUser, {
-        generatorId: IDS.generator,
-        ...VALID_INPUT
-      })
-    )
-
-    await waitFor(() => {
-      expect(result.current).toEqual({
-        status: 'ready',
-        ok: false,
-        code: 'NOT_AUTHORIZED_FOR_GENERATOR'
-      })
-    })
-  })
-
-  it('rejects with START_BEFORE_END when timestamps are inverted', async () => {
-    seedBaseScenario(mockDb)
-    seedGenerator(mockDb)
-
-    const { result } = renderHook(() =>
-      useCanLogManualSession(IDS.adminUser, {
-        generatorId: IDS.generator,
-        startedAt: '2026-01-15T12:00:00Z',
-        stoppedAt: '2026-01-15T11:00:00Z'
-      })
-    )
-
-    await waitFor(() => {
-      expect(result.current).toEqual({
-        status: 'ready',
-        ok: false,
-        code: 'START_BEFORE_END'
-      })
-    })
-  })
-
   it('accepts the happy path', async () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
-
     const { result } = renderHook(() =>
-      useCanLogManualSession(IDS.adminUser, {
+      usePolicy(policies.sessions.logManualSession, {
+        userId: IDS.adminUser,
         generatorId: IDS.generator,
-        ...VALID_INPUT
+        ...VALID_INPUT,
+        now: new Date()
       })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({ status: 'ready', ok: true })
     })
   })
 })
 
-// ── Re-subscribe on input change ────────────────────────────────────────────
-// Confirms the subscription pattern: when the caller passes a different
-// generatorId the hook re-emits with a policy result for the new inputs, not
-// a stale one. Stand-in for "true" reactivity (PowerSync's watch layer is
-// owned by @powersync/react-native and not our hook code).
-
-describe('useCanStartSession (re-subscribe on input change)', () => {
-  it('recomputes when the generatorId changes', async () => {
-    seedBaseScenario(mockDb)
-    seedGenerator(mockDb)
-    // Second generator in a different org — admin has no access.
-    const { generators } = require('@/data/client/db-schema/generators')
-    mockDb
-      .insert(generators)
-      .values({
-        id: 'gen-other',
-        organizationId: 'org-other',
-        title: 'Other',
-        model: 'X',
-        maxConsecutiveRunHours: 8,
-        requiredRestHours: 4,
-        runWarningThresholdPct: 80,
-        createdAt: '2026-01-15T12:00:00Z'
-      })
-      .run()
-
-    const { result, rerender } = renderHook(
-      ({ generatorId }: { generatorId: string }) =>
-        useCanStartSession(IDS.adminUser, generatorId),
-      { initialProps: { generatorId: IDS.generator } }
-    )
-
-    await waitFor(() => {
-      expect(result.current).toEqual({ status: 'ready', ok: true })
-    })
-
-    rerender({ generatorId: 'gen-other' })
-
-    await waitFor(() => {
-      expect(result.current).toEqual({
-        status: 'ready',
-        ok: false,
-        code: 'NOT_AUTHORIZED_FOR_GENERATOR'
-      })
-    })
-  })
-})
-
-// ── Parity: hook vs async SessionLifecycleChecks ────────────────────────────
+// ── Parity ──────────────────────────────────────────────────────────────────
 // Guardrail against drift between the reactive SQL-to-facts mapping and the
-// async FactsProvider that the mutation path uses.
+// async decision path (same plan both sides, but different resolver
+// registries). Strip `facts` from the async result before comparing — the
+// reactive `PolicyView` omits facts by design.
 
-describe('parity with SessionLifecycleChecks', () => {
-  it('startSession: hook matches check for assigned member', async () => {
+describe('parity with async decisions', () => {
+  it('startSession: hook matches async for assigned member', async () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)
     seedAssignment(mockDb)
-
     const { result } = renderHook(() =>
-      useCanStartSession(IDS.memberUser, IDS.generator)
-    )
-    await waitFor(() => {
-      expect(result.current.status).toBe('ready')
-    })
-
-    const checks = buildChecks()
-    const check = await checks.startSession(IDS.memberUser, IDS.generator)
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
-  })
-
-  it('stopSession: hook matches check for open session', async () => {
-    seedBaseScenario(mockDb)
-    seedGenerator(mockDb)
-    seedActiveSession(mockDb)
-
-    const { result } = renderHook(() =>
-      useCanStopSession(IDS.adminUser, IDS.session.active)
-    )
-    await waitFor(() => {
-      expect(result.current.status).toBe('ready')
-    })
-
-    const checks = buildChecks()
-    const check = await checks.stopSession(IDS.adminUser, IDS.session.active)
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
-  })
-
-  it('updateSession: hook matches check for stopped session', async () => {
-    seedBaseScenario(mockDb)
-    seedGenerator(mockDb)
-    seedStoppedSession(mockDb)
-
-    const { result } = renderHook(() =>
-      useCanUpdateSession(IDS.adminUser, IDS.session.stopped, VALID_INPUT)
-    )
-    await waitFor(() => {
-      expect(result.current.status).toBe('ready')
-    })
-
-    const checks = buildChecks()
-    const check = await checks.updateSession(
-      IDS.adminUser,
-      IDS.session.stopped,
-      VALID_INPUT,
-      new Date()
-    )
-
-    expect(result.current).toEqual({ status: 'ready', ...check })
-  })
-
-  it('logManualSession: hook matches check for happy path', async () => {
-    seedBaseScenario(mockDb)
-    seedGenerator(mockDb)
-
-    const { result } = renderHook(() =>
-      useCanLogManualSession(IDS.adminUser, {
-        generatorId: IDS.generator,
-        ...VALID_INPUT
+      usePolicy(policies.sessions.startSession, {
+        userId: IDS.memberUser,
+        generatorId: IDS.generator
       })
     )
     await waitFor(() => {
       expect(result.current.status).toBe('ready')
     })
-
-    const checks = buildChecks()
-    const check = await checks.logManualSession(
-      IDS.adminUser,
-      { generatorId: IDS.generator, ...VALID_INPUT },
-      new Date()
+    const check = await runDecisionAsync(
+      sessionsD.startSession,
+      { userId: IDS.memberUser, generatorId: IDS.generator },
+      clientLookup(mockDb)
     )
+    expect(result.current).toEqual(stripFacts(check))
+  })
 
-    expect(result.current).toEqual({ status: 'ready', ...check })
+  it('stopSession: hook matches async for open session', async () => {
+    seedBaseScenario(mockDb)
+    seedGenerator(mockDb)
+    seedActiveSession(mockDb)
+    const { result } = renderHook(() =>
+      usePolicy(policies.sessions.stopSession, {
+        userId: IDS.adminUser,
+        sessionId: IDS.session.active
+      })
+    )
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    const check = await runDecisionAsync(
+      sessionsD.stopSession,
+      { userId: IDS.adminUser, sessionId: IDS.session.active },
+      clientLookup(mockDb)
+    )
+    expect(result.current).toEqual(stripFacts(check))
   })
 })

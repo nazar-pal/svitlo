@@ -1,14 +1,12 @@
 import { desc, eq } from 'drizzle-orm'
 
-import {
-  maintenanceRecords,
-  maintenanceTemplates,
-  type MaintenanceRecord,
-  type MaintenanceTemplate
-} from '../db-schema'
-import { db, type ClientDb } from '@/lib/powersync/database'
+import { maintenanceRecords, maintenanceTemplates } from '../db-schema'
+import { db } from '@/lib/powersync/database'
 
-// ── Builder form (for useDrizzleQuery) ──────────────────────────────────────
+// Reactive Drizzle builders for `useDrizzleQuery` subscriptions. Row-form
+// awaited queries for the mutation path live in the fact registry
+// (`@/data/client/registry.ts`) so async + reactive share one source of
+// SQL per fact.
 
 export function getMaintenanceTemplate(id: string) {
   return db
@@ -55,30 +53,4 @@ export function getMaintenanceRecord(id: string) {
 
 export function getAllMaintenanceRecords() {
   return db.select().from(maintenanceRecords)
-}
-
-// ── Row form (awaited, for mutations) ───────────────────────────────────────
-
-export async function getMaintenanceTemplateById(
-  db: ClientDb,
-  id: string
-): Promise<MaintenanceTemplate | null> {
-  const [row] = await db
-    .select()
-    .from(maintenanceTemplates)
-    .where(eq(maintenanceTemplates.id, id))
-    .limit(1)
-  return row ?? null
-}
-
-export async function getMaintenanceRecordById(
-  db: ClientDb,
-  id: string
-): Promise<MaintenanceRecord | null> {
-  const [row] = await db
-    .select()
-    .from(maintenanceRecords)
-    .where(eq(maintenanceRecords.id, id))
-    .limit(1)
-  return row ?? null
 }

@@ -24,7 +24,7 @@ jest.mock('@/lib/powersync/database', () => ({
 
 jest.mock('@/lib/powersync', () => ({}))
 
-const { useOrgAuthzFacts } = require('../policy-hooks')
+const { policies, usePolicy } = require('@/data/client/use-policy')
 
 beforeAll(async () => {
   const testDb = await createTestDatabase()
@@ -41,59 +41,58 @@ afterAll(() => {
   closeDatabase(mockSqlite)
 })
 
-// ── useOrgAuthzFacts ────────────────────────────────────────────────────────
-
-describe('useOrgAuthzFacts', () => {
-  it('reports loading when inputs are missing', () => {
-    const { result } = renderHook(() => useOrgAuthzFacts(null, null))
+describe('usePolicy(organizations.renameOrganization)', () => {
+  it('reports loading when args are null', () => {
+    const { result } = renderHook(() =>
+      usePolicy(policies.organizations.renameOrganization, null)
+    )
     expect(result.current).toEqual({ status: 'loading' })
   })
 
-  it('resolves with org: null when the organization does not exist', async () => {
+  it('rejects with ORGANIZATION_NOT_FOUND when the org does not exist', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useOrgAuthzFacts(IDS.adminUser, 'does-not-exist')
+      usePolicy(policies.organizations.renameOrganization, {
+        callerUserId: IDS.adminUser,
+        organizationId: 'does-not-exist'
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
-        org: null,
-        isCallerOrgAdmin: false
+        ok: false,
+        code: 'ORGANIZATION_NOT_FOUND'
       })
     })
   })
 
-  it('returns isCallerOrgAdmin: true for the org admin', async () => {
+  it('rejects with ONLY_ADMIN_CAN_RENAME_ORG for a non-admin caller', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useOrgAuthzFacts(IDS.adminUser, IDS.org)
+      usePolicy(policies.organizations.renameOrganization, {
+        callerUserId: IDS.memberUser,
+        organizationId: IDS.org
+      })
     )
-
     await waitFor(() => {
       expect(result.current).toEqual({
         status: 'ready',
-        org: { id: IDS.org, adminUserId: IDS.adminUser },
-        isCallerOrgAdmin: true
+        ok: false,
+        code: 'ONLY_ADMIN_CAN_RENAME_ORG'
       })
     })
   })
 
-  it('returns isCallerOrgAdmin: false for a non-admin member', async () => {
+  it('accepts the happy path for the admin', async () => {
     seedBaseScenario(mockDb)
-
     const { result } = renderHook(() =>
-      useOrgAuthzFacts(IDS.memberUser, IDS.org)
-    )
-
-    await waitFor(() => {
-      expect(result.current).toEqual({
-        status: 'ready',
-        org: { id: IDS.org, adminUserId: IDS.adminUser },
-        isCallerOrgAdmin: false
+      usePolicy(policies.organizations.renameOrganization, {
+        callerUserId: IDS.adminUser,
+        organizationId: IDS.org
       })
+    )
+    await waitFor(() => {
+      expect(result.current).toEqual({ status: 'ready', ok: true })
     })
   })
 })

@@ -26,7 +26,10 @@ export const handleOrganizations: TableHandler = async ctx => {
 
   if (op === 'update') {
     const shielded = replayShieldNotFound(
-      await checks.renameOrganization(userId, id),
+      await checks.renameOrganization({
+        callerUserId: userId,
+        organizationId: id
+      }),
       'ORGANIZATION_NOT_FOUND'
     )
     if (shielded.status === 'consume') return shielded.result
@@ -46,7 +49,10 @@ export const handleOrganizations: TableHandler = async ctx => {
 
   if (op === 'delete') {
     const shielded = replayShieldNotFound(
-      await checks.deleteOrganization(userId, id),
+      await checks.deleteOrganization({
+        callerUserId: userId,
+        organizationId: id
+      }),
       'ORGANIZATION_NOT_FOUND'
     )
     if (shielded.status === 'consume') return shielded.result

@@ -7,15 +7,17 @@ import {
 } from '@/data/client/db-schema'
 import {
   transferAssignmentsAndRemoveMember,
-  type LeaveOrganizationResult,
-  type MemberWritePort,
-  type RemoveMemberResult
+  type MemberRef,
+  type MemberWritePort
 } from '@/data/shared/members'
-
 import type { ClientDb } from '@/lib/powersync/database'
 
 import type { MutationContext } from './context'
 import { defineMutation } from './pipeline'
+
+type MemberLifecycleCheck =
+  | { ok: true; member: MemberRef; adminUserId: string; facts: unknown }
+  | { ok: false; code: string }
 
 function createClientMemberWritePort(
   tx: ClientDb,
@@ -86,10 +88,10 @@ export function createMemberMutations(ctx: MutationContext) {
     removeMember: defineMutation<
       [string, string],
       undefined,
-      RemoveMemberResult
+      MemberLifecycleCheck
     >(ctx, {
-      check: (c, [adminUserId, memberId]) =>
-        c.checks.members.removeMember(adminUserId, memberId),
+      check: (c, [callerUserId, memberId]) =>
+        c.checks.members.removeMember({ callerUserId, memberId }),
       tx: true,
       apply: async ({ ctx: c, db, checkOk }) => {
         await transferAssignmentsAndRemoveMember(
@@ -106,10 +108,10 @@ export function createMemberMutations(ctx: MutationContext) {
     leaveOrganization: defineMutation<
       [string, string],
       undefined,
-      LeaveOrganizationResult
+      MemberLifecycleCheck
     >(ctx, {
-      check: (c, [userId, orgId]) =>
-        c.checks.members.leaveOrganization(userId, orgId),
+      check: (c, [userId, organizationId]) =>
+        c.checks.members.leaveOrganization({ userId, organizationId }),
       tx: true,
       apply: async ({ ctx: c, db, checkOk }) => {
         await transferAssignmentsAndRemoveMember(
