@@ -5,27 +5,7 @@ import { generateDrizzleJson } from 'drizzle-kit/api'
 import * as clientSchema from '@/data/client/db-schema'
 import * as serverSchema from '@/data/server/db-schema'
 
-interface SnapshotUniqueConstraint {
-  name: string
-  columns: string[]
-}
-
-interface SnapshotIndexColumn {
-  expression: string
-}
-
-interface SnapshotIndex {
-  name: string
-  columns: SnapshotIndexColumn[]
-  isUnique: boolean
-  where?: string
-}
-
-interface SnapshotTable {
-  name: string
-  uniqueConstraints?: Record<string, SnapshotUniqueConstraint>
-  indexes?: Record<string, SnapshotIndex>
-}
+import type { SnapshotTable } from './drizzle-snapshot-types'
 
 const clientTableNames = new Set<string>(
   Object.values(clientSchema)

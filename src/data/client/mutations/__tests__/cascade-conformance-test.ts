@@ -7,18 +7,7 @@ import * as serverSchema from '@/data/server/db-schema'
 
 import { CASCADE_EDGES } from '../cascade-edges.generated'
 
-interface SnapshotForeignKey {
-  tableFrom: string
-  tableTo: string
-  columnsFrom: string[]
-  columnsTo: string[]
-  onDelete: string
-}
-
-interface SnapshotTable {
-  name: string
-  foreignKeys?: Record<string, SnapshotForeignKey>
-}
+import type { SnapshotTable } from './drizzle-snapshot-types'
 
 const clientTableNames = new Set<string>(
   Object.values(clientSchema)
