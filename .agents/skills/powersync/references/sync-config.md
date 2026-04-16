@@ -7,9 +7,20 @@ metadata:
 
 # Sync Config
 
+> **Load this when** writing or modifying sync configuration — Sync Streams (new) or Sync Rules (legacy). Required for every PowerSync project.
+
+## Table of Contents
+**Sync Streams (new):** [Requirements](#requirements) · [File Format](#sync-configyaml-file-format) · [Structure](#structure) · [Stream Options](#stream-options) · [Common Patterns](#common-patterns) · [Query Parameters](#query-parameters) · [CTEs](#common-table-expressions-ctes) · [Migration](#migration) · [Client Usage](#client-usage) · [Advanced Topics](#advanced-topics)
+**Sync Rules (legacy):** [Structure](#structure-1) · [Parameter Queries](#parameter-queries) · [Data Queries](#data-queries) · [Supported SQL](#supported-sql-features) · [Common Patterns](#common-patterns-1)
+
 Expert guidance on Sync Config. Sync config is divided into two sections:
 1. Sync Streams (new, default) - The latest implementation of Sync Config. New apps should use Sync Streams by default. Prioritize Sync Streams above Sync Rules.
 2. Sync Rules (legacy) - The first implementation of Sync Config. New apps should not use Sync Rules, prioritize Sync Streams over Sync Rules.
+
+Critical warnings for fast setup:
+
+- `sync-config.yaml` must begin with a top-level `config:` block containing `edition: 3`.
+- If the app is stuck on `Syncing...`, first assume sync config was never deployed or backend setup is incomplete.
 
 # Sync Streams
 
@@ -49,6 +60,18 @@ streams:
   my_data:
     auto_subscribe: true
     query: SELECT * FROM my_table WHERE user_id = auth.user_id()
+```
+
+### Minimal Example
+
+```yaml
+config:
+  edition: 3
+
+streams:
+  posts:
+    auto_subscribe: true
+    query: SELECT * FROM posts WHERE user_id = auth.user_id()
 ```
 
 ## Structure
