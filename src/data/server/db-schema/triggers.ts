@@ -8,7 +8,10 @@ import { join } from 'node:path'
 // hand-edit trigger SQL here — edit (or add) the migration file. Any file
 // matching `*_custom_*trigger*.sql` in that directory is picked up
 // automatically, so a second custom trigger cannot silently skip PGlite
-// tests. The drift guard in triggers-test.ts pins this invariant.
+// tests. The behavioural test 'trigger: validate_org_admin_immutable' in
+// powersync/__tests__/handlers/organizations-integration-test.ts pins this:
+// if the loader returns nothing, the trigger is never applied and that test
+// fails.
 //
 // This file is only imported by test-server-db.ts (Node test env), so
 // `fs` + `__dirname` are safe.
