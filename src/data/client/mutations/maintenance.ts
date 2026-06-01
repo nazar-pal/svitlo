@@ -13,6 +13,7 @@ import {
   type UpdateMaintenanceTemplateInput
 } from '@/data/shared/validation'
 
+import { cascadeDelete } from './cascade'
 import type { MutationContext } from './context'
 import { defineMutation } from './pipeline'
 
@@ -73,10 +74,14 @@ export function createMaintenanceMutations(ctx: MutationContext) {
     deleteMaintenanceTemplate: defineMutation<[string, string]>(ctx, {
       check: (c, [userId, templateId]) =>
         c.checks.maintenance.deleteTemplate({ userId, templateId }),
+      tx: true,
       apply: async ({ db, args: [, templateId] }) => {
-        await db
-          .delete(maintenanceTemplates)
-          .where(eq(maintenanceTemplates.id, templateId))
+        await cascadeDelete(
+          db,
+          maintenanceTemplates,
+          maintenanceTemplates.id,
+          templateId
+        )
       }
     }),
 
