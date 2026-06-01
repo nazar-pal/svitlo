@@ -8,7 +8,8 @@ import {
   computeAllMaintenanceItems,
   computeMaintenanceDue,
   computeNextMaintenance,
-  formatMaintenanceLabel
+  formatMaintenanceLabel,
+  formatScheduleLabel
 } from '../due'
 
 // ── Fake timers ────────────────────────────────────────────────────────────
@@ -443,5 +444,83 @@ describe('formatMaintenanceLabel', () => {
     expect(
       formatMaintenanceLabel({ hoursRemaining: null, daysRemaining: null })
     ).toBe('')
+  })
+})
+
+// ── formatScheduleLabel ────────────────────────────────────────────────────
+
+describe('formatScheduleLabel', () => {
+  describe('recurring', () => {
+    it('formats an hours trigger', () => {
+      expect(
+        formatScheduleLabel(
+          template({ triggerType: 'hours', triggerHoursInterval: 100 })
+        )
+      ).toBe('Every 100h')
+    })
+
+    it('formats a calendar trigger', () => {
+      expect(
+        formatScheduleLabel(
+          template({
+            triggerType: 'calendar',
+            triggerHoursInterval: null,
+            triggerCalendarDays: 30
+          })
+        )
+      ).toBe('Every 30 days')
+    })
+
+    it('formats a whichever_first trigger', () => {
+      expect(
+        formatScheduleLabel(
+          template({
+            triggerType: 'whichever_first',
+            triggerHoursInterval: 100,
+            triggerCalendarDays: 30
+          })
+        )
+      ).toBe('100h or 30 days')
+    })
+  })
+
+  describe('one-time', () => {
+    it('formats an hours trigger', () => {
+      expect(
+        formatScheduleLabel(
+          template({
+            isOneTime: 1,
+            triggerType: 'hours',
+            triggerHoursInterval: 100
+          })
+        )
+      ).toBe('Once at 100h')
+    })
+
+    it('formats a calendar trigger', () => {
+      expect(
+        formatScheduleLabel(
+          template({
+            isOneTime: 1,
+            triggerType: 'calendar',
+            triggerHoursInterval: null,
+            triggerCalendarDays: 30
+          })
+        )
+      ).toBe('Once at 30 days')
+    })
+
+    it('formats a whichever_first trigger', () => {
+      expect(
+        formatScheduleLabel(
+          template({
+            isOneTime: 1,
+            triggerType: 'whichever_first',
+            triggerHoursInterval: 100,
+            triggerCalendarDays: 30
+          })
+        )
+      ).toBe('Once at 100h or 30 days')
+    })
   })
 })

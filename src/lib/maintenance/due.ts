@@ -274,3 +274,37 @@ export function formatMaintenanceLabel(
     return t('due.inDays', { days: String(Math.round(daysRemaining)) })
   return ''
 }
+
+/**
+ * Render a maintenance template's recurrence schedule (e.g. "Every 100h",
+ * "Once at 30 days") from its one-time flag and trigger type.
+ */
+export function formatScheduleLabel(
+  template: Pick<
+    MaintenanceTemplate,
+    'isOneTime' | 'triggerType' | 'triggerHoursInterval' | 'triggerCalendarDays'
+  >
+): string {
+  const hours = String(template.triggerHoursInterval)
+  const days = String(template.triggerCalendarDays)
+  const oneTime = !!template.isOneTime
+
+  switch (template.triggerType) {
+    case 'hours':
+      return oneTime
+        ? t('maintenanceTemplate.onceAtHours', { hours })
+        : t('maintenanceTemplate.everyHours', { hours })
+    case 'calendar':
+      return oneTime
+        ? t('maintenanceTemplate.onceAtDays', { days })
+        : t('maintenanceTemplate.everyDays', { days })
+    case 'whichever_first':
+      return oneTime
+        ? t('maintenanceTemplate.onceAtBoth', { hours, days })
+        : t('maintenanceTemplate.everyBoth', { hours, days })
+    default:
+      throw new Error(
+        `unhandled trigger type: ${template.triggerType satisfies never}`
+      )
+  }
+}
