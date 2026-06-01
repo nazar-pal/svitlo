@@ -48,6 +48,31 @@ describe('useForm', () => {
       expect(result.current.isSubmitting).toBe(false)
     })
 
+    it('awaits an async onSuccess before submit resolves', async () => {
+      const order: string[] = []
+      const mutate = jest.fn().mockResolvedValue(ok)
+      const onSuccess = jest.fn().mockImplementation(async () => {
+        await Promise.resolve()
+        order.push('onSuccess')
+      })
+      const { result } = renderHook(() =>
+        useForm({
+          initial: { name: 'Alice' },
+          build: values => ({ ok: true, data: values }),
+          mutate,
+          onSuccess
+        })
+      )
+
+      await act(async () => {
+        await result.current.submit()
+        order.push('after-submit')
+      })
+
+      expect(order).toEqual(['onSuccess', 'after-submit'])
+      expect(result.current.isSubmitting).toBe(false)
+    })
+
     it('exposes form state via the form handle', () => {
       const { result } = renderHook(() =>
         useForm({

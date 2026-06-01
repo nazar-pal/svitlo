@@ -30,7 +30,7 @@ interface UseFormOptions<TValues extends Record<string, unknown>, TInput> {
   build: (values: TValues) => BuildResult<TInput> | null
   mutate: (input: TInput) => Promise<MutationResult>
   /** Called after a successful mutation, or when shortCircuit returns true. */
-  onSuccess?: () => void
+  onSuccess?: () => void | Promise<void>
   /**
    * Called before build/mutate. Return true to skip them and call onSuccess
    * directly (e.g., when the form isn't dirty).
@@ -63,7 +63,7 @@ export function useForm<TValues extends Record<string, unknown>, TInput>(
   async function submit() {
     if (inFlightRef.current) return
     if (options.shortCircuit?.(form)) {
-      options.onSuccess?.()
+      await options.onSuccess?.()
       return
     }
 
@@ -88,7 +88,7 @@ export function useForm<TValues extends Record<string, unknown>, TInput>(
         return
       }
       notifySuccess()
-      options.onSuccess?.()
+      await options.onSuccess?.()
     } finally {
       inFlightRef.current = false
       setIsSubmitting(false)
