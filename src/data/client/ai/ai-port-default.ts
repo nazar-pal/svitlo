@@ -33,9 +33,6 @@ export function defaultAIPort(): AIPort {
         ])
       })
     },
-    now() {
-      return Date.now()
-    },
     sleep(ms, signal) {
       return new Promise<void>((resolve, reject) => {
         const id = setTimeout(resolve, ms)

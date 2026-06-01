@@ -39,7 +39,6 @@ export interface AIPort {
   ): Promise<SuggestionPlan>
   alertPrompt(copy: AlertPromptCopy): Promise<boolean>
   alertError(copy: AlertErrorCopy): Promise<void>
-  now(): number
   sleep(ms: number, signal: AbortSignal): Promise<void>
 }
 
