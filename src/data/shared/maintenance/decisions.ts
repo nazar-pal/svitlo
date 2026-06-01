@@ -243,7 +243,7 @@ export interface DeleteRecordArgs {
   recordId: string
 }
 
-export interface DeleteRecordFacts {
+interface DeleteRecordFacts {
   record: RecordRef | null
   authzGenerator: GeneratorAuthzFact
 }

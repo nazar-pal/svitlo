@@ -7,7 +7,6 @@ import { FormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import {
   assignUserToGenerator,
-  deleteGenerator,
   unassignUserFromGenerator,
   updateGenerator
 } from '@/data/client/mutations'
@@ -19,7 +18,11 @@ import {
   getOrgMembers
 } from '@/data/client/queries'
 import { updateGeneratorSchema } from '@/data/shared/validation'
-import { confirmDestructive, runMutation } from '@/lib/alerts'
+import {
+  confirmDeleteGenerator,
+  confirmDestructive,
+  runMutation
+} from '@/lib/alerts'
 import { useAuthedEntity } from '@/lib/hooks/use-authed-entity'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
@@ -83,13 +86,8 @@ function SettingsForm({ userId, generator }: SettingsFormProps) {
   const resolveUserName = (uid: string) => getUserName(users, uid)
 
   function handleDelete() {
-    confirmDestructive(
-      t('generator.deleteGenerator'),
-      t('generator.deleteGeneratorConfirm', { title: generator.title }),
-      {
-        mutation: () => deleteGenerator(userId, generatorId),
-        onSuccess: () => router.dismissAll()
-      }
+    confirmDeleteGenerator(userId, generatorId, generator.title, () =>
+      router.dismissAll()
     )
   }
 

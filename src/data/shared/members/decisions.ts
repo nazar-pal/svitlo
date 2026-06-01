@@ -17,7 +17,7 @@ export interface RemoveMemberArgs {
   memberId: string
 }
 
-export interface RemoveMemberFacts {
+interface RemoveMemberFacts {
   member: MemberRef | null
   authzOrg: OrgAuthzFact
 }
@@ -59,7 +59,7 @@ export interface LeaveOrganizationArgs {
   organizationId: string
 }
 
-export interface LeaveOrganizationFacts {
+interface LeaveOrganizationFacts {
   authzOrg: OrgAuthzFact
   member: MemberRef | null
 }

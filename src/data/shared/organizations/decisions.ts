@@ -54,7 +54,7 @@ export interface DeleteOrganizationArgs {
   organizationId: string
 }
 
-export interface DeleteOrganizationFacts {
+interface DeleteOrganizationFacts {
   org: OrganizationRef | null
 }
 

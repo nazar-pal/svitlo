@@ -11,8 +11,7 @@ import { scheduleOnRN } from 'react-native-worklets'
 
 import { storage } from '@/lib/storage'
 import { EmptyState } from '@/components/empty-state'
-import { deleteGenerator } from '@/data/client/mutations'
-import { confirmDestructive } from '@/lib/alerts'
+import { confirmDeleteGenerator } from '@/lib/alerts'
 import { impactLight } from '@/lib/haptics'
 import { useTranslation } from '@/lib/i18n'
 import {
@@ -211,13 +210,7 @@ export default function HomeScreen() {
                       role="destructive"
                       onPress={() => {
                         const gen = carouselItems[safeIndex]!.generator
-                        confirmDestructive(
-                          t('generator.deleteGenerator'),
-                          t('generator.deleteGeneratorConfirm', {
-                            title: gen.title
-                          }),
-                          { mutation: () => deleteGenerator(userId, gen.id) }
-                        )
+                        confirmDeleteGenerator(userId, gen.id, gen.title)
                       }}
                     />
                   </SwiftMenu>

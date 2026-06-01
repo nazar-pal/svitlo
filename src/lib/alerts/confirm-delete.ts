@@ -1,4 +1,5 @@
 import {
+  deleteGenerator,
   deleteMaintenanceRecord,
   deleteMaintenanceTemplate,
   deleteSession
@@ -8,9 +9,13 @@ import { t } from '@/lib/i18n'
 import { confirmDestructive } from './confirm-destructive'
 
 export function confirmDeleteSession(userId: string, sessionId: string) {
-  confirmDestructive(t('generator.deleteRun'), t('generator.deleteRunConfirm'), {
-    mutation: () => deleteSession(userId, sessionId)
-  })
+  confirmDestructive(
+    t('generator.deleteRun'),
+    t('generator.deleteRunConfirm'),
+    {
+      mutation: () => deleteSession(userId, sessionId)
+    }
+  )
 }
 
 export function confirmDeleteRecord(userId: string, recordId: string) {
@@ -31,6 +36,22 @@ export function confirmDeleteTemplate(
     t('maintenanceTemplate.deleteTaskConfirm'),
     {
       mutation: () => deleteMaintenanceTemplate(userId, templateId),
+      onSuccess: onDeleted
+    }
+  )
+}
+
+export function confirmDeleteGenerator(
+  userId: string,
+  generatorId: string,
+  title: string,
+  onDeleted?: () => void
+) {
+  confirmDestructive(
+    t('generator.deleteGenerator'),
+    t('generator.deleteGeneratorConfirm', { title }),
+    {
+      mutation: () => deleteGenerator(userId, generatorId),
       onSuccess: onDeleted
     }
   )

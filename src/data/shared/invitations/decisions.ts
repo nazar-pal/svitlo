@@ -67,7 +67,7 @@ export interface AcceptInvitationArgs {
   invitationId: string
 }
 
-export interface AcceptInvitationFacts {
+interface AcceptInvitationFacts {
   invitation: InvitationRef | null
   alreadyMember: boolean
 }

@@ -29,7 +29,7 @@ interface AssignUserToGeneratorFacts {
   alreadyAssigned: boolean
 }
 
-const assignPlan = factPlanFor<
+const assignUserToGeneratorPlan = factPlanFor<
   AssignUserToGeneratorArgs,
   AssignUserToGeneratorFacts
 >()
@@ -41,9 +41,13 @@ export const assignUserToGenerator = defineDecision<
 >({
   id: 'assignments.assignUserToGenerator',
   plan: [
-    assignPlan('orgId', 'generator.orgId', a => a.generatorId),
-    assignPlan('authzOrg', 'authz.org', (_a, f) => f.orgId ?? null),
-    assignPlan(
+    assignUserToGeneratorPlan('orgId', 'generator.orgId', a => a.generatorId),
+    assignUserToGeneratorPlan(
+      'authzOrg',
+      'authz.org',
+      (_a, f) => f.orgId ?? null
+    ),
+    assignUserToGeneratorPlan(
       'targetIsOrgMember',
       'orgMembership.hasForUserAndOrg',
       // Admin-self case: skip the membership lookup — the rule below ignores
@@ -53,7 +57,7 @@ export const assignUserToGenerator = defineDecision<
           ? null
           : { userId: a.targetUserId, organizationId: f.orgId }
     ),
-    assignPlan(
+    assignUserToGeneratorPlan(
       'alreadyAssigned',
       'assignment.hasForUserAndGenerator',
       (a, f) =>
@@ -92,7 +96,7 @@ interface UnassignUserFromGeneratorFacts {
   assignmentExists: boolean
 }
 
-const unassignPlan = factPlanFor<
+const unassignUserFromGeneratorPlan = factPlanFor<
   UnassignUserFromGeneratorArgs,
   UnassignUserFromGeneratorFacts
 >()
@@ -104,9 +108,17 @@ export const unassignUserFromGenerator = defineDecision<
 >({
   id: 'assignments.unassignUserFromGenerator',
   plan: [
-    unassignPlan('orgId', 'generator.orgId', a => a.generatorId),
-    unassignPlan('authzOrg', 'authz.org', (_a, f) => f.orgId ?? null),
-    unassignPlan(
+    unassignUserFromGeneratorPlan(
+      'orgId',
+      'generator.orgId',
+      a => a.generatorId
+    ),
+    unassignUserFromGeneratorPlan(
+      'authzOrg',
+      'authz.org',
+      (_a, f) => f.orgId ?? null
+    ),
+    unassignUserFromGeneratorPlan(
       'assignmentExists',
       'assignment.hasForUserAndGenerator',
       (a, f) =>

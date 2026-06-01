@@ -115,7 +115,7 @@ export interface DeleteSessionArgs {
   sessionId: string
 }
 
-export interface DeleteSessionFacts {
+interface DeleteSessionFacts {
   session: SessionRef | null
   authzGenerator: GeneratorAuthzFact
 }

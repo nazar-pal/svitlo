@@ -11,7 +11,7 @@ import * as policy from './policy'
 // sessions + maintenance-records server handlers, which gate a non-admin
 // "only delete your own row" rule on top of the shared policy).
 
-export type AuthzFailure = { ok: false; code: 'NOT_AUTHORIZED' }
+type AuthzFailure = { ok: false; code: 'NOT_AUTHORIZED' }
 export type AuthzResult = { ok: true } | AuthzFailure
 
 const denied: AuthzFailure = { ok: false, code: 'NOT_AUTHORIZED' }
