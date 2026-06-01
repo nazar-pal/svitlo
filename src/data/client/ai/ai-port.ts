@@ -1,7 +1,4 @@
-import type {
-  MaintenanceSuggestion,
-  SuggestionTask
-} from '@/data/shared/maintenance-suggestion'
+import type { MaintenanceSuggestion } from '@/data/shared/maintenance-suggestion'
 
 export interface SuggestionRequest {
   generatorModel: string
@@ -48,5 +45,3 @@ export type SuggestionResult =
   | { kind: 'failed'; message: string }
   | { kind: 'rejected-generic'; plan: SuggestionPlan }
   | { kind: 'accepted'; plan: SuggestionPlan }
-
-export type { SuggestionTask }

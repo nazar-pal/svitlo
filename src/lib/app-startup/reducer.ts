@@ -12,7 +12,7 @@ export interface StartupState {
   error: { message: string } | null
 }
 
-export type Action =
+type Action =
   | { type: 'INIT_REQUESTED' }
   | { type: 'INIT_SUCCEEDED' }
   | { type: 'INIT_FAILED'; message: string }

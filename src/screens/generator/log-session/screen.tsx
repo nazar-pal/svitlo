@@ -62,6 +62,7 @@ function LogSessionForm({
   const startedAtBinding = bind.value('startedAt')
   const stoppedAtBinding = bind.value('stoppedAt')
 
+  const startedAtISO = startedAtBinding.value.toISOString()
   const stoppedAtISO = stoppedAtBinding.value.toISOString()
   // Resample `now` when the user edits the stop time. Keeping a per-render
   // `new Date()` works but creates an unstable reference and lets the
@@ -76,7 +77,7 @@ function LogSessionForm({
   const policy = usePolicy(policies.sessions.logManualSession, {
     userId,
     generatorId,
-    startedAt: startedAtBinding.value.toISOString(),
+    startedAt: startedAtISO,
     stoppedAt: stoppedAtISO,
     now
   })

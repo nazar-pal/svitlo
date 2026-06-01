@@ -60,13 +60,11 @@ export const startSession = defineDecision<
   rule: (args, facts) =>
     startSessionPolicy({
       generatorExists: facts.generator !== null,
-      hasGeneratorAccess: facts.authzGenerator
-        ? authzPolicy.canAccessGenerator(
-            args.userId,
-            facts.authzGenerator.orgAdminUserId,
-            facts.authzGenerator.hasAssignment
-          )
-        : false,
+      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+        args.userId,
+        facts.authzGenerator?.orgAdminUserId ?? null,
+        facts.authzGenerator?.hasAssignment ?? false
+      ),
       hasOpenSession: facts.openSession
     })
 })
@@ -102,13 +100,11 @@ export const stopSession = defineDecision<
   rule: (args, facts) =>
     stopSessionPolicy({
       session: facts.session ?? null,
-      hasGeneratorAccess: facts.authzGenerator
-        ? authzPolicy.canAccessGenerator(
-            args.userId,
-            facts.authzGenerator.orgAdminUserId,
-            facts.authzGenerator.hasAssignment
-          )
-        : false
+      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+        args.userId,
+        facts.authzGenerator?.orgAdminUserId ?? null,
+        facts.authzGenerator?.hasAssignment ?? false
+      )
     })
 })
 
@@ -143,13 +139,11 @@ export const deleteSession = defineDecision<
   rule: (args, facts) =>
     deleteSessionPolicy({
       session: facts.session ?? null,
-      hasGeneratorAccess: facts.authzGenerator
-        ? authzPolicy.canAccessGenerator(
-            args.userId,
-            facts.authzGenerator.orgAdminUserId,
-            facts.authzGenerator.hasAssignment
-          )
-        : false
+      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+        args.userId,
+        facts.authzGenerator?.orgAdminUserId ?? null,
+        facts.authzGenerator?.hasAssignment ?? false
+      )
     })
 })
 
@@ -187,13 +181,11 @@ export const updateSession = defineDecision<
   rule: (args, facts) =>
     updateSessionPolicy({
       session: facts.session ?? null,
-      hasGeneratorAccess: facts.authzGenerator
-        ? authzPolicy.canAccessGenerator(
-            args.userId,
-            facts.authzGenerator.orgAdminUserId,
-            facts.authzGenerator.hasAssignment
-          )
-        : false,
+      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+        args.userId,
+        facts.authzGenerator?.orgAdminUserId ?? null,
+        facts.authzGenerator?.hasAssignment ?? false
+      ),
       startedAt: args.startedAt,
       stoppedAt: args.stoppedAt,
       now: args.now
@@ -235,13 +227,11 @@ export const logManualSession = defineDecision<
   rule: (args, facts) =>
     logManualSessionPolicy({
       generatorExists: facts.generator !== null,
-      hasGeneratorAccess: facts.authzGenerator
-        ? authzPolicy.canAccessGenerator(
-            args.userId,
-            facts.authzGenerator.orgAdminUserId,
-            facts.authzGenerator.hasAssignment
-          )
-        : false,
+      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+        args.userId,
+        facts.authzGenerator?.orgAdminUserId ?? null,
+        facts.authzGenerator?.hasAssignment ?? false
+      ),
       startedAt: args.startedAt,
       stoppedAt: args.stoppedAt,
       now: args.now

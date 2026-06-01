@@ -108,7 +108,8 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
       { userId, generatorId: record.generatorId },
       serverLookup(db)
     )
-    if (!adminCheck.ok && record.performedByUserId !== userId)
+    const isAdmin = adminCheck.ok
+    if (!isAdmin && record.performedByUserId !== userId)
       return fail('Can only edit your own maintenance records')
 
     if (Object.keys(fields).length > 0)

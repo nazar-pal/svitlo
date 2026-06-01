@@ -16,8 +16,9 @@ interface ConfirmDestructiveOptions {
 
 /**
  * The shared destructive-confirm dialog: a cancel button plus a destructive
- * button that fires the warning haptic and then either runs a mutation
- * (with error handling + onSuccess) or invokes a plain onConfirm callback.
+ * button that either runs a mutation (via runMutation, which handles errors
+ * and fires the warning haptic on success) or fires the warning haptic
+ * immediately and invokes a plain onConfirm callback.
  */
 export function confirmDestructive(
   title: string,
