@@ -171,13 +171,10 @@ export const aiRouter = {
         raw = genericFallback(input.generatorModel)
       }
 
-      const isGeneric = raw.isGeneric
-
       const repairedTasks = repairTasks(raw.tasks)
 
       return maintenanceSuggestionSchema.parse({
         ...raw,
-        isGeneric,
         tasks: repairedTasks
       })
     })
