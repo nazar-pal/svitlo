@@ -1,11 +1,10 @@
 import * as authzPolicy from '@/data/shared/authz/policy'
 import { defineDecision, factPlanFor } from '@/data/shared/facts/decisions'
-
 import {
-  assignUserToGeneratorPolicy,
-  unassignUserFromGeneratorPolicy,
+  policyFail as fail,
+  policyOk as ok,
   type PolicyResult
-} from './index'
+} from '@/data/shared/policy-result'
 
 // Decision-style bindings for the assignment lifecycle. The first plan
 // entry resolves the generator's org id; every downstream entry
@@ -47,8 +46,8 @@ export const assignUserToGenerator = defineDecision<
     assignPlan(
       'targetIsOrgMember',
       'orgMembership.hasForUserAndOrg',
-      // Admin-self case: skip the membership lookup — the policy ignores
-      // `targetIsOrgMember` when `targetIsSelf` is true.
+      // Admin-self case: skip the membership lookup — the rule below ignores
+      // `targetIsOrgMember` when the caller is assigning themselves.
       (a, f) =>
         a.callerUserId === a.targetUserId || !f.orgId
           ? null
@@ -61,17 +60,22 @@ export const assignUserToGenerator = defineDecision<
         f.orgId ? { userId: a.targetUserId, generatorId: a.generatorId } : null
     )
   ],
-  rule: (args, facts) =>
-    assignUserToGeneratorPolicy({
-      generatorExists: facts.orgId !== null,
-      isCallerOrgAdmin: authzPolicy.isOrgAdmin(
+  rule: (args, facts) => {
+    if (facts.orgId === null) return fail('GENERATOR_NOT_FOUND')
+    if (
+      !authzPolicy.isOrgAdmin(
         args.callerUserId,
         facts.authzOrg?.adminUserId ?? null
-      ),
-      targetIsSelf: args.callerUserId === args.targetUserId,
-      targetIsOrgMember: facts.targetIsOrgMember ?? false,
-      alreadyAssigned: facts.alreadyAssigned ?? false
-    })
+      )
+    )
+      return fail('ONLY_ADMIN_CAN_ASSIGN_USERS')
+    // Admin assigning themselves doesn't need a membership check — they're
+    // implicitly the org owner (the plan skips the lookup for the self case).
+    if (args.callerUserId !== args.targetUserId && !facts.targetIsOrgMember)
+      return fail('USER_NOT_ORG_MEMBER')
+    if (facts.alreadyAssigned) return fail('USER_ALREADY_ASSIGNED')
+    return ok
+  }
 })
 
 // ── unassignUserFromGenerator ───────────────────────────────────────────────
@@ -109,13 +113,16 @@ export const unassignUserFromGenerator = defineDecision<
         f.orgId ? { userId: a.targetUserId, generatorId: a.generatorId } : null
     )
   ],
-  rule: (args, facts) =>
-    unassignUserFromGeneratorPolicy({
-      generatorExists: facts.orgId !== null,
-      isCallerOrgAdmin: authzPolicy.isOrgAdmin(
+  rule: (args, facts) => {
+    if (facts.orgId === null) return fail('GENERATOR_NOT_FOUND')
+    if (
+      !authzPolicy.isOrgAdmin(
         args.callerUserId,
         facts.authzOrg?.adminUserId ?? null
-      ),
-      assignmentExists: facts.assignmentExists ?? false
-    })
+      )
+    )
+      return fail('ONLY_ADMIN_CAN_UNASSIGN_USERS')
+    if (!facts.assignmentExists) return fail('USER_NOT_ASSIGNED')
+    return ok
+  }
 })
