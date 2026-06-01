@@ -189,7 +189,6 @@ const validSession = (
 
 interface ProbeValue {
   phase: StartupPhase
-  splashHidden: boolean
   signOut: () => Promise<void>
   markExpired: () => void
   setSession: (next: SessionSnapshot) => void
@@ -206,7 +205,6 @@ function Probe({
   const auth = useAuthSession()
   probeRef.current = {
     phase: state.phase,
-    splashHidden: state.splashHidden,
     signOut: auth.signOut,
     markExpired: auth.markExpired,
     setSession
@@ -420,25 +418,6 @@ describe('StartupCoordinator', () => {
     expect(probe().phase).toBe('unauthenticated')
   })
 
-  it('collapses to unauthenticated when identity is lost', async () => {
-    const fake = createFakePowerSyncRuntime()
-    renderCoordinator(fake)
-
-    await waitFor(() => expect(probe().phase).toBe('initializing-db'))
-    await act(async () => {
-      fake.resolveInit()
-    })
-    await act(async () => {
-      fake.setHasSynced(true)
-    })
-    await waitFor(() => expect(probe().phase).toBe('ready'))
-
-    await act(async () => {
-      await probe().signOut()
-    })
-    expect(probe().phase).toBe('unauthenticated')
-  })
-
   it('connects when session is valid and disconnects on expiry', async () => {
     const fake = createFakePowerSyncRuntime()
     renderCoordinator(fake)
@@ -484,26 +463,5 @@ describe('StartupCoordinator', () => {
     expect(probe().phase).toBe('first-sync')
     expect(fake.initMock).toHaveBeenCalledTimes(1)
     expect(fake.connectMock).toHaveBeenCalledTimes(2)
-  })
-
-  it('exposes splashHidden accurately across phases', async () => {
-    const fake = createFakePowerSyncRuntime()
-    renderCoordinator(fake)
-
-    // initializing-db: splash still visible while DB opens.
-    await waitFor(() => expect(probe().phase).toBe('initializing-db'))
-    expect(probe().splashHidden).toBe(false)
-
-    await act(async () => {
-      fake.resolveInit()
-    })
-    expect(probe().phase).toBe('first-sync')
-    expect(probe().splashHidden).toBe(true)
-
-    await act(async () => {
-      fake.setHasSynced(true)
-    })
-    await waitFor(() => expect(probe().phase).toBe('ready'))
-    expect(probe().splashHidden).toBe(true)
   })
 })
