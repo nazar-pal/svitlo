@@ -5,9 +5,9 @@ import {
   generatorUserAssignments,
   organizationMembers
 } from '@/data/client/db-schema'
+import type { CheckFacade } from '@/data/shared/checks'
 import {
   transferAssignmentsAndRemoveMember,
-  type MemberRef,
   type MemberWritePort
 } from '@/data/shared/members'
 import type { ClientDb } from '@/lib/powersync/database'
@@ -15,9 +15,12 @@ import type { ClientDb } from '@/lib/powersync/database'
 import type { MutationContext } from './context'
 import { defineMutation } from './pipeline'
 
-type MemberLifecycleCheck =
-  | { ok: true; member: MemberRef; adminUserId: string; facts: unknown }
-  | { ok: false; code: string }
+type RemoveMemberCheck = Awaited<
+  ReturnType<CheckFacade['members']['removeMember']>
+>
+type LeaveOrganizationCheck = Awaited<
+  ReturnType<CheckFacade['members']['leaveOrganization']>
+>
 
 function createClientMemberWritePort(
   tx: ClientDb,
@@ -88,7 +91,7 @@ export function createMemberMutations(ctx: MutationContext) {
     removeMember: defineMutation<
       [string, string],
       undefined,
-      MemberLifecycleCheck
+      RemoveMemberCheck
     >(ctx, {
       check: (c, [callerUserId, memberId]) =>
         c.checks.members.removeMember({ callerUserId, memberId }),
@@ -108,7 +111,7 @@ export function createMemberMutations(ctx: MutationContext) {
     leaveOrganization: defineMutation<
       [string, string],
       undefined,
-      MemberLifecycleCheck
+      LeaveOrganizationCheck
     >(ctx, {
       check: (c, [userId, organizationId]) =>
         c.checks.members.leaveOrganization({ userId, organizationId }),

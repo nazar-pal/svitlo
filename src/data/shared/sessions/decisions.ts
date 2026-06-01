@@ -237,10 +237,3 @@ export const logManualSession = defineDecision<
       now: args.now
     })
 })
-
-// Authz-derivation + authz.generator reference used downstream: the rules
-// above read `authzGenerator` via `authz.generator`, so every side's
-// FactRegistry must register a resolver under that key returning
-// `{ orgAdminUserId: string | null; hasAssignment: boolean } | null`.
-// `generator.byId` + `session.byId` + `session.hasOpenForGenerator` keys
-// must return the shapes referenced in this file's Facts types.

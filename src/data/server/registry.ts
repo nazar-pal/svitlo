@@ -274,7 +274,7 @@ const maintenanceRecordById: Resolver<
   }
 }
 
-export interface ServerFactRegistry {
+interface ServerFactRegistry {
   'session.byId': Resolver<string, SessionRef | null>
   'generator.byId': Resolver<string, { id: string } | null>
   'generator.exists': Resolver<string, boolean>
@@ -322,7 +322,7 @@ export interface ServerFactRegistry {
   >
 }
 
-export const serverFactRegistry: ServerFactRegistry = {
+const serverFactRegistry: ServerFactRegistry = {
   'session.byId': sessionById,
   'generator.byId': generatorById,
   'generator.exists': generatorExists,

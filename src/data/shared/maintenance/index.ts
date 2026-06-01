@@ -68,7 +68,10 @@ export const updateMaintenanceTemplatePolicy = (facts: {
   if (facts.mergedTriggerType != null) {
     if (usesHours(facts.mergedTriggerType) && facts.mergedHours == null)
       return fail('HOURS_INTERVAL_REQUIRED')
-    if (usesCalendar(facts.mergedTriggerType) && facts.mergedCalendarDays == null)
+    if (
+      usesCalendar(facts.mergedTriggerType) &&
+      facts.mergedCalendarDays == null
+    )
       return fail('CALENDAR_DAYS_REQUIRED')
   }
 

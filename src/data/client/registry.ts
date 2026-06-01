@@ -372,7 +372,7 @@ const maintenanceRecordByIdEntry: Entry<
 // Flat registry — keys chosen to mirror the domain-qualified names used in
 // decision plans. Adding a new fact takes one entry here + one plan entry
 // in the domain's decision file.
-export interface ClientFactRegistry {
+interface ClientFactRegistry {
   'session.byId': Entry<string, SessionRef | null>
   'generator.byId': Entry<string, { id: string } | null>
   'generator.exists': Entry<string, boolean>
@@ -417,7 +417,7 @@ export interface ClientFactRegistry {
   >
 }
 
-export const clientFactRegistry: ClientFactRegistry = {
+const clientFactRegistry: ClientFactRegistry = {
   'session.byId': sessionByIdEntry,
   'generator.byId': generatorByIdEntry,
   'generator.exists': generatorExistsEntry,

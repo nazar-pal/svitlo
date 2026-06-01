@@ -94,9 +94,8 @@ export function defineMutation<
         // Decision-facade checks carry `facts` on every branch; strip it
         // before surfacing as a `MutationError` so the wire shape stays
         // `{ code, params? }` exactly as the discriminated union allows.
-        const asAny = result as Record<string, unknown>
-        const error: Record<string, unknown> = { code: asAny.code }
-        if ('params' in asAny) error.params = asAny.params
+        const error: Record<string, unknown> = { code: result.code }
+        if ('params' in result) error.params = result.params
         return { ok: false, error: error as unknown as MutationError }
       }
       checkOk = result as OkBranch<TCheck>
