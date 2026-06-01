@@ -13,6 +13,7 @@ import {
   type UpdateGeneratorInput
 } from '@/data/shared/validation'
 
+import { cascadeDelete } from './cascade'
 import type { MutationContext } from './context'
 import { defineMutation } from './pipeline'
 
@@ -108,8 +109,9 @@ export function createGeneratorMutations(ctx: MutationContext) {
     deleteGenerator: defineMutation<[string, string]>(ctx, {
       check: (c, [userId, generatorId]) =>
         c.checks.generators.deleteGenerator({ userId, generatorId }),
+      tx: true,
       apply: async ({ db, args: [, generatorId] }) => {
-        await db.delete(generators).where(eq(generators.id, generatorId))
+        await cascadeDelete(db, generators, generators.id, generatorId)
       }
     })
   }

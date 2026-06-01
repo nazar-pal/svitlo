@@ -1,10 +1,25 @@
 import { eq } from 'drizzle-orm'
 
-import { generators } from '@/data/client/db-schema/generators'
-import { maintenanceTemplates } from '@/data/client/db-schema/maintenance'
+import {
+  generators,
+  generatorSessions,
+  generatorUserAssignments
+} from '@/data/client/db-schema/generators'
+import {
+  maintenanceRecords,
+  maintenanceTemplates
+} from '@/data/client/db-schema/maintenance'
 
 import { setupMutationHarness } from './harness'
-import { IDS, seedBaseScenario, seedGenerator } from './seed'
+import {
+  IDS,
+  seedBaseScenario,
+  seedGenerator,
+  seedAssignment,
+  seedActiveSession,
+  seedMaintenanceTemplate,
+  seedMaintenanceRecord
+} from './seed'
 
 const h = setupMutationHarness()
 const { updateGenerator, createGeneratorWithMaintenance, deleteGenerator } =
@@ -222,6 +237,58 @@ describe('deleteGenerator', () => {
       .where(eq(generators.id, IDS.generator))
       .all()
     expect(row).toBeUndefined()
+  })
+
+  // SQLite has no FK cascade client-side, so deleteGenerator must walk the
+  // cascade itself (mirroring deleteOrganization). Seed every child the
+  // server FK-cascades and assert the delete leaves no orphans.
+  it('admin deletes a generator and all related data is cascaded', async () => {
+    seedAssignment(h.db)
+    seedActiveSession(h.db)
+    seedMaintenanceTemplate(h.db)
+    seedMaintenanceRecord(h.db)
+
+    const result = await deleteGenerator(IDS.adminUser, IDS.generator)
+    expect(result.ok).toBe(true)
+
+    const [row] = h.db
+      .select()
+      .from(generators)
+      .where(eq(generators.id, IDS.generator))
+      .all()
+    expect(row).toBeUndefined()
+
+    expect(
+      h.db
+        .select()
+        .from(generatorUserAssignments)
+        .where(eq(generatorUserAssignments.generatorId, IDS.generator))
+        .all()
+    ).toHaveLength(0)
+
+    expect(
+      h.db
+        .select()
+        .from(generatorSessions)
+        .where(eq(generatorSessions.generatorId, IDS.generator))
+        .all()
+    ).toHaveLength(0)
+
+    expect(
+      h.db
+        .select()
+        .from(maintenanceTemplates)
+        .where(eq(maintenanceTemplates.generatorId, IDS.generator))
+        .all()
+    ).toHaveLength(0)
+
+    expect(
+      h.db
+        .select()
+        .from(maintenanceRecords)
+        .where(eq(maintenanceRecords.generatorId, IDS.generator))
+        .all()
+    ).toHaveLength(0)
   })
 
   // Same behavior change as updateGenerator: missing rows now surface a
