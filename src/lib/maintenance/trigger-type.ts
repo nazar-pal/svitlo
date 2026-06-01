@@ -6,11 +6,11 @@ export function isTriggerType(value: string): value is TriggerType {
   return (TRIGGER_TYPES as readonly string[]).includes(value)
 }
 
-export function showsHours(type: TriggerType): boolean {
+export function usesHours(type: TriggerType): boolean {
   return type === 'hours' || type === 'whichever_first'
 }
 
-export function showsCalendar(type: TriggerType): boolean {
+export function usesCalendar(type: TriggerType): boolean {
   return type === 'calendar' || type === 'whichever_first'
 }
 

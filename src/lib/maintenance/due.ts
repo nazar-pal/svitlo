@@ -6,6 +6,7 @@ import type {
   MaintenanceTemplate
 } from '@/data/client/db-schema/maintenance'
 import { t } from '@/lib/i18n'
+import { usesCalendar, usesHours } from '@/lib/maintenance/trigger-type'
 import { formatHours, hoursBetween } from '@/lib/utils/time'
 
 export type MaintenanceUrgency = 'overdue' | 'due_soon' | 'ok'
@@ -59,10 +60,7 @@ function computeRemaining(
   let hoursRemaining: number | null = null
   let daysRemaining: number | null = null
 
-  if (
-    template.triggerType === 'hours' ||
-    template.triggerType === 'whichever_first'
-  ) {
+  if (usesHours(template.triggerType)) {
     const interval = template.triggerHoursInterval!
     const hoursSince = lastPerformedAt
       ? sessionHoursSince(sessions, lastPerformedAt)
@@ -70,10 +68,7 @@ function computeRemaining(
     hoursRemaining = interval - hoursSince
   }
 
-  if (
-    template.triggerType === 'calendar' ||
-    template.triggerType === 'whichever_first'
-  ) {
+  if (usesCalendar(template.triggerType)) {
     const intervalDays = template.triggerCalendarDays!
     const referenceDate = lastPerformedAt ?? template.createdAt
     daysRemaining = intervalDays - daysBetween(referenceDate, now)

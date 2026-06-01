@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { usesCalendar, usesHours } from '@/lib/maintenance/trigger-type'
+
 export const rawTaskSchema = z.object({
   taskName: z.string().describe('Name of the maintenance task'),
   description: z.string().describe('What this task involves'),
@@ -27,19 +29,14 @@ export const rawTaskSchema = z.object({
 })
 
 export const taskSchema = rawTaskSchema.superRefine((task, ctx) => {
-  const needsHours =
-    task.triggerType === 'hours' || task.triggerType === 'whichever_first'
-  const needsDays =
-    task.triggerType === 'calendar' || task.triggerType === 'whichever_first'
-
-  if (needsHours && task.triggerHoursInterval == null)
+  if (usesHours(task.triggerType) && task.triggerHoursInterval == null)
     ctx.addIssue({
       code: 'custom',
       path: ['triggerHoursInterval'],
       message: 'Required for this trigger type'
     })
 
-  if (needsDays && task.triggerCalendarDays == null)
+  if (usesCalendar(task.triggerType) && task.triggerCalendarDays == null)
     ctx.addIssue({
       code: 'custom',
       path: ['triggerCalendarDays'],

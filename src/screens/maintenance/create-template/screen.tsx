@@ -15,8 +15,8 @@ import {
   type TriggerType,
   isTriggerType,
   parseOptionalNumber,
-  showsCalendar,
-  showsHours
+  usesCalendar,
+  usesHours
 } from '@/lib/maintenance/trigger-type'
 import { useTriggerLabels } from '@/lib/maintenance/use-trigger-labels'
 
@@ -50,10 +50,10 @@ function CreateForm({ userId, generatorId }: CreateFormProps) {
         taskName: values.taskName,
         description: values.description || undefined,
         triggerType: values.triggerType,
-        triggerHoursInterval: showsHours(values.triggerType)
+        triggerHoursInterval: usesHours(values.triggerType)
           ? parseOptionalNumber(values.triggerHoursInterval, parseFloat)
           : undefined,
-        triggerCalendarDays: showsCalendar(values.triggerType)
+        triggerCalendarDays: usesCalendar(values.triggerType)
           ? parseOptionalNumber(values.triggerCalendarDays, s =>
               parseInt(s, 10)
             )
@@ -64,8 +64,8 @@ function CreateForm({ userId, generatorId }: CreateFormProps) {
   })
 
   const triggerType = form.values.triggerType
-  const showHours = showsHours(triggerType)
-  const showCalendar = showsCalendar(triggerType)
+  const showHours = usesHours(triggerType)
+  const showCalendar = usesCalendar(triggerType)
 
   const taskNameBinding = bind.text('taskName')
   const descriptionBinding = bind.text('description')

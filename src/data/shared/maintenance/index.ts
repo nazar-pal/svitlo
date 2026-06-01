@@ -3,7 +3,11 @@ import {
   policyOk as ok,
   type PolicyResult
 } from '@/data/shared/policy-result'
-import type { TriggerType } from '@/lib/maintenance/trigger-type'
+import {
+  type TriggerType,
+  usesCalendar,
+  usesHours
+} from '@/lib/maintenance/trigger-type'
 
 export type { PolicyResult }
 
@@ -62,16 +66,9 @@ export const updateMaintenanceTemplatePolicy = (facts: {
     return fail('ONLY_ADMIN_CAN_UPDATE_TEMPLATES')
 
   if (facts.mergedTriggerType != null) {
-    const needsHours =
-      facts.mergedTriggerType === 'hours' ||
-      facts.mergedTriggerType === 'whichever_first'
-    const needsDays =
-      facts.mergedTriggerType === 'calendar' ||
-      facts.mergedTriggerType === 'whichever_first'
-
-    if (needsHours && facts.mergedHours == null)
+    if (usesHours(facts.mergedTriggerType) && facts.mergedHours == null)
       return fail('HOURS_INTERVAL_REQUIRED')
-    if (needsDays && facts.mergedCalendarDays == null)
+    if (usesCalendar(facts.mergedTriggerType) && facts.mergedCalendarDays == null)
       return fail('CALENDAR_DAYS_REQUIRED')
   }
 
