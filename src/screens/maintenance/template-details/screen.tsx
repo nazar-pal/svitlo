@@ -27,6 +27,7 @@ import {
   formatScheduleLabel
 } from '@/lib/maintenance/due'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
+import { useLocalUserId } from '@/lib/powersync'
 
 export default function TemplateDetailsScreen() {
   const { t } = useTranslation()
@@ -35,7 +36,8 @@ export default function TemplateDetailsScreen() {
     templateId: string
   }>()
   const router = useRouter()
-  const { isAdmin, userId } = useUserOrgs()
+  const { isAdmin } = useUserOrgs()
+  const userId = useLocalUserId()
   const [mutedColor, dangerColor, warningColor, successColor] = useThemeColor([
     'muted',
     'danger',

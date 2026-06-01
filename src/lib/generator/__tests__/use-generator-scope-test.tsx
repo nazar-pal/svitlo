@@ -39,6 +39,10 @@ jest.mock('@/lib/organization/use-user-orgs', () => ({
   useUserOrgs: jest.fn()
 }))
 
+jest.mock('@/lib/powersync', () => ({
+  useLocalUserId: jest.fn()
+}))
+
 const { useSelectedOrg } = jest.requireMock<{
   useSelectedOrg: jest.Mock
 }>('@/lib/organization/use-selected-org')
@@ -46,6 +50,10 @@ const { useSelectedOrg } = jest.requireMock<{
 const { useUserOrgs } = jest.requireMock<{
   useUserOrgs: jest.Mock
 }>('@/lib/organization/use-user-orgs')
+
+const { useLocalUserId } = jest.requireMock<{
+  useLocalUserId: jest.Mock
+}>('@/lib/powersync')
 
 const { useGeneratorScope } = require('../use-generator-scope')
 
@@ -80,9 +88,10 @@ function setupMocks(overrides?: {
 
   useUserOrgs.mockReturnValue({
     userOrgs: orgId ? [{ id: orgId }] : [],
-    isAdmin: (id: string | null) => admin && id === orgId,
-    userId
+    isAdmin: (id: string | null) => admin && id === orgId
   })
+
+  useLocalUserId.mockReturnValue(userId)
 }
 
 describe('useGeneratorScope', () => {

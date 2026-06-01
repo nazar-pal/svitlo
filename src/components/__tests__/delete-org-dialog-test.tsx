@@ -116,27 +116,27 @@ jest.mock('@/lib/hooks/use-drizzle-query', () => ({
   useDrizzleQuery: jest.fn()
 }))
 
-jest.mock('@/lib/organization/use-user-orgs', () => ({
-  useUserOrgs: jest.fn()
+jest.mock('@/lib/powersync', () => ({
+  useLocalUserId: jest.fn()
 }))
 
 import { deleteOrganization } from '@/data/client/mutations'
 import { runMutation } from '@/lib/alerts'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useUserOrgs } from '@/lib/organization/use-user-orgs'
+import { useLocalUserId } from '@/lib/powersync'
 
 import { DeleteOrgDialog } from '../delete-org-dialog'
 
 const deleteOrganizationMock = deleteOrganization as jest.Mock
 const runMutationMock = runMutation as jest.Mock
 const useDrizzleQueryMock = useDrizzleQuery as jest.Mock
-const useUserOrgsMock = useUserOrgs as jest.Mock
+const useLocalUserIdMock = useLocalUserId as jest.Mock
 
 const ORG_NAME = 'Acme'
 
 beforeEach(() => {
   jest.resetAllMocks()
-  useUserOrgsMock.mockReturnValue({ userId: 'user-1' })
+  useLocalUserIdMock.mockReturnValue('user-1')
   useDrizzleQueryMock.mockReturnValue({ data: [{ name: ORG_NAME }] })
   deleteOrganizationMock.mockResolvedValue({ ok: true })
   runMutationMock.mockImplementation(async (mutation, options) => {

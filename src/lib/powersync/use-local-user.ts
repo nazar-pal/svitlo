@@ -11,3 +11,7 @@ export function useLocalUser() {
 
   return data[0] || null
 }
+
+export function useLocalUserId() {
+  return usePowerSync().userId ?? ''
+}

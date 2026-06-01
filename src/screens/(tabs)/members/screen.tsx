@@ -14,7 +14,7 @@ import { confirmDestructive, runMutation } from '@/lib/alerts'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { getUserName } from '@/lib/utils/get-user-name'
-import { useUserOrgs } from '@/lib/organization/use-user-orgs'
+import { useLocalUserId } from '@/lib/powersync'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import {
@@ -40,7 +40,7 @@ export default function MembersScreen() {
   const { q } = useLocalSearchParams<{ q?: string }>()
   const searchText = q ?? ''
 
-  const { userId } = useUserOrgs()
+  const userId = useLocalUserId()
 
   // Selected organization
   const { data: orgData } = useDrizzleQuery(

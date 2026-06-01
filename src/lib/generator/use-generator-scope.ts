@@ -4,6 +4,7 @@ import { getGeneratorsByOrg, getUserAssignments } from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
+import { useLocalUserId } from '@/lib/powersync'
 
 export function useGeneratorScope() {
   const [generatorScope, setGeneratorScope] = useState<string | null>(null)
@@ -15,7 +16,8 @@ export function useGeneratorScope() {
     setPrevOrgId(selectedOrgId)
     setGeneratorScope(null)
   }
-  const { userOrgs, isAdmin, userId } = useUserOrgs()
+  const { userOrgs, isAdmin } = useUserOrgs()
+  const userId = useLocalUserId()
   const admin = isAdmin(selectedOrgId)
 
   const { data: generators } = useDrizzleQuery(

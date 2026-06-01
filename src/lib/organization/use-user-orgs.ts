@@ -1,10 +1,9 @@
 import { getAllOrganizations, getUserMemberOrgIds } from '@/data/client/queries'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
-import { useLocalUser } from '@/lib/powersync/use-local-user'
+import { useLocalUserId } from '@/lib/powersync/use-local-user'
 
 export function useUserOrgs() {
-  const localUser = useLocalUser()
-  const userId = localUser?.id ?? ''
+  const userId = useLocalUserId()
 
   const { data: memberOrgIds } = useDrizzleQuery(
     userId ? getUserMemberOrgIds(userId) : undefined
@@ -23,5 +22,5 @@ export function useUserOrgs() {
   const isAdmin = (orgId: string | null) =>
     userOrgs.find(o => o.id === orgId)?.adminUserId === userId
 
-  return { userOrgs, allOrgs, isAdmin, userId, isOrgsLoading }
+  return { userOrgs, allOrgs, isAdmin, isOrgsLoading }
 }
