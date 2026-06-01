@@ -10,7 +10,7 @@ import {
   getOrgInvitations,
   getOrgMembers
 } from '@/data/client/queries'
-import { runMutation } from '@/lib/alerts'
+import { confirmDestructive, runMutation } from '@/lib/alerts'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { getUserName } from '@/lib/utils/get-user-name'
@@ -24,7 +24,7 @@ import {
   Separator,
   useThemeColor
 } from 'heroui-native'
-import { Alert, ScrollView, View } from 'react-native'
+import { ScrollView, View } from 'react-native'
 
 import {
   buildMemberList,
@@ -84,18 +84,15 @@ export default function MembersScreen() {
     }
   }
 
-  async function handleRemoveMember(memberId: string) {
-    Alert.alert(t('members.removeMember'), t('members.removeMemberDesc'), [
-      { text: t('common.cancel'), style: 'cancel' },
+  function handleRemoveMember(memberId: string) {
+    confirmDestructive(
+      t('members.removeMember'),
+      t('members.removeMemberDesc'),
       {
-        text: t('common.remove'),
-        style: 'destructive',
-        onPress: () =>
-          runMutation(() => removeMember(userId, memberId), {
-            feedback: 'warning'
-          })
+        confirmLabel: t('common.remove'),
+        mutation: () => removeMember(userId, memberId)
       }
-    ])
+    )
   }
 
   async function handleCancelInvitation(invitationId: string) {

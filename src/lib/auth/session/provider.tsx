@@ -6,8 +6,8 @@ import React, {
   useReducer,
   useRef
 } from 'react'
-import { Alert } from 'react-native'
 
+import { confirmDestructive } from '@/lib/alerts'
 import { notifyWarning } from '@/lib/haptics'
 import { t } from '@/lib/i18n'
 import { powersync } from '@/lib/powersync/database'
@@ -30,24 +30,14 @@ interface AuthSessionProviderProps {
 
 function confirmDestructiveSignOut(pendingCount: number): Promise<boolean> {
   return new Promise(resolve => {
-    Alert.alert(
+    confirmDestructive(
       t('signOut.unsyncedChanges'),
       t('signOut.unsyncedDesc', { count: pendingCount }),
-      [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
-          onPress: () => resolve(false)
-        },
-        {
-          text: t('signOut.signOutAnyway'),
-          style: 'destructive',
-          onPress: () => {
-            notifyWarning()
-            resolve(true)
-          }
-        }
-      ]
+      {
+        confirmLabel: t('signOut.signOutAnyway'),
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false)
+      }
     )
   })
 }
