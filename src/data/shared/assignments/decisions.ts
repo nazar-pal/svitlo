@@ -24,9 +24,9 @@ export interface AssignUserToGeneratorArgs {
 
 interface AssignUserToGeneratorFacts {
   orgId: string | null
-  authzOrg: OrgAuthzFact
-  targetIsOrgMember: boolean
-  alreadyAssigned: boolean
+  authzOrg?: OrgAuthzFact
+  targetIsOrgMember?: boolean
+  alreadyAssigned?: boolean
 }
 
 const assignUserToGeneratorPlan = factPlanFor<
@@ -92,8 +92,8 @@ export interface UnassignUserFromGeneratorArgs {
 
 interface UnassignUserFromGeneratorFacts {
   orgId: string | null
-  authzOrg: OrgAuthzFact
-  assignmentExists: boolean
+  authzOrg?: OrgAuthzFact
+  assignmentExists?: boolean
 }
 
 const unassignUserFromGeneratorPlan = factPlanFor<

@@ -22,7 +22,7 @@ export interface CreateInvitationArgs {
 
 interface CreateInvitationFacts {
   authzOrg: OrgAuthzFact
-  existing: InvitationRef | null
+  existing?: InvitationRef | null
 }
 
 const createInvitationPlan = factPlanFor<
@@ -69,7 +69,7 @@ export interface AcceptInvitationArgs {
 
 interface AcceptInvitationFacts {
   invitation: InvitationRef | null
-  alreadyMember: boolean
+  alreadyMember?: boolean
 }
 
 const acceptInvitationPlan = factPlanFor<
@@ -146,7 +146,7 @@ export interface CancelInvitationArgs {
 
 interface CancelInvitationFacts {
   invitation: InvitationRef | null
-  authzOrg: OrgAuthzFact
+  authzOrg?: OrgAuthzFact
 }
 
 const cancelInvitationPlan = factPlanFor<

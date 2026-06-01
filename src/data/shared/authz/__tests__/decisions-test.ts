@@ -106,6 +106,28 @@ describe('canAccessGenerator decision', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('ok for an assigned user on an orphan generator (null org admin)', async () => {
+    const result = await runDecisionAsync(
+      canAccessGenerator,
+      { userId: MEMBER, generatorId: GENERATOR },
+      makeLookup({
+        'authz.generator': { orgAdminUserId: null, hasAssignment: true }
+      })
+    )
+    expect(result.ok).toBe(true)
+  })
+
+  it('NOT_AUTHORIZED for an unassigned user on an orphan generator', async () => {
+    const result = await runDecisionAsync(
+      canAccessGenerator,
+      { userId: OUTSIDER, generatorId: GENERATOR },
+      makeLookup({
+        'authz.generator': { orgAdminUserId: null, hasAssignment: false }
+      })
+    )
+    expect(result).toMatchObject({ ok: false, code: 'NOT_AUTHORIZED' })
+  })
+
   it('NOT_AUTHORIZED for a non-admin without an assignment', async () => {
     const result = await runDecisionAsync(
       canAccessGenerator,

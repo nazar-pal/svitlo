@@ -36,8 +36,8 @@ export interface StartSessionArgs {
 
 interface StartSessionFacts {
   generator: { id: string } | null
-  authzGenerator: GeneratorAuthzFact
-  openSession: boolean
+  authzGenerator?: GeneratorAuthzFact
+  openSession?: boolean
 }
 
 const startSessionPlan = factPlanFor<StartSessionArgs, StartSessionFacts>()
@@ -65,7 +65,7 @@ export const startSession = defineDecision<
         facts.authzGenerator?.orgAdminUserId ?? null,
         facts.authzGenerator?.hasAssignment ?? false
       ),
-      hasOpenSession: facts.openSession
+      hasOpenSession: facts.openSession ?? false
     })
 })
 
@@ -78,7 +78,7 @@ export interface StopSessionArgs {
 
 interface StopSessionFacts {
   session: SessionRef | null
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator?: GeneratorAuthzFact
 }
 
 const stopSessionPlan = factPlanFor<StopSessionArgs, StopSessionFacts>()
@@ -117,7 +117,7 @@ export interface DeleteSessionArgs {
 
 interface DeleteSessionFacts {
   session: SessionRef | null
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator?: GeneratorAuthzFact
 }
 
 const deleteSessionPlan = factPlanFor<DeleteSessionArgs, DeleteSessionFacts>()
@@ -159,7 +159,7 @@ export interface UpdateSessionArgs {
 
 interface UpdateSessionFacts {
   session: SessionRef | null
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator?: GeneratorAuthzFact
 }
 
 const updateSessionPlan = factPlanFor<UpdateSessionArgs, UpdateSessionFacts>()
@@ -204,7 +204,7 @@ export interface LogManualSessionArgs {
 
 interface LogManualSessionFacts {
   generator: { id: string } | null
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator?: GeneratorAuthzFact
 }
 
 const logManualSessionPlan = factPlanFor<

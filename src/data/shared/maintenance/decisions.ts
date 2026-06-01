@@ -74,7 +74,7 @@ export interface UpdateTemplateArgs {
 
 interface UpdateTemplateFacts {
   template: TemplateRef | null
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator?: GeneratorAuthzFact
 }
 
 const updateTemplatePlan = factPlanFor<
@@ -145,7 +145,7 @@ export interface DeleteTemplateArgs {
 
 interface DeleteTemplateFacts {
   template: TemplateRef | null
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator?: GeneratorAuthzFact
 }
 
 const deleteTemplatePlan = factPlanFor<
@@ -245,7 +245,7 @@ export interface DeleteRecordArgs {
 
 interface DeleteRecordFacts {
   record: RecordRef | null
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator?: GeneratorAuthzFact
 }
 
 const deleteRecordPlan = factPlanFor<DeleteRecordArgs, DeleteRecordFacts>()
@@ -284,7 +284,7 @@ export interface UpdateRecordArgs {
 
 interface UpdateRecordFacts {
   record: RecordRef | null
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator?: GeneratorAuthzFact
 }
 
 const updateRecordPlan = factPlanFor<UpdateRecordArgs, UpdateRecordFacts>()

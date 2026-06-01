@@ -19,7 +19,7 @@ export interface RemoveMemberArgs {
 
 interface RemoveMemberFacts {
   member: MemberRef | null
-  authzOrg: OrgAuthzFact
+  authzOrg?: OrgAuthzFact
 }
 
 const removeMemberPlan = factPlanFor<RemoveMemberArgs, RemoveMemberFacts>()
