@@ -88,6 +88,27 @@ describe('sessions decisions (async adapter)', () => {
     expect(result.facts.session).toMatchObject({ isStopped: false })
   })
 
+  it('stopSession: denies when the session outlives a deleted generator', async () => {
+    // Session exists but its generator row is gone (seedGenerator omitted), so
+    // the conditional `authz.generator` plan entry resolves to a null fact.
+    // `canAccessGeneratorFact(user, null)` must deny — even for the org admin,
+    // who would otherwise be allowed — because access derives from the fact
+    // row, not ambient admin status. Exercises the null-fact branch of the
+    // shared helper end-to-end through the async adapter.
+    seedBaseScenario(testDb.db)
+    seedActiveSession(testDb.db)
+    const result = await runDecisionAsync(
+      stopSession,
+      { userId: IDS.adminUser, sessionId: IDS.session.active },
+      clientLookup(testDb.db)
+    )
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'NOT_AUTHORIZED_FOR_GENERATOR'
+    })
+    expect(result.facts.authzGenerator).toBeNull()
+  })
+
   it('deleteSession: surfaces session on success for defence-in-depth', async () => {
     seedBaseScenario(testDb.db)
     seedGenerator(testDb.db)
