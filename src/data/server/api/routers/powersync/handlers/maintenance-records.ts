@@ -4,6 +4,7 @@ import { maintenanceRecords } from '@/data/server/db-schema'
 import { serverLookup } from '@/data/server/registry'
 import * as authz from '@/data/shared/authz/decisions'
 import { runDecisionAsync } from '@/data/shared/facts/async-adapter'
+import type { RecordRef } from '@/data/shared/maintenance'
 
 import { replayShieldNotFound } from './replay'
 import { transformSyncRow } from '../transform'
@@ -76,7 +77,7 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
     if ('notes' in data)
       fields.notes = data.notes == null ? null : String(data.notes)
 
-    let record: { generatorId: string; performedByUserId: string } | null
+    let record: RecordRef | null
     if ('performed_at' in data) {
       const performedAt = data.performed_at as string
       const result = await checks.updateRecord({

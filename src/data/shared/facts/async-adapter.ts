@@ -8,7 +8,7 @@ import type { Decision } from './port'
 // typed as `string` so authz decisions (which emit `NOT_AUTHORIZED`, a
 // code intentionally outside the user-facing `ParamFreeMutationErrorCode`
 // union) compose with the adapter uniformly.
-type RuleResult =
+export type RuleResult =
   | { ok: true; [k: string]: unknown }
   | { ok: false; code: string }
 

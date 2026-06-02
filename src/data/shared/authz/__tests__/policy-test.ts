@@ -1,4 +1,8 @@
-import { canAccessGenerator, isOrgAdmin } from '../policy'
+import {
+  canAccessGenerator,
+  canAccessGeneratorFact,
+  isOrgAdmin
+} from '../policy'
 
 const ADMIN = 'user-admin'
 const MEMBER = 'user-member'
@@ -32,5 +36,42 @@ describe('canAccessGenerator', () => {
 
   it('denies access when no admin and no assignment', () => {
     expect(canAccessGenerator(MEMBER, null, false)).toBe(false)
+  })
+})
+
+describe('canAccessGeneratorFact', () => {
+  it('grants the org admin from the fact row', () => {
+    expect(
+      canAccessGeneratorFact(ADMIN, {
+        orgAdminUserId: ADMIN,
+        hasAssignment: false
+      })
+    ).toBe(true)
+  })
+
+  it('grants a non-admin assigned in the fact row', () => {
+    expect(
+      canAccessGeneratorFact(MEMBER, {
+        orgAdminUserId: ADMIN,
+        hasAssignment: true
+      })
+    ).toBe(true)
+  })
+
+  it('denies a non-admin with no assignment in the fact row', () => {
+    expect(
+      canAccessGeneratorFact(MEMBER, {
+        orgAdminUserId: ADMIN,
+        hasAssignment: false
+      })
+    ).toBe(false)
+  })
+
+  it('denies when the generator was not found (null fact)', () => {
+    expect(canAccessGeneratorFact(ADMIN, null)).toBe(false)
+  })
+
+  it('denies when the plan entry was skipped (undefined fact)', () => {
+    expect(canAccessGeneratorFact(ADMIN, undefined)).toBe(false)
   })
 })

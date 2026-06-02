@@ -15,10 +15,7 @@ import {
   type UpdateTemplateInput
 } from './index'
 
-type GeneratorAuthzFact = {
-  orgAdminUserId: string | null
-  hasAssignment: boolean
-} | null
+type GeneratorAuthzFact = authzPolicy.GeneratorAuthzFact | null
 
 // ── createTemplate ──────────────────────────────────────────────────────────
 
@@ -225,10 +222,9 @@ export const recordMaintenance = defineDecision<
   rule: (args, facts) =>
     recordMaintenancePolicy({
       generatorExists: facts.generatorExists,
-      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+      hasGeneratorAccess: authzPolicy.canAccessGeneratorFact(
         args.userId,
-        facts.authzGenerator?.orgAdminUserId ?? null,
-        facts.authzGenerator?.hasAssignment ?? false
+        facts.authzGenerator
       ),
       templateExists: facts.template !== null,
       templateGeneratorId: facts.template?.generatorId ?? null,
@@ -265,10 +261,9 @@ export const deleteRecord = defineDecision<
   rule: (args, facts) =>
     deleteMaintenanceRecordPolicy({
       recordExists: facts.record !== null,
-      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+      hasGeneratorAccess: authzPolicy.canAccessGeneratorFact(
         args.userId,
-        facts.authzGenerator?.orgAdminUserId ?? null,
-        facts.authzGenerator?.hasAssignment ?? false
+        facts.authzGenerator
       )
     })
 })
@@ -304,10 +299,9 @@ export const updateRecord = defineDecision<
   rule: (args, facts) =>
     updateMaintenanceRecordPolicy({
       recordExists: facts.record !== null,
-      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+      hasGeneratorAccess: authzPolicy.canAccessGeneratorFact(
         args.userId,
-        facts.authzGenerator?.orgAdminUserId ?? null,
-        facts.authzGenerator?.hasAssignment ?? false
+        facts.authzGenerator
       ),
       performedAt: args.performedAt,
       now: args.now

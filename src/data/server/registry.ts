@@ -11,6 +11,7 @@ import {
   organizationMembers,
   organizations
 } from '@/data/server/db-schema'
+import type { GeneratorAuthzFact } from '@/data/shared/authz/policy'
 import type { SessionRef } from '@/data/shared/sessions'
 import type { TriggerType } from '@/lib/maintenance/trigger-type'
 
@@ -69,7 +70,7 @@ type GeneratorAuthzInput = { userId: string; generatorId: string }
 
 const authzGenerator: Resolver<
   GeneratorAuthzInput,
-  { orgAdminUserId: string | null; hasAssignment: boolean } | null
+  GeneratorAuthzFact | null
 > = async (db, { userId, generatorId }) => {
   const [row] = await db
     .select({
@@ -280,10 +281,7 @@ interface ServerFactRegistry {
   'generator.exists': Resolver<string, boolean>
   'generator.orgId': Resolver<string, string | null>
   'session.hasOpenForGenerator': Resolver<string, boolean>
-  'authz.generator': Resolver<
-    GeneratorAuthzInput,
-    { orgAdminUserId: string | null; hasAssignment: boolean } | null
-  >
+  'authz.generator': Resolver<GeneratorAuthzInput, GeneratorAuthzFact | null>
   'authz.org': Resolver<string, { adminUserId: string | null } | null>
   'organization.byId': Resolver<
     string,

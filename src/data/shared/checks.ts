@@ -1,4 +1,7 @@
-import { runDecisionAsync } from '@/data/shared/facts/async-adapter'
+import {
+  runDecisionAsync,
+  type RuleResult
+} from '@/data/shared/facts/async-adapter'
 import type { Decision } from '@/data/shared/facts/port'
 
 import * as assignmentsD from './assignments/decisions'
@@ -20,9 +23,7 @@ import * as sessionsD from './sessions/decisions'
 // + facts types without a hand-written interface. If TypeScript check time
 // regresses, replace the return type with a hand-written `Checks` interface.
 
-type Rule = { ok: true; [k: string]: unknown } | { ok: false; code: string }
-
-function wrap<Args, Facts, R extends Rule>(
+function wrap<Args, Facts, R extends RuleResult>(
   decision: Decision<Args, Facts, R>,
   lookup: (key: string, input: unknown) => Promise<unknown>
 ) {

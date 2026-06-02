@@ -42,7 +42,7 @@ export const isOrgAdmin = defineDecision<
 })
 
 interface GeneratorAuthzFacts {
-  gen: { orgAdminUserId: string | null; hasAssignment: boolean } | null
+  gen: policy.GeneratorAuthzFact | null
 }
 
 export interface IsGeneratorOrgAdminArgs {
@@ -96,11 +96,5 @@ export const canAccessGenerator = defineDecision<
     }))
   ],
   rule: (args, facts) =>
-    policy.canAccessGenerator(
-      args.userId,
-      facts.gen?.orgAdminUserId ?? null,
-      facts.gen?.hasAssignment ?? false
-    )
-      ? allowed
-      : denied
+    policy.canAccessGeneratorFact(args.userId, facts.gen) ? allowed : denied
 })

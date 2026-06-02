@@ -112,15 +112,15 @@ export const deleteMaintenanceRecordPolicy = (facts: {
   return ok
 }
 
-export const updateMaintenanceRecordPolicy = (params: {
+export const updateMaintenanceRecordPolicy = (facts: {
   recordExists: boolean
   hasGeneratorAccess: boolean
   performedAt: string
   now: Date
 }): PolicyResult => {
-  if (!params.recordExists) return fail('RECORD_NOT_FOUND')
-  if (!params.hasGeneratorAccess) return fail('NOT_AUTHORIZED_FOR_GENERATOR')
-  if (new Date(params.performedAt) > params.now)
+  if (!facts.recordExists) return fail('RECORD_NOT_FOUND')
+  if (!facts.hasGeneratorAccess) return fail('NOT_AUTHORIZED_FOR_GENERATOR')
+  if (new Date(facts.performedAt) > facts.now)
     return fail('PERFORMED_TIME_IN_FUTURE')
   return ok
 }

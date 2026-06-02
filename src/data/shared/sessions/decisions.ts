@@ -17,15 +17,12 @@ import {
 // uniformly.
 //
 // Each plan entry names a resolver key registered in the side-specific
-// FactRegistry. `authz.generator` returns the raw
-// `{ orgAdminUserId, hasAssignment }` row so the rule can apply the pure
-// authz predicates inline. This keeps authz-as-fact cheap and shareable
-// without needing to promote the authz checks to their own decisions.
+// FactRegistry. `authz.generator` returns the shared `GeneratorAuthzFact`
+// row so the rule can apply the pure authz predicates inline. This keeps
+// authz-as-fact cheap and shareable without needing to promote the authz
+// checks to their own decisions.
 
-type GeneratorAuthzFact = {
-  orgAdminUserId: string | null
-  hasAssignment: boolean
-} | null
+type GeneratorAuthzFact = authzPolicy.GeneratorAuthzFact | null
 
 // ── startSession ────────────────────────────────────────────────────────────
 
@@ -60,10 +57,9 @@ export const startSession = defineDecision<
   rule: (args, facts) =>
     startSessionPolicy({
       generatorExists: facts.generator !== null,
-      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+      hasGeneratorAccess: authzPolicy.canAccessGeneratorFact(
         args.userId,
-        facts.authzGenerator?.orgAdminUserId ?? null,
-        facts.authzGenerator?.hasAssignment ?? false
+        facts.authzGenerator
       ),
       hasOpenSession: facts.openSession ?? false
     })
@@ -100,10 +96,9 @@ export const stopSession = defineDecision<
   rule: (args, facts) =>
     stopSessionPolicy({
       session: facts.session,
-      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+      hasGeneratorAccess: authzPolicy.canAccessGeneratorFact(
         args.userId,
-        facts.authzGenerator?.orgAdminUserId ?? null,
-        facts.authzGenerator?.hasAssignment ?? false
+        facts.authzGenerator
       )
     })
 })
@@ -139,10 +134,9 @@ export const deleteSession = defineDecision<
   rule: (args, facts) =>
     deleteSessionPolicy({
       session: facts.session,
-      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+      hasGeneratorAccess: authzPolicy.canAccessGeneratorFact(
         args.userId,
-        facts.authzGenerator?.orgAdminUserId ?? null,
-        facts.authzGenerator?.hasAssignment ?? false
+        facts.authzGenerator
       )
     })
 })
@@ -181,10 +175,9 @@ export const updateSession = defineDecision<
   rule: (args, facts) =>
     updateSessionPolicy({
       session: facts.session,
-      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+      hasGeneratorAccess: authzPolicy.canAccessGeneratorFact(
         args.userId,
-        facts.authzGenerator?.orgAdminUserId ?? null,
-        facts.authzGenerator?.hasAssignment ?? false
+        facts.authzGenerator
       ),
       startedAt: args.startedAt,
       stoppedAt: args.stoppedAt,
@@ -227,10 +220,9 @@ export const logManualSession = defineDecision<
   rule: (args, facts) =>
     logManualSessionPolicy({
       generatorExists: facts.generator !== null,
-      hasGeneratorAccess: authzPolicy.canAccessGenerator(
+      hasGeneratorAccess: authzPolicy.canAccessGeneratorFact(
         args.userId,
-        facts.authzGenerator?.orgAdminUserId ?? null,
-        facts.authzGenerator?.hasAssignment ?? false
+        facts.authzGenerator
       ),
       startedAt: args.startedAt,
       stoppedAt: args.stoppedAt,

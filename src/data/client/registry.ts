@@ -10,6 +10,7 @@ import {
   organizationMembers,
   organizations
 } from '@/data/client/db-schema'
+import type { GeneratorAuthzFact } from '@/data/shared/authz/policy'
 import type { SessionRef } from '@/data/shared/sessions'
 import type { TriggerType } from '@/lib/maintenance/trigger-type'
 import type { ClientDb } from '@/lib/powersync/database'
@@ -95,7 +96,7 @@ const sessionHasOpenForGeneratorEntry: Entry<string, boolean> = {
 
 const authzGeneratorEntry: Entry<
   GeneratorAuthzInput,
-  { orgAdminUserId: string | null; hasAssignment: boolean } | null
+  GeneratorAuthzFact | null
 > = {
   build: (db, { userId, generatorId }) =>
     db
@@ -381,10 +382,7 @@ interface ClientFactRegistry {
   'generator.exists': Entry<string, boolean>
   'generator.orgId': Entry<string, string | null>
   'session.hasOpenForGenerator': Entry<string, boolean>
-  'authz.generator': Entry<
-    GeneratorAuthzInput,
-    { orgAdminUserId: string | null; hasAssignment: boolean } | null
-  >
+  'authz.generator': Entry<GeneratorAuthzInput, GeneratorAuthzFact | null>
   'authz.org': Entry<string, { adminUserId: string | null } | null>
   'organization.byId': Entry<string, { id: string; adminUserId: string } | null>
   'orgMembership.hasForUserAndOrg': Entry<OrgMemberInput, boolean>

@@ -12,10 +12,7 @@ import {
 // branches) doesn't apply here.
 
 type OrgAuthzFact = { adminUserId: string | null } | null
-type GeneratorAuthzFact = {
-  orgAdminUserId: string | null
-  hasAssignment: boolean
-} | null
+type GeneratorAuthzFact = authzPolicy.GeneratorAuthzFact | null
 
 // ── createGenerator ─────────────────────────────────────────────────────────
 
