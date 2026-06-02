@@ -12,9 +12,7 @@ export function confirmDeleteSession(userId: string, sessionId: string) {
   confirmDestructive(
     t('generator.deleteRun'),
     t('generator.deleteRunConfirm'),
-    {
-      mutation: () => deleteSession(userId, sessionId)
-    }
+    { mutation: () => deleteSession(userId, sessionId) }
   )
 }
 

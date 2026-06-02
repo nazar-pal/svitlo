@@ -6,6 +6,7 @@ import {
   cancelInvitationPolicy,
   createInvitationPolicy,
   declineInvitationPolicy,
+  type AcceptInvitationResult,
   type InvitationRef,
   type PolicyResult
 } from './index'
@@ -80,7 +81,7 @@ const acceptInvitationPlan = factPlanFor<
 export const acceptInvitation = defineDecision<
   AcceptInvitationArgs,
   AcceptInvitationFacts,
-  ReturnType<typeof acceptInvitationPolicy>
+  AcceptInvitationResult
 >({
   id: 'invitations.acceptInvitation',
   plan: [

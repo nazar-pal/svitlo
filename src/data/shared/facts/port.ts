@@ -25,15 +25,6 @@ export interface Decision<Args, Facts, Result> {
   readonly rule: (args: Args, facts: Facts) => Result
 }
 
-// Async outcome. Adapters always attach `facts` so defence-in-depth rules
-// in server handlers can reuse the already-fetched row without a second
-// round trip. Replaces the domain-specific `DeleteSessionResult` /
-// `RemoveMemberResult` shapes the previous architecture had per rule.
-export type CheckResult<
-  Facts,
-  Code extends string = ParamFreeMutationErrorCode
-> = { ok: true; facts: Facts } | { ok: false; code: Code; facts: Facts }
-
 // Reactive outcome. UI only cares about ok/code and the loading gate, so
 // facts are projected away — keeps `PolicyView` equality with the
 // pre-refactor shape and avoids leaking server-only fact payloads into the

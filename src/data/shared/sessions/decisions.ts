@@ -99,7 +99,7 @@ export const stopSession = defineDecision<
   ],
   rule: (args, facts) =>
     stopSessionPolicy({
-      session: facts.session ?? null,
+      session: facts.session,
       hasGeneratorAccess: authzPolicy.canAccessGenerator(
         args.userId,
         facts.authzGenerator?.orgAdminUserId ?? null,
@@ -138,7 +138,7 @@ export const deleteSession = defineDecision<
   ],
   rule: (args, facts) =>
     deleteSessionPolicy({
-      session: facts.session ?? null,
+      session: facts.session,
       hasGeneratorAccess: authzPolicy.canAccessGenerator(
         args.userId,
         facts.authzGenerator?.orgAdminUserId ?? null,
@@ -180,7 +180,7 @@ export const updateSession = defineDecision<
   ],
   rule: (args, facts) =>
     updateSessionPolicy({
-      session: facts.session ?? null,
+      session: facts.session,
       hasGeneratorAccess: authzPolicy.canAccessGenerator(
         args.userId,
         facts.authzGenerator?.orgAdminUserId ?? null,

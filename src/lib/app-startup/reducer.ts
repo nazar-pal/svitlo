@@ -62,8 +62,7 @@ export function reduce(state: StartupState, action: Action): StartupState {
     case 'INIT_FAILED':
       if (state.phase === 'initializing-db')
         return {
-          phase: 'db-failed',
-          splashHidden: true,
+          ...projectPhase('db-failed'),
           error: { message: action.message }
         }
       return state

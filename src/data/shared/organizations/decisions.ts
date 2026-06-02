@@ -4,6 +4,7 @@ import { defineDecision, factPlanFor } from '@/data/shared/facts/decisions'
 import {
   deleteOrganizationPolicy,
   renameOrganizationPolicy,
+  type DeleteOrganizationResult,
   type OrganizationRef,
   type PolicyResult
 } from './index'
@@ -66,7 +67,7 @@ const deleteOrganizationPlan = factPlanFor<
 export const deleteOrganization = defineDecision<
   DeleteOrganizationArgs,
   DeleteOrganizationFacts,
-  ReturnType<typeof deleteOrganizationPolicy>
+  DeleteOrganizationResult
 >({
   id: 'organizations.deleteOrganization',
   plan: [

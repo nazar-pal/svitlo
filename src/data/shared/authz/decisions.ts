@@ -14,6 +14,7 @@ import * as policy from './policy'
 type AuthzFailure = { ok: false; code: 'NOT_AUTHORIZED' }
 export type AuthzResult = { ok: true } | AuthzFailure
 
+const allowed: AuthzResult = { ok: true }
 const denied: AuthzFailure = { ok: false, code: 'NOT_AUTHORIZED' }
 
 interface OrgAuthzFacts {
@@ -36,7 +37,7 @@ export const isOrgAdmin = defineDecision<
   plan: [isOrgAdminPlan('org', 'authz.org', a => a.orgId)],
   rule: (args, facts) =>
     policy.isOrgAdmin(args.userId, facts.org?.adminUserId ?? null)
-      ? { ok: true }
+      ? allowed
       : denied
 })
 
@@ -68,7 +69,7 @@ export const isGeneratorOrgAdmin = defineDecision<
   ],
   rule: (args, facts) =>
     policy.isOrgAdmin(args.userId, facts.gen?.orgAdminUserId ?? null)
-      ? { ok: true }
+      ? allowed
       : denied
 })
 
@@ -100,6 +101,6 @@ export const canAccessGenerator = defineDecision<
       facts.gen?.orgAdminUserId ?? null,
       facts.gen?.hasAssignment ?? false
     )
-      ? { ok: true }
+      ? allowed
       : denied
 })

@@ -15,14 +15,12 @@ import * as sessionsD from './sessions/decisions'
 // their own side-specific `lookup` — the only thing that differs between
 // sides is the resolver registry, not the decisions.
 //
-// `wrap` preserves each decision's `(args: Args) => Promise<CheckResult<Facts>>`
+// `wrap` preserves each decision's `(args: Args) => Promise<{ ok; facts }>`
 // signature via generic inference so mutation authors get precise argument
 // + facts types without a hand-written interface. If TypeScript check time
 // regresses, replace the return type with a hand-written `Checks` interface.
 
-type RuleOk = { ok: true; [k: string]: unknown }
-type RuleFail = { ok: false; code: string }
-type Rule = RuleOk | RuleFail
+type Rule = { ok: true; [k: string]: unknown } | { ok: false; code: string }
 
 function wrap<Args, Facts, R extends Rule>(
   decision: Decision<Args, Facts, R>,

@@ -41,7 +41,9 @@ describe('confirmDestructive', () => {
   })
 
   it('uses a custom confirm label', () => {
-    confirmDestructive('Remove?', 'Are you sure', { confirmLabel: 'common.remove' })
+    confirmDestructive('Remove?', 'Are you sure', {
+      confirmLabel: 'common.remove'
+    })
 
     expect(lastButtons()[1]).toMatchObject({ text: 'common.remove' })
   })

@@ -56,7 +56,7 @@ export const createTemplate = defineDecision<
   ],
   rule: (args, facts) =>
     createMaintenanceTemplatePolicy({
-      generatorExists: facts.generatorExists ?? false,
+      generatorExists: facts.generatorExists,
       isCallerGeneratorOrgAdmin: authzPolicy.isOrgAdmin(
         args.userId,
         facts.authzGenerator?.orgAdminUserId ?? null
@@ -224,7 +224,7 @@ export const recordMaintenance = defineDecision<
   ],
   rule: (args, facts) =>
     recordMaintenancePolicy({
-      generatorExists: facts.generatorExists ?? false,
+      generatorExists: facts.generatorExists,
       hasGeneratorAccess: authzPolicy.canAccessGenerator(
         args.userId,
         facts.authzGenerator?.orgAdminUserId ?? null,

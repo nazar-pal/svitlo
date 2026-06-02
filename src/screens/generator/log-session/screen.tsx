@@ -1,7 +1,7 @@
 import { DatePicker, Host } from '@expo/ui/swift-ui'
 import { useRouter } from 'expo-router'
 import { Card } from 'heroui-native'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Text } from 'react-native'
 
 import { useTranslation } from '@/lib/i18n'
@@ -13,6 +13,7 @@ import { isPolicyAllowed, policies, usePolicy } from '@/data/client/use-policy'
 import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
+import { useResampledNow } from '@/lib/hooks/use-resampled-now'
 
 export default function LogSessionScreen() {
   const ctx = useAuthedParams(['id'])
@@ -64,16 +65,7 @@ function LogSessionForm({
 
   const startedAtISO = startedAtBinding.value.toISOString()
   const stoppedAtISO = stoppedAtBinding.value.toISOString()
-  // Resample `now` when the user edits the stop time. Keeping a per-render
-  // `new Date()` works but creates an unstable reference and lets the
-  // `END_TIME_IN_FUTURE` branch flicker across frames near the boundary;
-  // the mutation re-checks with `c.now()` at submit so this gate is
-  // UX-only.
-  const now = useMemo(
-    () => new Date(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stoppedAtISO]
-  )
+  const now = useResampledNow(stoppedAtISO)
   const policy = usePolicy(policies.sessions.logManualSession, {
     userId,
     generatorId,
