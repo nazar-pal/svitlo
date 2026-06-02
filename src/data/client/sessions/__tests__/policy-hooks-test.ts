@@ -316,6 +316,30 @@ describe('usePolicy(sessions.updateSession)', () => {
     })
   })
 
+  it('rejects with END_TIME_IN_FUTURE when stoppedAt is beyond now', async () => {
+    seedBaseScenario(mockDb)
+    seedGenerator(mockDb)
+    seedStoppedSession(mockDb)
+    const now = new Date()
+    const futureEnd = new Date(now.getTime() + 60 * 60 * 1000).toISOString()
+    const { result } = renderHook(() =>
+      usePolicy(policies.sessions.updateSession, {
+        userId: IDS.adminUser,
+        sessionId: IDS.session.stopped,
+        startedAt: '2026-01-15T10:00:00Z',
+        stoppedAt: futureEnd,
+        now
+      })
+    )
+    await waitFor(() => {
+      expect(result.current).toEqual({
+        status: 'ready',
+        ok: false,
+        code: 'END_TIME_IN_FUTURE'
+      })
+    })
+  })
+
   it('accepts the happy path', async () => {
     seedBaseScenario(mockDb)
     seedGenerator(mockDb)

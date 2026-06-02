@@ -1,5 +1,5 @@
 import { runDecisionAsync } from '@/data/shared/facts/async-adapter'
-import type { CheckResult, Decision } from '@/data/shared/facts/port'
+import type { Decision } from '@/data/shared/facts/port'
 
 import * as assignmentsD from './assignments/decisions'
 import * as generatorsD from './generators/decisions'
@@ -80,7 +80,3 @@ export function buildCheckFacade(
 }
 
 export type CheckFacade = ReturnType<typeof buildCheckFacade>
-
-// Re-export for downstream call sites that need the shape of a specific
-// rule's `checkOk.facts` — mutation apply callbacks destructure these.
-export type { CheckResult }

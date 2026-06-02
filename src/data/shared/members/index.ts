@@ -1,8 +1,6 @@
 import type { ParamFreeMutationErrorCode } from '@/data/shared/errors'
 import type { PolicyResult } from '@/data/shared/policy-result'
 
-export type { PolicyResult }
-
 // Fact shapes the member-lifecycle policy needs. `id` is the membership
 // row id — both entry points (admin-removes and self-leaves) need it for
 // the downstream transfer-and-delete side effect, so carrying it on

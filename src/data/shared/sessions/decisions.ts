@@ -1,10 +1,10 @@
 import * as authzPolicy from '@/data/shared/authz/policy'
 import { defineDecision, factPlanFor } from '@/data/shared/facts/decisions'
-import type { PolicyResult } from '@/data/shared/policy-result'
 
 import {
   deleteSessionPolicy,
   logManualSessionPolicy,
+  type PolicyResult,
   type SessionRef,
   startSessionPolicy,
   stopSessionPolicy,
