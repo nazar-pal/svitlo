@@ -30,7 +30,10 @@ interface Entry<Input, Output> {
   build: (
     db: ClientDb,
     input: Input
-  ) => { execute: () => Promise<unknown>; toSQL: () => unknown }
+  ) => {
+    execute: () => Promise<unknown>
+    toSQL: () => { sql: string; params: unknown[] }
+  }
   project: (rows: readonly unknown[]) => Output
 }
 
@@ -466,11 +469,7 @@ export function buildReactiveRegistry(getDb: () => ClientDb): ReactiveRegistry {
   for (const [key, entry] of Object.entries(clientFactRegistry)) {
     const typed = entry as Entry<unknown, unknown>
     out[key] = {
-      build: input =>
-        typed.build(getDb(), input) as {
-          execute: () => Promise<unknown>
-          toSQL: () => { sql: string; params: unknown[] }
-        },
+      build: input => typed.build(getDb(), input),
       project: rows => typed.project(rows)
     }
   }
