@@ -15,8 +15,6 @@ import {
   type UpdateTemplateInput
 } from './index'
 
-type GeneratorAuthzFact = authzPolicy.GeneratorAuthzFact | null
-
 // ── createTemplate ──────────────────────────────────────────────────────────
 
 export interface CreateTemplateArgs {
@@ -26,7 +24,7 @@ export interface CreateTemplateArgs {
 
 interface CreateTemplateFacts {
   generatorExists: boolean
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator: authzPolicy.GeneratorAuthzFact | null
 }
 
 const createTemplatePlan = factPlanFor<
@@ -71,7 +69,7 @@ export interface UpdateTemplateArgs {
 
 interface UpdateTemplateFacts {
   template: TemplateRef | null
-  authzGenerator?: GeneratorAuthzFact
+  authzGenerator?: authzPolicy.GeneratorAuthzFact | null
 }
 
 const updateTemplatePlan = factPlanFor<
@@ -142,7 +140,7 @@ export interface DeleteTemplateArgs {
 
 interface DeleteTemplateFacts {
   template: TemplateRef | null
-  authzGenerator?: GeneratorAuthzFact
+  authzGenerator?: authzPolicy.GeneratorAuthzFact | null
 }
 
 const deleteTemplatePlan = factPlanFor<
@@ -188,7 +186,7 @@ export interface RecordMaintenanceArgs {
 
 interface RecordMaintenanceFacts {
   generatorExists: boolean
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator: authzPolicy.GeneratorAuthzFact | null
   template: TemplateRef | null
 }
 
@@ -241,7 +239,7 @@ export interface DeleteRecordArgs {
 
 interface DeleteRecordFacts {
   record: RecordRef | null
-  authzGenerator?: GeneratorAuthzFact
+  authzGenerator?: authzPolicy.GeneratorAuthzFact | null
 }
 
 const deleteRecordPlan = factPlanFor<DeleteRecordArgs, DeleteRecordFacts>()
@@ -279,7 +277,7 @@ export interface UpdateRecordArgs {
 
 interface UpdateRecordFacts {
   record: RecordRef | null
-  authzGenerator?: GeneratorAuthzFact
+  authzGenerator?: authzPolicy.GeneratorAuthzFact | null
 }
 
 const updateRecordPlan = factPlanFor<UpdateRecordArgs, UpdateRecordFacts>()

@@ -12,18 +12,25 @@ export type RuleResult =
   | { ok: true; [k: string]: unknown }
   | { ok: false; code: string }
 
+// Distributes over the rule-result union: ok branches contribute nothing,
+// fail branches contribute their code literal(s).
 type FailCode<T> = T extends { ok: false; code: infer C extends string }
   ? C
-  : string
+  : never
 
 type OkBranch<T> = Extract<T, { ok: true }>
 
 // Walks a decision's plan in declaration order, short-circuiting any entry
 // whose `input()` returns null (leaves the fact as `undefined` in the
-// merged facts object). After all lookups settle, invokes `rule`, spreads
-// the rule's ok-branch so the caller keeps any extras it returned, and
-// attaches `facts` on both branches so server handlers can do
-// defence-in-depth without a second round trip.
+// merged facts object). Lookups run sequentially even when independent —
+// a deliberate trade of a small latency cost (2-3 plan entries per
+// decision) for one execution order shared with the reactive adapter,
+// whose hook rules force sequential resolution anyway. After all lookups
+// settle, invokes `rule`, spreads the rule's ok-branch so the caller keeps
+// any extras it returned, and attaches `facts` on both branches so server
+// handlers can do defence-in-depth without a second round trip. Because
+// `facts` is attached after the spread, a rule ok-branch must not carry a
+// field named `facts` of its own.
 export async function runDecisionAsync<Args, Facts, Result extends RuleResult>(
   decision: Decision<Args, Facts, Result>,
   args: Args,

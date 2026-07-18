@@ -12,8 +12,6 @@ import {
 // exist, letting the rule fall through to GENERATOR_NOT_FOUND without
 // paying for the fan-out.
 
-type OrgAuthzFact = { adminUserId: string | null } | null
-
 // ── assignUserToGenerator ───────────────────────────────────────────────────
 
 export interface AssignUserToGeneratorArgs {
@@ -24,7 +22,7 @@ export interface AssignUserToGeneratorArgs {
 
 interface AssignUserToGeneratorFacts {
   orgId: string | null
-  authzOrg?: OrgAuthzFact
+  authzOrg?: authzPolicy.OrgAuthzFact | null
   targetIsOrgMember?: boolean
   alreadyAssigned?: boolean
 }
@@ -92,7 +90,7 @@ export interface UnassignUserFromGeneratorArgs {
 
 interface UnassignUserFromGeneratorFacts {
   orgId: string | null
-  authzOrg?: OrgAuthzFact
+  authzOrg?: authzPolicy.OrgAuthzFact | null
   assignmentExists?: boolean
 }
 

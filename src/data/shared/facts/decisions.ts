@@ -1,3 +1,4 @@
+import type { FactKey } from './contracts'
 import type { Decision, FactPlanEntry } from './port'
 
 // Identity helper with inference anchors. Domains declare decisions via
@@ -20,7 +21,7 @@ export function defineDecision<Args, Facts, Result>(def: {
 export function factPlanFor<Args, Facts>() {
   return <Input>(
     alias: keyof Facts & string,
-    key: string,
+    key: FactKey,
     input: (args: Args, facts: Partial<Facts>) => Input | null
   ): FactPlanEntry<Args, Partial<Facts>, Input> => ({ alias, key, input })
 }

@@ -44,6 +44,7 @@ export function DeleteOrgDialog({
 
   function close() {
     setConfirmText('')
+    setIsSubmitting(false)
     onClose()
   }
 

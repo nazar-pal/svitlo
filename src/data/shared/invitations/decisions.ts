@@ -11,8 +11,6 @@ import {
   type PolicyResult
 } from './index'
 
-type OrgAuthzFact = { adminUserId: string | null } | null
-
 // ── createInvitation ────────────────────────────────────────────────────────
 
 export interface CreateInvitationArgs {
@@ -22,7 +20,7 @@ export interface CreateInvitationArgs {
 }
 
 interface CreateInvitationFacts {
-  authzOrg: OrgAuthzFact
+  authzOrg: authzPolicy.OrgAuthzFact | null
   existing?: InvitationRef | null
 }
 
@@ -147,7 +145,7 @@ export interface CancelInvitationArgs {
 
 interface CancelInvitationFacts {
   invitation: InvitationRef | null
-  authzOrg?: OrgAuthzFact
+  authzOrg?: authzPolicy.OrgAuthzFact | null
 }
 
 const cancelInvitationPlan = factPlanFor<

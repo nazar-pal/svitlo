@@ -10,37 +10,51 @@ import {
   organizationMembers,
   organizations
 } from '@/data/client/db-schema'
-import type { GeneratorAuthzFact } from '@/data/shared/authz/policy'
+import type {
+  GeneratorAuthzFact,
+  OrgAuthzFact
+} from '@/data/shared/authz/policy'
+import type {
+  FactInput,
+  FactKey,
+  FactOf,
+  GeneratorUserInput,
+  InvitationRef,
+  OrgMemberInput,
+  OrgMembershipRef,
+  TemplateTriggerRef
+} from '@/data/shared/facts/contracts'
+import type { RecordRef } from '@/data/shared/maintenance'
 import type { SessionRef } from '@/data/shared/sessions'
-import type { TriggerType } from '@/lib/maintenance/trigger-type'
+import type { DrizzleCompilable } from '@/lib/hooks/use-drizzle-query'
 import type { ClientDb } from '@/lib/powersync/database'
 
 import type { ReactiveRegistry } from '@/data/shared/facts/reactive-adapter'
 
 // Client-side fact registry. Each resolver exposes two members:
 //
-//   build:   a Drizzle builder. Async callers `await` it, reactive callers
+//   build:   a Drizzle builder. Async callers execute it, reactive callers
 //            feed it to `useDrizzleQuery`. This keeps the SQL for every
 //            fact in exactly one place across both delivery paths.
 //   project: row(s) → fact shape. Also shared across both paths so
 //            projection drift between async/reactive is impossible.
 //
-// Decisions reference resolvers by the key they're registered under here.
-
-interface Entry<Input, Output> {
-  build: (
-    db: ClientDb,
-    input: Input
-  ) => {
-    execute: () => Promise<unknown>
-    toSQL: () => { sql: string; params: unknown[] }
-  }
-  project: (rows: readonly unknown[]) => Output
+// Decisions reference resolvers by the key they're registered under here;
+// the `satisfies` check against the shared `FactContracts` map guarantees
+// every key resolves and every input/fact shape matches the server side.
+//
+// Members are declared as methods so entries with concrete `Row` types stay
+// assignable to the `Row = unknown` erasure used at the lookup boundary.
+interface Entry<Input, Row, Output> {
+  build(db: ClientDb, input: Input): DrizzleCompilable<Row>
+  project(rows: readonly Row[]): Output
 }
 
-type GeneratorAuthzInput = { userId: string; generatorId: string }
-
-const sessionByIdEntry: Entry<string, SessionRef | null> = {
+const sessionByIdEntry: Entry<
+  string,
+  { generatorId: string; startedByUserId: string; stoppedAt: string | null },
+  SessionRef | null
+> = {
   build: (db, id) =>
     db
       .select({
@@ -52,11 +66,7 @@ const sessionByIdEntry: Entry<string, SessionRef | null> = {
       .where(eq(generatorSessions.id, id))
       .limit(1),
   project: rows => {
-    const [row] = rows as readonly {
-      generatorId: string
-      startedByUserId: string
-      stoppedAt: string | null
-    }[]
+    const [row] = rows
     if (!row) return null
     return {
       generatorId: row.generatorId,
@@ -66,36 +76,36 @@ const sessionByIdEntry: Entry<string, SessionRef | null> = {
   }
 }
 
-const generatorByIdEntry: Entry<string, { id: string } | null> = {
-  build: (db, id) =>
-    db
-      .select({ id: generators.id })
-      .from(generators)
-      .where(eq(generators.id, id))
-      .limit(1),
-  project: rows => {
-    const [row] = rows as readonly { id: string }[]
-    return row ?? null
+const generatorByIdEntry: Entry<string, { id: string }, { id: string } | null> =
+  {
+    build: (db, id) =>
+      db
+        .select({ id: generators.id })
+        .from(generators)
+        .where(eq(generators.id, id))
+        .limit(1),
+    project: rows => rows[0] ?? null
   }
-}
 
-const sessionHasOpenForGeneratorEntry: Entry<string, boolean> = {
-  build: (db, generatorId) =>
-    db
-      .select({ id: generatorSessions.id })
-      .from(generatorSessions)
-      .where(
-        and(
-          eq(generatorSessions.generatorId, generatorId),
-          isNull(generatorSessions.stoppedAt)
+const sessionHasOpenForGeneratorEntry: Entry<string, { id: string }, boolean> =
+  {
+    build: (db, generatorId) =>
+      db
+        .select({ id: generatorSessions.id })
+        .from(generatorSessions)
+        .where(
+          and(
+            eq(generatorSessions.generatorId, generatorId),
+            isNull(generatorSessions.stoppedAt)
+          )
         )
-      )
-      .limit(1),
-  project: rows => rows.length > 0
-}
+        .limit(1),
+    project: rows => rows.length > 0
+  }
 
 const authzGeneratorEntry: Entry<
-  GeneratorAuthzInput,
+  GeneratorUserInput,
+  { orgAdminUserId: string | null; hasAssignment: number },
   GeneratorAuthzFact | null
 > = {
   build: (db, { userId, generatorId }) =>
@@ -115,10 +125,7 @@ const authzGeneratorEntry: Entry<
       .where(eq(generators.id, generatorId))
       .limit(1),
   project: rows => {
-    const [row] = rows as readonly {
-      orgAdminUserId: string | null
-      hasAssignment: number
-    }[]
+    const [row] = rows
     if (!row) return null
     return {
       orgAdminUserId: row.orgAdminUserId,
@@ -127,21 +134,19 @@ const authzGeneratorEntry: Entry<
   }
 }
 
-const authzOrgEntry: Entry<string, { adminUserId: string | null } | null> = {
+const authzOrgEntry: Entry<string, OrgAuthzFact, OrgAuthzFact | null> = {
   build: (db, orgId) =>
     db
       .select({ adminUserId: organizations.adminUserId })
       .from(organizations)
       .where(eq(organizations.id, orgId))
       .limit(1),
-  project: rows => {
-    const [row] = rows as readonly { adminUserId: string | null }[]
-    return row ?? null
-  }
+  project: rows => rows[0] ?? null
 }
 
 const organizationByIdEntry: Entry<
   string,
+  { id: string; adminUserId: string },
   { id: string; adminUserId: string } | null
 > = {
   build: (db, id) =>
@@ -150,26 +155,24 @@ const organizationByIdEntry: Entry<
       .from(organizations)
       .where(eq(organizations.id, id))
       .limit(1),
-  project: rows => {
-    const [row] = rows as readonly { id: string; adminUserId: string }[]
-    return row ?? null
-  }
+  project: rows => rows[0] ?? null
 }
 
-const generatorOrgIdEntry: Entry<string, string | null> = {
+const generatorOrgIdEntry: Entry<
+  string,
+  { organizationId: string },
+  string | null
+> = {
   build: (db, id) =>
     db
       .select({ organizationId: generators.organizationId })
       .from(generators)
       .where(eq(generators.id, id))
       .limit(1),
-  project: rows => {
-    const [row] = rows as readonly { organizationId: string }[]
-    return row?.organizationId ?? null
-  }
+  project: rows => rows[0]?.organizationId ?? null
 }
 
-const generatorExistsEntry: Entry<string, boolean> = {
+const generatorExistsEntry: Entry<string, { id: string }, boolean> = {
   build: (db, id) =>
     db
       .select({ id: generators.id })
@@ -179,9 +182,11 @@ const generatorExistsEntry: Entry<string, boolean> = {
   project: rows => rows.length > 0
 }
 
-type OrgMemberInput = { userId: string; organizationId: string }
-
-const orgMembershipHasForUserAndOrgEntry: Entry<OrgMemberInput, boolean> = {
+const orgMembershipHasForUserAndOrgEntry: Entry<
+  OrgMemberInput,
+  { id: string },
+  boolean
+> = {
   build: (db, { userId, organizationId }) =>
     db
       .select({ id: organizationMembers.id })
@@ -198,7 +203,8 @@ const orgMembershipHasForUserAndOrgEntry: Entry<OrgMemberInput, boolean> = {
 
 const orgMembershipByUserAndOrgEntry: Entry<
   OrgMemberInput,
-  { id: string; organizationId: string; userId: string } | null
+  OrgMembershipRef,
+  OrgMembershipRef | null
 > = {
   build: (db, { userId, organizationId }) =>
     db
@@ -215,19 +221,13 @@ const orgMembershipByUserAndOrgEntry: Entry<
         )
       )
       .limit(1),
-  project: rows => {
-    const [row] = rows as readonly {
-      id: string
-      organizationId: string
-      userId: string
-    }[]
-    return row ?? null
-  }
+  project: rows => rows[0] ?? null
 }
 
 const orgMembershipByIdEntry: Entry<
   string,
-  { id: string; organizationId: string; userId: string } | null
+  OrgMembershipRef,
+  OrgMembershipRef | null
 > = {
   build: (db, id) =>
     db
@@ -239,19 +239,14 @@ const orgMembershipByIdEntry: Entry<
       .from(organizationMembers)
       .where(eq(organizationMembers.id, id))
       .limit(1),
-  project: rows => {
-    const [row] = rows as readonly {
-      id: string
-      organizationId: string
-      userId: string
-    }[]
-    return row ?? null
-  }
+  project: rows => rows[0] ?? null
 }
 
-type AssignmentInput = { userId: string; generatorId: string }
-
-const assignmentHasForUserAndGeneratorEntry: Entry<AssignmentInput, boolean> = {
+const assignmentHasForUserAndGeneratorEntry: Entry<
+  GeneratorUserInput,
+  { id: string },
+  boolean
+> = {
   build: (db, { userId, generatorId }) =>
     db
       .select({ id: generatorUserAssignments.id })
@@ -266,36 +261,24 @@ const assignmentHasForUserAndGeneratorEntry: Entry<AssignmentInput, boolean> = {
   project: rows => rows.length > 0
 }
 
-const invitationByIdEntry: Entry<
-  string,
-  { organizationId: string; inviteeEmail: string } | null
-> = {
-  build: (db, id) =>
-    db
-      .select({
-        organizationId: invitations.organizationId,
-        inviteeEmail: invitations.inviteeEmail
-      })
-      .from(invitations)
-      .where(eq(invitations.id, id))
-      .limit(1),
-  project: rows => {
-    const [row] = rows as readonly {
-      organizationId: string
-      inviteeEmail: string
-    }[]
-    return row ?? null
+const invitationByIdEntry: Entry<string, InvitationRef, InvitationRef | null> =
+  {
+    build: (db, id) =>
+      db
+        .select({
+          organizationId: invitations.organizationId,
+          inviteeEmail: invitations.inviteeEmail
+        })
+        .from(invitations)
+        .where(eq(invitations.id, id))
+        .limit(1),
+    project: rows => rows[0] ?? null
   }
-}
-
-type InvitationByOrgAndEmailInput = {
-  organizationId: string
-  inviteeEmail: string
-}
 
 const invitationByOrgAndEmailEntry: Entry<
-  InvitationByOrgAndEmailInput,
-  { organizationId: string; inviteeEmail: string } | null
+  FactInput<'invitation.byOrgAndEmail'>,
+  InvitationRef,
+  InvitationRef | null
 > = {
   build: (db, { organizationId, inviteeEmail }) =>
     db
@@ -311,23 +294,13 @@ const invitationByOrgAndEmailEntry: Entry<
         )
       )
       .limit(1),
-  project: rows => {
-    const [row] = rows as readonly {
-      organizationId: string
-      inviteeEmail: string
-    }[]
-    return row ?? null
-  }
+  project: rows => rows[0] ?? null
 }
 
 const maintenanceTemplateByIdEntry: Entry<
   string,
-  {
-    generatorId: string
-    triggerType: TriggerType
-    triggerHoursInterval: number | null
-    triggerCalendarDays: number | null
-  } | null
+  TemplateTriggerRef,
+  TemplateTriggerRef | null
 > = {
   build: (db, id) =>
     db
@@ -340,21 +313,10 @@ const maintenanceTemplateByIdEntry: Entry<
       .from(maintenanceTemplates)
       .where(eq(maintenanceTemplates.id, id))
       .limit(1),
-  project: rows => {
-    const [row] = rows as readonly {
-      generatorId: string
-      triggerType: TriggerType
-      triggerHoursInterval: number | null
-      triggerCalendarDays: number | null
-    }[]
-    return row ?? null
-  }
+  project: rows => rows[0] ?? null
 }
 
-const maintenanceRecordByIdEntry: Entry<
-  string,
-  { generatorId: string; performedByUserId: string } | null
-> = {
+const maintenanceRecordByIdEntry: Entry<string, RecordRef, RecordRef | null> = {
   build: (db, id) =>
     db
       .select({
@@ -364,61 +326,14 @@ const maintenanceRecordByIdEntry: Entry<
       .from(maintenanceRecords)
       .where(eq(maintenanceRecords.id, id))
       .limit(1),
-  project: rows => {
-    const [row] = rows as readonly {
-      generatorId: string
-      performedByUserId: string
-    }[]
-    return row ?? null
-  }
+  project: rows => rows[0] ?? null
 }
 
 // Flat registry — keys chosen to mirror the domain-qualified names used in
-// decision plans. Adding a new fact takes one entry here + one plan entry
-// in the domain's decision file.
-interface ClientFactRegistry {
-  'session.byId': Entry<string, SessionRef | null>
-  'generator.byId': Entry<string, { id: string } | null>
-  'generator.exists': Entry<string, boolean>
-  'generator.orgId': Entry<string, string | null>
-  'session.hasOpenForGenerator': Entry<string, boolean>
-  'authz.generator': Entry<GeneratorAuthzInput, GeneratorAuthzFact | null>
-  'authz.org': Entry<string, { adminUserId: string | null } | null>
-  'organization.byId': Entry<string, { id: string; adminUserId: string } | null>
-  'orgMembership.hasForUserAndOrg': Entry<OrgMemberInput, boolean>
-  'orgMembership.byUserAndOrg': Entry<
-    OrgMemberInput,
-    { id: string; organizationId: string; userId: string } | null
-  >
-  'orgMembership.byId': Entry<
-    string,
-    { id: string; organizationId: string; userId: string } | null
-  >
-  'assignment.hasForUserAndGenerator': Entry<AssignmentInput, boolean>
-  'invitation.byId': Entry<
-    string,
-    { organizationId: string; inviteeEmail: string } | null
-  >
-  'invitation.byOrgAndEmail': Entry<
-    InvitationByOrgAndEmailInput,
-    { organizationId: string; inviteeEmail: string } | null
-  >
-  'maintenanceTemplate.byId': Entry<
-    string,
-    {
-      generatorId: string
-      triggerType: TriggerType
-      triggerHoursInterval: number | null
-      triggerCalendarDays: number | null
-    } | null
-  >
-  'maintenanceRecord.byId': Entry<
-    string,
-    { generatorId: string; performedByUserId: string } | null
-  >
-}
-
-const clientFactRegistry: ClientFactRegistry = {
+// decision plans. Adding a new fact takes one contract entry in
+// `@/data/shared/facts/contracts.ts` plus one resolver here and one in the
+// server registry; the `satisfies` check fails until all three agree.
+const clientFactRegistry = {
   'session.byId': sessionByIdEntry,
   'generator.byId': generatorByIdEntry,
   'generator.exists': generatorExistsEntry,
@@ -435,28 +350,33 @@ const clientFactRegistry: ClientFactRegistry = {
   'invitation.byOrgAndEmail': invitationByOrgAndEmailEntry,
   'maintenanceTemplate.byId': maintenanceTemplateByIdEntry,
   'maintenanceRecord.byId': maintenanceRecordByIdEntry
-}
+} satisfies { [K in FactKey]: Entry<FactInput<K>, unknown, FactOf<K>> }
 
-// Async lookup: reads registry[key], awaits the builder, returns projection.
-// Same key namespace as the reactive adapter, so a single decision's plan
-// drives both paths.
+// Per-key `Input`/`Row` types erase to `unknown` at the lookup boundary —
+// the adapters traffic in `unknown` either way, and method bivariance makes
+// this a plain assignment rather than a cast.
+const erasedRegistry: Record<
+  string,
+  Entry<unknown, unknown, unknown>
+> = clientFactRegistry
+
+// Async lookup: reads registry[key], executes the builder, returns the
+// projection. Same key namespace as the reactive adapter, so a single
+// decision's plan drives both paths.
 export function clientLookup(
   db: ClientDb
 ): (key: string, input: unknown) => Promise<unknown> {
-  const flat = clientFactRegistry as unknown as Record<
-    string,
-    Entry<unknown, unknown>
-  >
   return async (key, input) => {
-    const entry = flat[key]
+    const entry = erasedRegistry[key]
     if (!entry) throw new Error(`no client resolver for fact key "${key}"`)
-    const rows = (await entry.build(db, input)) as unknown as readonly unknown[]
+    // Select builders always resolve to an array of rows.
+    const rows = (await entry.build(db, input).execute()) as readonly unknown[]
     return entry.project(rows)
   }
 }
 
 // Reactive registry adapter: same projection but the builder is fed to
-// `useDrizzleQuery` rather than awaited. `getDb` resolves the module-level
+// `useDrizzleQuery` rather than executed. `getDb` resolves the module-level
 // PowerSync handle lazily — the production entry passes a getter that
 // returns `db` from `@/lib/powersync/database`, while jest tests pass a
 // getter that resolves the per-test in-memory `drizzle` handle after
@@ -464,11 +384,10 @@ export function clientLookup(
 // the registry at module load time, before test mocks are wired.
 export function buildReactiveRegistry(getDb: () => ClientDb): ReactiveRegistry {
   const out: ReactiveRegistry = {}
-  for (const [key, entry] of Object.entries(clientFactRegistry)) {
-    const typed = entry as Entry<unknown, unknown>
+  for (const [key, entry] of Object.entries(erasedRegistry)) {
     out[key] = {
-      build: input => typed.build(getDb(), input),
-      project: rows => typed.project(rows)
+      build: input => entry.build(getDb(), input),
+      project: entry.project
     }
   }
   return out

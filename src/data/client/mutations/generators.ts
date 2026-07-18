@@ -17,6 +17,10 @@ import { cascadeDelete } from './cascade'
 import type { MutationContext } from './context'
 import { defineMutation } from './pipeline'
 
+type CreateGeneratorCheck = Awaited<
+  ReturnType<CheckFacade['generators']['createGenerator']>
+>
+
 export function createGeneratorMutations(ctx: MutationContext) {
   return {
     updateGenerator: defineMutation<
@@ -41,7 +45,7 @@ export function createGeneratorMutations(ctx: MutationContext) {
         Omit<InsertMaintenanceTemplateInput, 'generatorId'>[]
       ],
       z.output<typeof insertGeneratorSchema>,
-      Awaited<ReturnType<CheckFacade['generators']['createGenerator']>>,
+      CreateGeneratorCheck,
       z.output<typeof insertMaintenanceTemplateSchema>[]
     >(ctx, {
       parse: ([, input]) => insertGeneratorSchema.safeParse(input),

@@ -51,15 +51,29 @@ describe('updateGenerator', () => {
 
   // Behavior change: previously a missing row silently no-opped. The shared
   // lifecycle checks now return a structured `GENERATOR_NOT_FOUND` so the
-  // UI can surface it. Authz/validation branches are covered by the shared
-  // policy/checks unit tests; integration tests only assert the SQL write
-  // (or absence of it) from here on.
+  // UI can surface it.
   it('fails for nonexistent generator with GENERATOR_NOT_FOUND', async () => {
     const result = await updateGenerator(IDS.adminUser, 'nonexistent', {
       title: 'Test'
     })
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe('GENERATOR_NOT_FOUND')
+  })
+
+  it('rejects a non-admin member and leaves the row unchanged', async () => {
+    const result = await updateGenerator(IDS.memberUser, IDS.generator, {
+      title: 'Hijacked'
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok)
+      expect(result.error.code).toBe('ONLY_ADMIN_CAN_UPDATE_GENERATORS')
+
+    const [gen] = h.db
+      .select()
+      .from(generators)
+      .where(eq(generators.id, IDS.generator))
+      .all()
+    expect(gen.title).not.toBe('Hijacked')
   })
 })
 
@@ -130,6 +144,31 @@ describe('createGeneratorWithMaintenance', () => {
       .where(eq(generators.title, 'Bare Gen'))
       .all()
     expect(gens).toHaveLength(1)
+  })
+
+  it('rejects a non-admin member and inserts nothing', async () => {
+    const result = await createGeneratorWithMaintenance(
+      IDS.memberUser,
+      {
+        organizationId: IDS.org,
+        title: 'Member Gen',
+        model: 'Test',
+        maxConsecutiveRunHours: 8,
+        requiredRestHours: 4,
+        runWarningThresholdPct: 80
+      },
+      []
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok)
+      expect(result.error.code).toBe('ONLY_ADMIN_CAN_CREATE_GENERATORS')
+
+    const gens = h.db
+      .select()
+      .from(generators)
+      .where(eq(generators.title, 'Member Gen'))
+      .all()
+    expect(gens).toHaveLength(0)
   })
 
   it('fails with invalid maintenance template input', async () => {
@@ -297,5 +336,19 @@ describe('deleteGenerator', () => {
     const result = await deleteGenerator(IDS.adminUser, 'nonexistent')
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe('GENERATOR_NOT_FOUND')
+  })
+
+  it('rejects a non-admin member and leaves the row intact', async () => {
+    const result = await deleteGenerator(IDS.memberUser, IDS.generator)
+    expect(result.ok).toBe(false)
+    if (!result.ok)
+      expect(result.error.code).toBe('ONLY_ADMIN_CAN_DELETE_GENERATORS')
+
+    const rows = h.db
+      .select()
+      .from(generators)
+      .where(eq(generators.id, IDS.generator))
+      .all()
+    expect(rows).toHaveLength(1)
   })
 })

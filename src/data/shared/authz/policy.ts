@@ -25,6 +25,12 @@ export interface GeneratorAuthzFact {
   hasAssignment: boolean
 }
 
+// Payload the `authz.org` fact resolver returns (the non-null branch), with
+// the same single-definition rationale as `GeneratorAuthzFact` above.
+export interface OrgAuthzFact {
+  adminUserId: string | null
+}
+
 // Convenience over the raw `authz.generator` fact row, which is `undefined`
 // when its plan entry was skipped and `null` when the generator was not
 // found. Both cases fall back to the "no access" inputs.

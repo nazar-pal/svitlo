@@ -22,6 +22,9 @@ function lastButtons(): AlertButton[] {
 describe('confirmDestructive', () => {
   beforeEach(() => {
     jest.resetAllMocks()
+    // resetAllMocks wipes the spy's implementation too — re-install the
+    // no-op so no test ever triggers a real native alert.
+    alertSpy.mockImplementation(() => {})
   })
 
   it('presents cancel + destructive buttons with the default delete label', () => {

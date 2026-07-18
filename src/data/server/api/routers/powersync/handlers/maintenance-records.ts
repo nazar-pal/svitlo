@@ -1,11 +1,9 @@
 import { eq } from 'drizzle-orm'
 
 import { maintenanceRecords } from '@/data/server/db-schema'
-import { serverLookup } from '@/data/server/registry'
-import * as authz from '@/data/shared/authz/decisions'
-import { runDecisionAsync } from '@/data/shared/facts/async-adapter'
 import type { RecordRef } from '@/data/shared/maintenance'
 
+import { isOwnerOrGeneratorAdmin } from './checks'
 import { replayShieldNotFound } from './replay'
 import { transformSyncRow } from '../transform'
 import { fail, ok, type Insert, type TableHandler } from './types'
@@ -44,22 +42,15 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
     )
     if (shielded.status === 'consume') return shielded.result
 
-    // Server-only extra: non-admins may only delete their own records. The
-    // shared policy allows any user with generator access, matching client
-    // behaviour; the server layers an ownership rule on top as defence in
-    // depth for the sync protocol. Reuse the record the policy already
-    // fetched — no second `findRecord` round trip. Same pattern as the
-    // session delete handler.
     const record = shielded.data.facts.record
     if (!record) return fail('RECORD_NOT_FOUND')
-    const adminCheck = await runDecisionAsync(
-      authz.isGeneratorOrgAdmin,
-      { userId, generatorId: record.generatorId },
-      serverLookup(db)
+    const allowed = await isOwnerOrGeneratorAdmin(
+      db,
+      userId,
+      record.generatorId,
+      record.performedByUserId
     )
-    const isAdmin = adminCheck.ok
-    if (!isAdmin && record.performedByUserId !== userId)
-      return fail('Can only delete your own maintenance records')
+    if (!allowed) return fail('Can only delete your own maintenance records')
 
     await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, id))
     return ok
@@ -79,7 +70,15 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
 
     let record: RecordRef | null
     if ('performed_at' in data) {
-      const performedAt = data.performed_at as string
+      // Untrusted wire data: an unparseable date would sail through the
+      // future-date policy check (`NaN > now` is false) and only blow up as
+      // a Drizzle serialization error. Reject it up front instead.
+      const performedAt = data.performed_at
+      if (
+        typeof performedAt !== 'string' ||
+        Number.isNaN(Date.parse(performedAt))
+      )
+        return fail('Invalid performed_at')
       const result = await checks.updateRecord({
         userId,
         recordId: id,
@@ -101,17 +100,14 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
       record = result.facts.record
     }
 
-    // Mirror the delete branch's defence-in-depth: non-admins may only edit
-    // their own records. Reuse the record the policy already fetched.
     if (!record) return fail('Record not found')
-    const adminCheck = await runDecisionAsync(
-      authz.isGeneratorOrgAdmin,
-      { userId, generatorId: record.generatorId },
-      serverLookup(db)
+    const allowed = await isOwnerOrGeneratorAdmin(
+      db,
+      userId,
+      record.generatorId,
+      record.performedByUserId
     )
-    const isAdmin = adminCheck.ok
-    if (!isAdmin && record.performedByUserId !== userId)
-      return fail('Can only edit your own maintenance records')
+    if (!allowed) return fail('Can only edit your own maintenance records')
 
     if (Object.keys(fields).length > 0)
       await db

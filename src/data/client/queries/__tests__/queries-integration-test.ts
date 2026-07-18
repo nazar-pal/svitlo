@@ -27,6 +27,9 @@ jest.mock('@/lib/powersync/database', () => ({
   }
 }))
 
+import { eq } from 'drizzle-orm'
+
+import { organizations } from '@/data/client/db-schema'
 import { clientLookup } from '@/data/client/registry'
 
 function lookup(key: string, input: unknown) {
@@ -144,6 +147,21 @@ describe('registry: authz.generator', () => {
         generatorId: 'nope'
       })
     ).toBeNull()
+  })
+
+  // The client schema is FK-agnostic, so deleting the org row directly
+  // exercises the LEFT JOIN orphan-generator path.
+  it('returns orgAdminUserId: null when the generator is orphaned (LEFT JOIN)', async () => {
+    mockTestDb.db
+      .delete(organizations)
+      .where(eq(organizations.id, IDS.org))
+      .run()
+    expect(
+      await lookup('authz.generator', {
+        userId: IDS.memberUser,
+        generatorId: IDS.generator
+      })
+    ).toEqual({ orgAdminUserId: null, hasAssignment: false })
   })
 })
 

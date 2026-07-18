@@ -1,18 +1,20 @@
 import type { ParamFreeMutationErrorCode } from '@/data/shared/errors'
 
+import type { FactKey } from './contracts'
+
 // Unified port for the "facts + policy + lifecycle-checks" cluster. Replaces
 // the per-domain FactsProvider interfaces by declaring facts via their
 // resolver key in a side-specific registry. Decisions describe (args → facts
 // → result); adapters interpret the same decision over an async or reactive
 // registry.
 
-// Resolver keys are plain strings. Each side's registry binds them to a
-// concrete fetch function (PG query on the server, SQLite builder on the
-// client). Decisions reference them via `key` here so the same spec drives
-// both sides.
+// Resolver keys come from the shared `FactContracts` map (`./contracts`), so
+// a plan can only reference facts both registries implement. Each side's
+// registry binds a key to a concrete fetch function (PG query on the server,
+// SQLite builder on the client); the same spec drives both sides.
 export interface FactPlanEntry<Args, FactsSoFar, Input> {
   readonly alias: string
-  readonly key: string
+  readonly key: FactKey
   readonly input: (args: Args, facts: FactsSoFar) => Input | null
 }
 
@@ -29,18 +31,13 @@ export interface Decision<Args, Facts, Result> {
 // facts are projected away — keeps `PolicyView` equality with the
 // pre-refactor shape and avoids leaking server-only fact payloads into the
 // client-bundle subscription layer.
-export type PolicyView<Code extends string = ParamFreeMutationErrorCode> =
+export type PolicyView =
   | { status: 'loading' }
   | { status: 'ready'; ok: true }
-  | { status: 'ready'; ok: false; code: Code }
-
-// Re-export so downstream files can reach the narrow code union without
-// importing `@/data/shared/errors` directly.
-export type { ParamFreeMutationErrorCode }
+  | { status: 'ready'; ok: false; code: ParamFreeMutationErrorCode }
 
 export const LOADING: PolicyView = { status: 'loading' }
 
-// Convenience narrowing.
 export function isPolicyAllowed(view: PolicyView): boolean {
   return view.status === 'ready' && view.ok
 }

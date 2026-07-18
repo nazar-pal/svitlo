@@ -1,12 +1,13 @@
-import * as invitationsP from '@/data/shared/invitations/decisions'
-import * as membersP from '@/data/shared/members/decisions'
-import * as organizationsP from '@/data/shared/organizations/decisions'
-import * as sessionsP from '@/data/shared/sessions/decisions'
+import * as invitationsD from '@/data/shared/invitations/decisions'
+import * as membersD from '@/data/shared/members/decisions'
+import * as organizationsD from '@/data/shared/organizations/decisions'
+import * as sessionsD from '@/data/shared/sessions/decisions'
 import type { Decision, PolicyView } from '@/data/shared/facts/port'
 import {
   useDecision,
   type ReactiveRegistry
 } from '@/data/shared/facts/reactive-adapter'
+import type { PolicyResult } from '@/data/shared/policy-result'
 import * as powerSyncDb from '@/lib/powersync/database'
 
 import { buildReactiveRegistry } from './registry'
@@ -14,8 +15,6 @@ import { buildReactiveRegistry } from './registry'
 const reactiveRegistry: ReactiveRegistry = buildReactiveRegistry(
   () => powerSyncDb.db
 )
-
-type Rule = { ok: true } | { ok: false; code: string }
 
 // Single reactive policy hook. Replaces the previous per-rule hand-written
 // hooks (`useCanStartSession`, `useCanRemoveMember`, …) with one entry point
@@ -34,7 +33,7 @@ type Rule = { ok: true } | { ok: false; code: string }
 // `args: Args | null` preserves the "gate this hook" ergonomic of the old
 // `useCanX(userId | null, entityId | null)` form — null forces LOADING via
 // `useDecision` without breaking hook order.
-export function usePolicy<Args, Facts, R extends Rule>(
+export function usePolicy<Args, Facts, R extends PolicyResult>(
   decision: Decision<Args, Facts, R>,
   args: Args | null
 ): PolicyView {
@@ -47,10 +46,10 @@ export function usePolicy<Args, Facts, R extends Rule>(
 // code. Mutation paths consume those checks via `MutationContext.checks`
 // (see `mutations/context.ts`) instead.
 export const policies = {
-  sessions: sessionsP,
-  members: membersP,
-  invitations: invitationsP,
-  organizations: organizationsP
+  sessions: sessionsD,
+  members: membersD,
+  invitations: invitationsD,
+  organizations: organizationsD
 }
 
 // Re-export so screens can narrow `PolicyView` without reaching into the

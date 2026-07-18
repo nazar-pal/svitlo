@@ -1,6 +1,9 @@
 import type { z } from 'zod'
 
-import type { MutationError } from '@/data/shared/errors'
+import type {
+  MutationError,
+  ParamFreeMutationErrorCode
+} from '@/data/shared/errors'
 import { failFromZod } from '@/data/shared/errors-from-zod'
 import { ok, type MutationResult } from '@/data/shared/result'
 import type { ClientDb } from '@/lib/powersync/database'
@@ -9,14 +12,16 @@ import type { MutationContext } from './context'
 
 type OkBranch<T> = Extract<T, { ok: true }>
 
-// Fail branch is any `{ ok: false; code: string }` shape. Decision-facade
-// checks also carry `facts` on both branches (that's how the async adapter
-// attaches already-fetched rows for defence-in-depth) — the extra field is
-// accepted via the open index signature on the ok branch. Parameterized
+// Fail-branch codes must come from the `MutationError` union so a decision
+// whose code is outside it (e.g. the authz decisions' `NOT_AUTHORIZED`)
+// cannot compile into a client mutation and surface untranslatable.
+// Decision-facade checks also carry `facts` on both branches (that's how
+// the async adapter attaches already-fetched rows for defence-in-depth) —
+// the extra field is accepted via the open index signatures. Parameterized
 // codes must still supply their typed `params`.
 type CheckOutcome =
   | { ok: true; [k: string]: unknown }
-  | { ok: false; code: string; [k: string]: unknown }
+  | { ok: false; code: ParamFreeMutationErrorCode; [k: string]: unknown }
   | ({ ok: false } & Extract<MutationError, { params: unknown }>)
 
 type ValidateOutcome<TVali> =
@@ -91,12 +96,15 @@ export function defineMutation<
     if (def.check) {
       const result = await def.check(ctx, args, parsed)
       if (!result.ok) {
-        // Decision-facade checks carry `facts` on every branch; strip it
-        // before surfacing as a `MutationError` so the wire shape stays
+        // Decision-facade checks carry `facts` on every branch; rebuild the
+        // error from `code`/`params` alone so the wire shape stays
         // `{ code, params? }` exactly as the discriminated union allows.
-        const error: Record<string, unknown> = { code: result.code }
-        if ('params' in result) error.params = result.params
-        return { ok: false, error: error as unknown as MutationError }
+        return {
+          ok: false,
+          error: ('params' in result
+            ? { code: result.code, params: result.params }
+            : { code: result.code }) as MutationError
+        }
       }
       checkOk = result as OkBranch<TCheck>
     }

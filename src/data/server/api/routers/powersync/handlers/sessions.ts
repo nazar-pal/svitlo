@@ -1,10 +1,8 @@
 import { eq } from 'drizzle-orm'
 
 import { generatorSessions } from '@/data/server/db-schema'
-import { serverLookup } from '@/data/server/registry'
-import * as authz from '@/data/shared/authz/decisions'
-import { runDecisionAsync } from '@/data/shared/facts/async-adapter'
 
+import { isOwnerOrGeneratorAdmin } from './checks'
 import { replayShieldNotFound } from './replay'
 import { transformSyncRow } from '../transform'
 import { fail, ok, type Insert, type TableHandler } from './types'
@@ -107,21 +105,15 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     )
     if (shielded.status === 'consume') return shielded.result
 
-    // Server-only extra: non-admins may only delete their own sessions. The
-    // shared policy allows any user with generator access, matching client
-    // behaviour; the server layers an ownership rule on top as defence in
-    // depth for the sync protocol. Reuse the session the policy already
-    // fetched — no second `findSession` round trip.
     const session = shielded.data.facts.session
     if (!session) return fail('SESSION_NOT_FOUND')
-    const adminCheck = await runDecisionAsync(
-      authz.isGeneratorOrgAdmin,
-      { userId, generatorId: session.generatorId },
-      serverLookup(db)
+    const allowed = await isOwnerOrGeneratorAdmin(
+      db,
+      userId,
+      session.generatorId,
+      session.startedByUserId
     )
-    const isAdmin = adminCheck.ok
-    if (!isAdmin && session.startedByUserId !== userId)
-      return fail('Can only delete your own sessions')
+    if (!allowed) return fail('Can only delete your own sessions')
 
     await db.delete(generatorSessions).where(eq(generatorSessions.id, id))
     return ok

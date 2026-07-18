@@ -6,13 +6,27 @@ import { t } from '@/lib/i18n'
 
 import { runMutation } from './run-mutation'
 
-interface ConfirmDestructiveOptions {
+interface ConfirmDestructiveBase {
   confirmLabel?: string
-  mutation?: () => Promise<MutationResult>
-  onSuccess?: () => void | Promise<void>
-  onConfirm?: () => void
   onCancel?: () => void
 }
+
+interface MutationConfirm extends ConfirmDestructiveBase {
+  mutation: () => Promise<MutationResult>
+  onSuccess?: () => void | Promise<void>
+  onConfirm?: never
+}
+
+interface PlainConfirm extends ConfirmDestructiveBase {
+  mutation?: never
+  onSuccess?: never
+  onConfirm?: () => void
+}
+
+// The two modes are mutually exclusive: a mutation confirm gets its haptic
+// and `onSuccess` from `runMutation`, a plain confirm fires the haptic
+// itself and only has `onConfirm`.
+type ConfirmDestructiveOptions = MutationConfirm | PlainConfirm
 
 /**
  * The shared destructive-confirm dialog: a cancel button plus a destructive

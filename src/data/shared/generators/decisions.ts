@@ -11,9 +11,6 @@ import {
 // makes the sessions decisions worth the split (temporal + state-machine
 // branches) doesn't apply here.
 
-type OrgAuthzFact = { adminUserId: string | null } | null
-type GeneratorAuthzFact = authzPolicy.GeneratorAuthzFact | null
-
 // ── createGenerator ─────────────────────────────────────────────────────────
 
 export interface CreateGeneratorArgs {
@@ -22,7 +19,7 @@ export interface CreateGeneratorArgs {
 }
 
 interface CreateGeneratorFacts {
-  authzOrg: OrgAuthzFact
+  authzOrg: authzPolicy.OrgAuthzFact | null
 }
 
 const createGeneratorPlan = factPlanFor<
@@ -52,7 +49,7 @@ export interface UpdateGeneratorArgs {
 
 interface UpdateGeneratorFacts {
   generator: { id: string } | null
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator: authzPolicy.GeneratorAuthzFact | null
 }
 
 const updateGeneratorPlan = factPlanFor<
@@ -95,7 +92,7 @@ export interface DeleteGeneratorArgs {
 
 interface DeleteGeneratorFacts {
   generator: { id: string } | null
-  authzGenerator: GeneratorAuthzFact
+  authzGenerator: authzPolicy.GeneratorAuthzFact | null
 }
 
 const deleteGeneratorPlan = factPlanFor<

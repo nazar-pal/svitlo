@@ -11,16 +11,30 @@ import {
   organizationMembers,
   organizations
 } from '@/data/server/db-schema'
-import type { GeneratorAuthzFact } from '@/data/shared/authz/policy'
+import type {
+  GeneratorAuthzFact,
+  OrgAuthzFact
+} from '@/data/shared/authz/policy'
+import type {
+  FactInput,
+  FactKey,
+  FactOf,
+  GeneratorUserInput,
+  InvitationRef,
+  OrgMemberInput,
+  OrgMembershipRef,
+  TemplateTriggerRef
+} from '@/data/shared/facts/contracts'
+import type { RecordRef } from '@/data/shared/maintenance'
 import type { SessionRef } from '@/data/shared/sessions'
-import type { TriggerType } from '@/lib/maintenance/trigger-type'
 
 type Db = typeof serverDb
 
 // Server-side fact registry. No reactive path here (Postgres is behind
 // oRPC, not subscribed to), so resolvers are flat async functions. The
-// fact-key namespace mirrors `@/data/client/registry.ts` so the same
-// decision plan drives both sides.
+// fact-key namespace mirrors `@/data/client/registry.ts`; the `satisfies`
+// check against the shared `FactContracts` map keeps the two sides from
+// drifting apart.
 
 type Resolver<Input, Output> = (db: Db, input: Input) => Promise<Output>
 
@@ -66,10 +80,8 @@ const sessionHasOpenForGenerator: Resolver<string, boolean> = async (
   return row !== undefined
 }
 
-type GeneratorAuthzInput = { userId: string; generatorId: string }
-
 const authzGenerator: Resolver<
-  GeneratorAuthzInput,
+  GeneratorUserInput,
   GeneratorAuthzFact | null
 > = async (db, { userId, generatorId }) => {
   const [row] = await db
@@ -91,14 +103,11 @@ const authzGenerator: Resolver<
   if (!row) return null
   return {
     orgAdminUserId: row.orgAdminUserId,
-    hasAssignment: row.hasAssignment === true
+    hasAssignment: row.hasAssignment
   }
 }
 
-const authzOrg: Resolver<
-  string,
-  { adminUserId: string | null } | null
-> = async (db, orgId) => {
+const authzOrg: Resolver<string, OrgAuthzFact | null> = async (db, orgId) => {
   const row = await db.query.organizations.findFirst({
     where: eq(organizations.id, orgId),
     columns: { adminUserId: true }
@@ -133,8 +142,6 @@ const generatorOrgId: Resolver<string, string | null> = async (db, id) => {
   return row?.organizationId ?? null
 }
 
-type OrgMemberInput = { userId: string; organizationId: string }
-
 const orgMembershipHasForUserAndOrg: Resolver<OrgMemberInput, boolean> = async (
   db,
   { userId, organizationId }
@@ -151,7 +158,7 @@ const orgMembershipHasForUserAndOrg: Resolver<OrgMemberInput, boolean> = async (
 
 const orgMembershipByUserAndOrg: Resolver<
   OrgMemberInput,
-  { id: string; organizationId: string; userId: string } | null
+  OrgMembershipRef | null
 > = async (db, { userId, organizationId }) => {
   const row = await db.query.organizationMembers.findFirst({
     where: and(
@@ -163,10 +170,10 @@ const orgMembershipByUserAndOrg: Resolver<
   return row ?? null
 }
 
-const orgMembershipById: Resolver<
-  string,
-  { id: string; organizationId: string; userId: string } | null
-> = async (db, id) => {
+const orgMembershipById: Resolver<string, OrgMembershipRef | null> = async (
+  db,
+  id
+) => {
   const row = await db.query.organizationMembers.findFirst({
     where: eq(organizationMembers.id, id),
     columns: { id: true, organizationId: true, userId: true }
@@ -174,10 +181,8 @@ const orgMembershipById: Resolver<
   return row ?? null
 }
 
-type AssignmentInput = { userId: string; generatorId: string }
-
 const assignmentHasForUserAndGenerator: Resolver<
-  AssignmentInput,
+  GeneratorUserInput,
   boolean
 > = async (db, { userId, generatorId }) => {
   const row = await db.query.generatorUserAssignments.findFirst({
@@ -190,10 +195,10 @@ const assignmentHasForUserAndGenerator: Resolver<
   return row !== undefined
 }
 
-const invitationById: Resolver<
-  string,
-  { organizationId: string; inviteeEmail: string } | null
-> = async (db, id) => {
+const invitationById: Resolver<string, InvitationRef | null> = async (
+  db,
+  id
+) => {
   const row = await db.query.invitations.findFirst({
     where: eq(invitations.id, id),
     columns: { organizationId: true, inviteeEmail: true }
@@ -205,14 +210,9 @@ const invitationById: Resolver<
   }
 }
 
-type InvitationByOrgAndEmailInput = {
-  organizationId: string
-  inviteeEmail: string
-}
-
 const invitationByOrgAndEmail: Resolver<
-  InvitationByOrgAndEmailInput,
-  { organizationId: string; inviteeEmail: string } | null
+  FactInput<'invitation.byOrgAndEmail'>,
+  InvitationRef | null
 > = async (db, { organizationId, inviteeEmail }) => {
   // Mirror the client resolver's normalization so the two sides resolve the
   // same decision's `invitation.byOrgAndEmail` fact identically. Stored
@@ -235,12 +235,7 @@ const invitationByOrgAndEmail: Resolver<
 
 const maintenanceTemplateById: Resolver<
   string,
-  {
-    generatorId: string
-    triggerType: TriggerType
-    triggerHoursInterval: number | null
-    triggerCalendarDays: number | null
-  } | null
+  TemplateTriggerRef | null
 > = async (db, id) => {
   const row = await db.query.maintenanceTemplates.findFirst({
     where: eq(maintenanceTemplates.id, id),
@@ -260,10 +255,10 @@ const maintenanceTemplateById: Resolver<
   }
 }
 
-const maintenanceRecordById: Resolver<
-  string,
-  { generatorId: string; performedByUserId: string } | null
-> = async (db, id) => {
+const maintenanceRecordById: Resolver<string, RecordRef | null> = async (
+  db,
+  id
+) => {
   const row = await db.query.maintenanceRecords.findFirst({
     where: eq(maintenanceRecords.id, id),
     columns: { generatorId: true, performedByUserId: true }
@@ -275,52 +270,7 @@ const maintenanceRecordById: Resolver<
   }
 }
 
-interface ServerFactRegistry {
-  'session.byId': Resolver<string, SessionRef | null>
-  'generator.byId': Resolver<string, { id: string } | null>
-  'generator.exists': Resolver<string, boolean>
-  'generator.orgId': Resolver<string, string | null>
-  'session.hasOpenForGenerator': Resolver<string, boolean>
-  'authz.generator': Resolver<GeneratorAuthzInput, GeneratorAuthzFact | null>
-  'authz.org': Resolver<string, { adminUserId: string | null } | null>
-  'organization.byId': Resolver<
-    string,
-    { id: string; adminUserId: string } | null
-  >
-  'orgMembership.hasForUserAndOrg': Resolver<OrgMemberInput, boolean>
-  'orgMembership.byUserAndOrg': Resolver<
-    OrgMemberInput,
-    { id: string; organizationId: string; userId: string } | null
-  >
-  'orgMembership.byId': Resolver<
-    string,
-    { id: string; organizationId: string; userId: string } | null
-  >
-  'assignment.hasForUserAndGenerator': Resolver<AssignmentInput, boolean>
-  'invitation.byId': Resolver<
-    string,
-    { organizationId: string; inviteeEmail: string } | null
-  >
-  'invitation.byOrgAndEmail': Resolver<
-    InvitationByOrgAndEmailInput,
-    { organizationId: string; inviteeEmail: string } | null
-  >
-  'maintenanceTemplate.byId': Resolver<
-    string,
-    {
-      generatorId: string
-      triggerType: TriggerType
-      triggerHoursInterval: number | null
-      triggerCalendarDays: number | null
-    } | null
-  >
-  'maintenanceRecord.byId': Resolver<
-    string,
-    { generatorId: string; performedByUserId: string } | null
-  >
-}
-
-const serverFactRegistry: ServerFactRegistry = {
+const serverFactRegistry = {
   'session.byId': sessionById,
   'generator.byId': generatorById,
   'generator.exists': generatorExists,
@@ -337,18 +287,19 @@ const serverFactRegistry: ServerFactRegistry = {
   'invitation.byOrgAndEmail': invitationByOrgAndEmail,
   'maintenanceTemplate.byId': maintenanceTemplateById,
   'maintenanceRecord.byId': maintenanceRecordById
-}
+} satisfies { [K in FactKey]: Resolver<FactInput<K>, FactOf<K>> }
 
 export function serverLookup(
   db: Db
 ): (key: string, input: unknown) => Promise<unknown> {
+  // Per-key `Input` types erase to `unknown` at the lookup boundary — the
+  // adapters traffic in `unknown` either way.
+  const erased = serverFactRegistry as unknown as Record<
+    string,
+    Resolver<unknown, unknown>
+  >
   return async (key, input) => {
-    const resolver = (
-      serverFactRegistry as unknown as Record<
-        string,
-        (db: Db, input: unknown) => Promise<unknown>
-      >
-    )[key]
+    const resolver = erased[key]
     if (!resolver) throw new Error(`no server resolver for fact key "${key}"`)
     return resolver(db, input)
   }

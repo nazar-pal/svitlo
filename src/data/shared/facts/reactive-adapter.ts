@@ -1,12 +1,8 @@
 import type { DrizzleCompilable } from '@/lib/hooks/use-drizzle-query'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
+import type { PolicyResult } from '@/data/shared/policy-result'
 
-import {
-  LOADING,
-  type Decision,
-  type ParamFreeMutationErrorCode,
-  type PolicyView
-} from './port'
+import { LOADING, type Decision, type PolicyView } from './port'
 
 // Reactive resolver contract. Each entry exposes a Drizzle builder that
 // `useDrizzleQuery` can subscribe to, plus a projector that maps the
@@ -18,10 +14,10 @@ export interface ReactiveResolverEntry {
 
 export type ReactiveRegistry = Record<string, ReactiveResolverEntry>
 
-type RuleResult = { ok: true } | { ok: false; code: string }
-
 // React hooks must run in a stable order across renders, which means the
-// decision's plan length determines the hook count up front. Every entry
+// decision's plan length determines the hook count up front. The `decision`
+// argument must therefore be render-constant — swapping in a decision with
+// a different plan length mid-lifetime breaks hook order. Every entry
 // calls `useDrizzleQuery` unconditionally; entries whose `input()` is
 // null pass `undefined` so the hook returns its no-op result while
 // preserving the hook slot.
@@ -30,13 +26,18 @@ type RuleResult = { ok: true } | { ok: false; code: string }
 // hand-written `useCanX(userId | null, entityId | null)` hooks it replaces:
 // null forces LOADING for the whole decision without breaking hook order
 // (every plan entry still calls `useDrizzleQuery(undefined)`).
-export function useDecision<Args, Facts, Result extends RuleResult>(
+//
+// `Result extends PolicyResult` keeps authz decisions (whose
+// `NOT_AUTHORIZED` code is intentionally outside the user-facing
+// `ParamFreeMutationErrorCode` union) out of this facade at compile time —
+// they run server-side only via `runDecisionAsync`.
+export function useDecision<Args, Facts, Result extends PolicyResult>(
   decision: Decision<Args, Facts, Result>,
   args: Args | null,
   registry: ReactiveRegistry
 ): PolicyView {
   const facts: Record<string, unknown> = {}
-  let isLoading = args === null
+  let isLoading = false
 
   for (const entry of decision.plan) {
     const resolver = registry[entry.key]
@@ -62,13 +63,5 @@ export function useDecision<Args, Facts, Result extends RuleResult>(
 
   const result = decision.rule(args, facts as Facts)
   if (result.ok) return { status: 'ready', ok: true }
-  // Cast is safe: every user-surfaced decision rule emits a
-  // `ParamFreeMutationErrorCode`. Authz decisions emit `NOT_AUTHORIZED`
-  // which is intentionally outside that union — they run server-side only
-  // via `runDecisionAsync`, never through this reactive facade.
-  return {
-    status: 'ready',
-    ok: false,
-    code: result.code as ParamFreeMutationErrorCode
-  }
+  return { status: 'ready', ok: false, code: result.code }
 }

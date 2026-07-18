@@ -22,8 +22,6 @@ import {
 // authz-as-fact cheap and shareable without needing to promote the authz
 // checks to their own decisions.
 
-type GeneratorAuthzFact = authzPolicy.GeneratorAuthzFact | null
-
 // ── startSession ────────────────────────────────────────────────────────────
 
 export interface StartSessionArgs {
@@ -33,7 +31,7 @@ export interface StartSessionArgs {
 
 interface StartSessionFacts {
   generator: { id: string } | null
-  authzGenerator?: GeneratorAuthzFact
+  authzGenerator?: authzPolicy.GeneratorAuthzFact | null
   openSession?: boolean
 }
 
@@ -74,7 +72,7 @@ export interface StopSessionArgs {
 
 interface StopSessionFacts {
   session: SessionRef | null
-  authzGenerator?: GeneratorAuthzFact
+  authzGenerator?: authzPolicy.GeneratorAuthzFact | null
 }
 
 const stopSessionPlan = factPlanFor<StopSessionArgs, StopSessionFacts>()
@@ -112,7 +110,7 @@ export interface DeleteSessionArgs {
 
 interface DeleteSessionFacts {
   session: SessionRef | null
-  authzGenerator?: GeneratorAuthzFact
+  authzGenerator?: authzPolicy.GeneratorAuthzFact | null
 }
 
 const deleteSessionPlan = factPlanFor<DeleteSessionArgs, DeleteSessionFacts>()
@@ -153,7 +151,7 @@ export interface UpdateSessionArgs {
 
 interface UpdateSessionFacts {
   session: SessionRef | null
-  authzGenerator?: GeneratorAuthzFact
+  authzGenerator?: authzPolicy.GeneratorAuthzFact | null
 }
 
 const updateSessionPlan = factPlanFor<UpdateSessionArgs, UpdateSessionFacts>()
@@ -197,7 +195,7 @@ export interface LogManualSessionArgs {
 
 interface LogManualSessionFacts {
   generator: { id: string } | null
-  authzGenerator?: GeneratorAuthzFact
+  authzGenerator?: authzPolicy.GeneratorAuthzFact | null
 }
 
 const logManualSessionPlan = factPlanFor<

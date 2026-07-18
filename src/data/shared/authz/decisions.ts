@@ -11,14 +11,17 @@ import * as policy from './policy'
 // sessions + maintenance-records server handlers, which gate a non-admin
 // "only delete your own row" rule on top of the shared policy).
 
-type AuthzFailure = { ok: false; code: 'NOT_AUTHORIZED' }
+interface AuthzFailure {
+  ok: false
+  code: 'NOT_AUTHORIZED'
+}
 export type AuthzResult = { ok: true } | AuthzFailure
 
 const allowed: AuthzResult = { ok: true }
 const denied: AuthzFailure = { ok: false, code: 'NOT_AUTHORIZED' }
 
 interface OrgAuthzFacts {
-  org: { adminUserId: string | null } | null
+  org: policy.OrgAuthzFact | null
 }
 
 export interface IsOrgAdminArgs {

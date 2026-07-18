@@ -8,8 +8,6 @@ import {
   type MemberRef
 } from './index'
 
-type OrgAuthzFact = { adminUserId: string | null } | null
-
 // ── removeMember ────────────────────────────────────────────────────────────
 
 export interface RemoveMemberArgs {
@@ -19,7 +17,7 @@ export interface RemoveMemberArgs {
 
 interface RemoveMemberFacts {
   member: MemberRef | null
-  authzOrg?: OrgAuthzFact
+  authzOrg?: authzPolicy.OrgAuthzFact | null
 }
 
 const removeMemberPlan = factPlanFor<RemoveMemberArgs, RemoveMemberFacts>()
@@ -60,7 +58,7 @@ export interface LeaveOrganizationArgs {
 }
 
 interface LeaveOrganizationFacts {
-  authzOrg: OrgAuthzFact
+  authzOrg: authzPolicy.OrgAuthzFact | null
   member: MemberRef | null
 }
 
