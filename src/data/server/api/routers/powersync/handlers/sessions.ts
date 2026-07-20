@@ -107,11 +107,10 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
 
     const session = shielded.data.facts.session
     if (!session) return fail('SESSION_NOT_FOUND')
-    const allowed = await isOwnerOrGeneratorAdmin(
-      db,
+    const allowed = isOwnerOrGeneratorAdmin(
       userId,
-      session.generatorId,
-      session.startedByUserId
+      session.startedByUserId,
+      shielded.data.facts.authzGenerator
     )
     if (!allowed) return fail('Can only delete your own sessions')
 

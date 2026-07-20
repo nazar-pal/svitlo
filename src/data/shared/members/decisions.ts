@@ -27,7 +27,6 @@ export const removeMember = defineDecision<
   RemoveMemberFacts,
   MemberLifecycleResult
 >({
-  id: 'members.removeMember',
   plan: [
     removeMemberPlan('member', 'orgMembership.byId', a => a.memberId),
     // Second-stage lookup depends on the membership row's organization;
@@ -72,7 +71,6 @@ export const leaveOrganization = defineDecision<
   LeaveOrganizationFacts,
   MemberLifecycleResult
 >({
-  id: 'members.leaveOrganization',
   plan: [
     leaveOrganizationPlan('authzOrg', 'authz.org', a => a.organizationId),
     leaveOrganizationPlan('member', 'orgMembership.byUserAndOrg', a => ({

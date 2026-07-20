@@ -52,31 +52,31 @@ export const deleteSessionPolicy = (facts: {
   return ok
 }
 
-export const updateSessionPolicy = (params: {
+export const updateSessionPolicy = (facts: {
   session: SessionRef | null
   hasGeneratorAccess: boolean
   startedAt: string
   stoppedAt: string
   now: Date
 }): PolicyResult => {
-  if (!params.session) return fail('SESSION_NOT_FOUND')
-  if (!params.session.isStopped) return fail('CANNOT_EDIT_ACTIVE_SESSION')
-  if (!params.hasGeneratorAccess) return fail('NOT_AUTHORIZED_FOR_GENERATOR')
-  if (params.startedAt >= params.stoppedAt) return fail('START_BEFORE_END')
-  if (new Date(params.stoppedAt) > params.now) return fail('END_TIME_IN_FUTURE')
+  if (!facts.session) return fail('SESSION_NOT_FOUND')
+  if (!facts.session.isStopped) return fail('CANNOT_EDIT_ACTIVE_SESSION')
+  if (!facts.hasGeneratorAccess) return fail('NOT_AUTHORIZED_FOR_GENERATOR')
+  if (facts.startedAt >= facts.stoppedAt) return fail('START_BEFORE_END')
+  if (new Date(facts.stoppedAt) > facts.now) return fail('END_TIME_IN_FUTURE')
   return ok
 }
 
-export const logManualSessionPolicy = (params: {
+export const logManualSessionPolicy = (facts: {
   generatorExists: boolean
   hasGeneratorAccess: boolean
   startedAt: string
   stoppedAt: string
   now: Date
 }): PolicyResult => {
-  if (!params.generatorExists) return fail('GENERATOR_NOT_FOUND')
-  if (!params.hasGeneratorAccess) return fail('NOT_AUTHORIZED_FOR_GENERATOR')
-  if (params.startedAt >= params.stoppedAt) return fail('START_BEFORE_END')
-  if (new Date(params.stoppedAt) > params.now) return fail('END_TIME_IN_FUTURE')
+  if (!facts.generatorExists) return fail('GENERATOR_NOT_FOUND')
+  if (!facts.hasGeneratorAccess) return fail('NOT_AUTHORIZED_FOR_GENERATOR')
+  if (facts.startedAt >= facts.stoppedAt) return fail('START_BEFORE_END')
+  if (new Date(facts.stoppedAt) > facts.now) return fail('END_TIME_IN_FUTURE')
   return ok
 }

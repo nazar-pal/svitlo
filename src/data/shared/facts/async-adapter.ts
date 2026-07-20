@@ -2,14 +2,17 @@ import type { Decision } from './port'
 
 // Common "policy result" shape the rule may return. Rules may carry extra
 // fields on the success branch (e.g. `acceptInvitationPolicy` returns
-// `{ ok: true, invitation }`); those extras are forwarded through to the
-// adapter's caller so mutation apply callbacks can read
-// `checkOk.<field>` directly without re-deriving from `facts`. `code` is
-// typed as `string` so authz decisions (which emit `NOT_AUTHORIZED`, a
-// code intentionally outside the user-facing `ParamFreeMutationErrorCode`
-// union) compose with the adapter uniformly.
+// `{ ok: true, invitation }`); those extras survive via the
+// `OkBranch<Result>` return type below — computed from the caller's own
+// `Result` — so mutation apply callbacks can read `checkOk.<field>`
+// directly without re-deriving from `facts`. `facts?: never` reserves the
+// key the adapter attaches, so a rule cannot declare one that would be
+// silently overwritten. `code` is typed as `string` so authz decisions
+// (which emit `NOT_AUTHORIZED`, a code intentionally outside the
+// user-facing `ParamFreeMutationErrorCode` union) compose with the adapter
+// uniformly.
 export type RuleResult =
-  | { ok: true; [k: string]: unknown }
+  | { ok: true; facts?: never; [k: string]: unknown }
   | { ok: false; code: string }
 
 // Distributes over the rule-result union: ok branches contribute nothing,
@@ -28,9 +31,10 @@ type OkBranch<T> = Extract<T, { ok: true }>
 // whose hook rules force sequential resolution anyway. After all lookups
 // settle, invokes `rule`, spreads the rule's ok-branch so the caller keeps
 // any extras it returned, and attaches `facts` on both branches so server
-// handlers can do defence-in-depth without a second round trip. Because
-// `facts` is attached after the spread, a rule ok-branch must not carry a
-// field named `facts` of its own.
+// handlers can do defence-in-depth without a second round trip. A rule
+// ok-branch cannot carry a field named `facts` — the `facts?: never` clause
+// on `RuleResult` rejects it, so the attach below can never silently
+// overwrite a rule's own value.
 export async function runDecisionAsync<Args, Facts, Result extends RuleResult>(
   decision: Decision<Args, Facts, Result>,
   args: Args,

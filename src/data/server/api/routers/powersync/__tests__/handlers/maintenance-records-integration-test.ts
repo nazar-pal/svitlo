@@ -278,6 +278,27 @@ describe('handleMaintenanceRecords', () => {
     expect(result.ok).toBe(true)
   })
 
+  // Twin of the case above, on the other update branch: `performed_at` routes
+  // through `updateRecord` rather than `deleteRecord`, so it threads its own
+  // `authzGenerator` fact into the owner-or-admin check. Admin-edits-someone-
+  // else is the only shape that reads that fact — an owner short-circuits
+  // before it, and a deny case passes even when the fact is missing.
+  it("update: admin can edit anyone's performedAt", async () => {
+    await seedRecord(fixture.testDb.db, IDS.member)
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        data: { performed_at: '2026-01-10T08:00:00Z' }
+      })
+    )
+    expect(result.ok).toBe(true)
+    const row = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(row!.performedAt).toEqual(new Date('2026-01-10T08:00:00Z'))
+  })
+
   it('rejects outsider delete and leaves the record intact', async () => {
     await seedRecord(fixture.testDb.db)
     const result = await handleMaintenanceRecords(

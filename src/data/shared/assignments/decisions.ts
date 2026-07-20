@@ -37,7 +37,6 @@ export const assignUserToGenerator = defineDecision<
   AssignUserToGeneratorFacts,
   PolicyResult
 >({
-  id: 'assignments.assignUserToGenerator',
   plan: [
     assignUserToGeneratorPlan('orgId', 'generator.orgId', a => a.generatorId),
     assignUserToGeneratorPlan(
@@ -104,7 +103,6 @@ export const unassignUserFromGenerator = defineDecision<
   UnassignUserFromGeneratorFacts,
   PolicyResult
 >({
-  id: 'assignments.unassignUserFromGenerator',
   plan: [
     unassignUserFromGeneratorPlan(
       'orgId',

@@ -1,5 +1,8 @@
-import type { ParamFreeMutationErrorCode } from '@/data/shared/errors'
-import { policyOk as ok, type PolicyResult } from '@/data/shared/policy-result'
+import {
+  policyFail as fail,
+  policyOk as ok,
+  type PolicyResult
+} from '@/data/shared/policy-result'
 
 export type { PolicyResult }
 
@@ -10,13 +13,6 @@ export interface InvitationRef {
   organizationId: string
   inviteeEmail: string
 }
-
-// Local `fail` helper so the return type narrows to just the failure
-// variant — `policyFail` returns the wider `PolicyResult` which breaks
-// inference for the richer success shape of `AcceptInvitationResult`.
-const fail = (
-  code: ParamFreeMutationErrorCode
-): { ok: false; code: ParamFreeMutationErrorCode } => ({ ok: false, code })
 
 // `acceptInvitationPolicy` surfaces the fetched invitation on success so
 // the caller can drive the "create membership + delete invitation" side

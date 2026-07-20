@@ -42,7 +42,6 @@ export const startSession = defineDecision<
   StartSessionFacts,
   PolicyResult
 >({
-  id: 'sessions.startSession',
   plan: [
     startSessionPlan('generator', 'generator.byId', a => a.generatorId),
     startSessionPlan('authzGenerator', 'authz.generator', (a, f) =>
@@ -82,7 +81,6 @@ export const stopSession = defineDecision<
   StopSessionFacts,
   PolicyResult
 >({
-  id: 'sessions.stopSession',
   plan: [
     stopSessionPlan('session', 'session.byId', a => a.sessionId),
     stopSessionPlan('authzGenerator', 'authz.generator', (a, f) =>
@@ -120,7 +118,6 @@ export const deleteSession = defineDecision<
   DeleteSessionFacts,
   PolicyResult
 >({
-  id: 'sessions.deleteSession',
   plan: [
     deleteSessionPlan('session', 'session.byId', a => a.sessionId),
     deleteSessionPlan('authzGenerator', 'authz.generator', (a, f) =>
@@ -161,7 +158,6 @@ export const updateSession = defineDecision<
   UpdateSessionFacts,
   PolicyResult
 >({
-  id: 'sessions.updateSession',
   plan: [
     updateSessionPlan('session', 'session.byId', a => a.sessionId),
     updateSessionPlan('authzGenerator', 'authz.generator', (a, f) =>
@@ -208,7 +204,6 @@ export const logManualSession = defineDecision<
   LogManualSessionFacts,
   PolicyResult
 >({
-  id: 'sessions.logManualSession',
   plan: [
     logManualSessionPlan('generator', 'generator.byId', a => a.generatorId),
     logManualSessionPlan('authzGenerator', 'authz.generator', (a, f) =>

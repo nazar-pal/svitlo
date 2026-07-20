@@ -53,7 +53,7 @@ export function reduce(state: InternalState, action: Action): InternalState {
       }
     default:
       throw new Error(
-        `unhandled action: ${(action satisfies never as Action).type}`
+        `unhandled action: ${JSON.stringify(action satisfies never)}`
       )
   }
 }

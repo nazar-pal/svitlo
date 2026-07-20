@@ -11,7 +11,8 @@ jest.mock('react-native-keyboard-controller', () => {
 })
 
 jest.mock('heroui-native', () => {
-  const { Pressable, Text, TextInput, View } = jest.requireActual('react-native')
+  const { Pressable, Text, TextInput, View } =
+    jest.requireActual('react-native')
   function Dialog({
     isOpen,
     children
@@ -56,7 +57,10 @@ jest.mock('heroui-native', () => {
     isDisabled?: boolean
   }) {
     return (
-      <Pressable disabled={isDisabled} onPress={() => !isDisabled && onPress?.()}>
+      <Pressable
+        disabled={isDisabled}
+        onPress={() => !isDisabled && onPress?.()}
+      >
         <Text>{children}</Text>
       </Pressable>
     )

@@ -1,5 +1,7 @@
-import type { ParamFreeMutationErrorCode } from '@/data/shared/errors'
-import type { PolicyResult } from '@/data/shared/policy-result'
+import {
+  policyFail as fail,
+  type PolicyResult
+} from '@/data/shared/policy-result'
 
 export type { PolicyResult }
 
@@ -10,13 +12,6 @@ export interface OrganizationRef {
   id: string
   adminUserId: string
 }
-
-// Local `fail` helper so the return type narrows to just the failure
-// variant — `policyFail` returns the wider `PolicyResult` which breaks
-// inference for the richer success shape below.
-const fail = (
-  code: ParamFreeMutationErrorCode
-): { ok: false; code: ParamFreeMutationErrorCode } => ({ ok: false, code })
 
 // Delete surfaces the resolved org so the caller can drive the cascade
 // side effect (client: raw SQL tx; server: Postgres FK cascade) without a

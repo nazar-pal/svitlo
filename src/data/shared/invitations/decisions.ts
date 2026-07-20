@@ -34,7 +34,6 @@ export const createInvitation = defineDecision<
   CreateInvitationFacts,
   PolicyResult
 >({
-  id: 'invitations.createInvitation',
   plan: [
     createInvitationPlan('authzOrg', 'authz.org', a => a.organizationId),
     // Members-screen affordance gate passes `inviteeEmail: ''` before the
@@ -81,7 +80,6 @@ export const acceptInvitation = defineDecision<
   AcceptInvitationFacts,
   AcceptInvitationResult
 >({
-  id: 'invitations.acceptInvitation',
   plan: [
     acceptInvitationPlan('invitation', 'invitation.byId', a => a.invitationId),
     acceptInvitationPlan(
@@ -125,7 +123,6 @@ export const declineInvitation = defineDecision<
   DeclineInvitationFacts,
   PolicyResult
 >({
-  id: 'invitations.declineInvitation',
   plan: [
     declineInvitationPlan('invitation', 'invitation.byId', a => a.invitationId)
   ],
@@ -158,7 +155,6 @@ export const cancelInvitation = defineDecision<
   CancelInvitationFacts,
   PolicyResult
 >({
-  id: 'invitations.cancelInvitation',
   plan: [
     cancelInvitationPlan('invitation', 'invitation.byId', a => a.invitationId),
     cancelInvitationPlan(

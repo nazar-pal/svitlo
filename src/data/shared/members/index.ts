@@ -1,5 +1,7 @@
-import type { ParamFreeMutationErrorCode } from '@/data/shared/errors'
-import type { PolicyResult } from '@/data/shared/policy-result'
+import {
+  policyFail as fail,
+  type PolicyResult
+} from '@/data/shared/policy-result'
 
 // Fact shapes the member-lifecycle policy needs. `id` is the membership
 // row id — both entry points (admin-removes and self-leaves) need it for
@@ -10,13 +12,6 @@ export interface MemberRef {
   organizationId: string
   userId: string
 }
-
-// Local `fail` helper so the return type narrows to the failure variant —
-// `policyFail` returns the wider `PolicyResult`, which would let an
-// ok-branch leak past the richer `MemberLifecycleResult` shape.
-const fail = (
-  code: ParamFreeMutationErrorCode
-): { ok: false; code: ParamFreeMutationErrorCode } => ({ ok: false, code })
 
 // Both lifecycle policies surface the resolved `member` + `adminUserId` on
 // success so callers can drive `transferAssignmentsAndRemoveMember`

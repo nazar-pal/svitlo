@@ -20,6 +20,7 @@ import type {
   FactOf,
   GeneratorUserInput,
   InvitationRef,
+  OrganizationRef,
   OrgMemberInput,
   OrgMembershipRef,
   TemplateTriggerRef
@@ -146,8 +147,8 @@ const authzOrgEntry: Entry<string, OrgAuthzFact, OrgAuthzFact | null> = {
 
 const organizationByIdEntry: Entry<
   string,
-  { id: string; adminUserId: string },
-  { id: string; adminUserId: string } | null
+  OrganizationRef,
+  OrganizationRef | null
 > = {
   build: (db, id) =>
     db

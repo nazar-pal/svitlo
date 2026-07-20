@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 
 import { maintenanceRecords } from '@/data/server/db-schema'
+import type * as authzPolicy from '@/data/shared/authz/policy'
 import type { RecordRef } from '@/data/shared/maintenance'
 
 import { isOwnerOrGeneratorAdmin } from './checks'
@@ -44,11 +45,10 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
 
     const record = shielded.data.facts.record
     if (!record) return fail('RECORD_NOT_FOUND')
-    const allowed = await isOwnerOrGeneratorAdmin(
-      db,
+    const allowed = isOwnerOrGeneratorAdmin(
       userId,
-      record.generatorId,
-      record.performedByUserId
+      record.performedByUserId,
+      shielded.data.facts.authzGenerator
     )
     if (!allowed) return fail('Can only delete your own maintenance records')
 
@@ -68,7 +68,13 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
     if ('notes' in data)
       fields.notes = data.notes == null ? null : String(data.notes)
 
-    let record: RecordRef | null
+    // Both branches hand back the same fact bundle, kept whole so the
+    // `record` fed to the owner check and the `authzGenerator` backing its
+    // admin fallback provably come from the same decision result.
+    let facts: {
+      record: RecordRef | null
+      authzGenerator?: authzPolicy.GeneratorAuthzFact | null
+    }
     if ('performed_at' in data) {
       // Untrusted wire data: an unparseable date would sail through the
       // future-date policy check (`NaN > now` is false) and only blow up as
@@ -89,7 +95,7 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
         if (result.code === 'RECORD_NOT_FOUND') return fail('Record not found')
         return fail(result.code)
       }
-      record = result.facts.record
+      facts = result.facts
       fields.performedAt = new Date(performedAt)
     } else {
       const result = await checks.deleteRecord({ userId, recordId: id })
@@ -97,15 +103,14 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
         if (result.code === 'RECORD_NOT_FOUND') return fail('Record not found')
         return fail(result.code)
       }
-      record = result.facts.record
+      facts = result.facts
     }
 
-    if (!record) return fail('Record not found')
-    const allowed = await isOwnerOrGeneratorAdmin(
-      db,
+    if (!facts.record) return fail('Record not found')
+    const allowed = isOwnerOrGeneratorAdmin(
       userId,
-      record.generatorId,
-      record.performedByUserId
+      facts.record.performedByUserId,
+      facts.authzGenerator
     )
     if (!allowed) return fail('Can only edit your own maintenance records')
 

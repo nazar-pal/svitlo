@@ -67,6 +67,24 @@ describe('canAccessGeneratorFact', () => {
     ).toBe(false)
   })
 
+  it('grants an assigned user on an orphan generator (null org admin)', () => {
+    expect(
+      canAccessGeneratorFact(MEMBER, {
+        orgAdminUserId: null,
+        hasAssignment: true
+      })
+    ).toBe(true)
+  })
+
+  it('denies an unassigned user on an orphan generator', () => {
+    expect(
+      canAccessGeneratorFact(MEMBER, {
+        orgAdminUserId: null,
+        hasAssignment: false
+      })
+    ).toBe(false)
+  })
+
   it('denies when the generator was not found (null fact)', () => {
     expect(canAccessGeneratorFact(ADMIN, null)).toBe(false)
   })

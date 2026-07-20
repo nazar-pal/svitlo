@@ -32,7 +32,6 @@ export const createGenerator = defineDecision<
   CreateGeneratorFacts,
   PolicyResult
 >({
-  id: 'generators.createGenerator',
   plan: [createGeneratorPlan('authzOrg', 'authz.org', a => a.organizationId)],
   rule: (args, facts) =>
     authzPolicy.isOrgAdmin(args.userId, facts.authzOrg?.adminUserId ?? null)
@@ -62,7 +61,6 @@ export const updateGenerator = defineDecision<
   UpdateGeneratorFacts,
   PolicyResult
 >({
-  id: 'generators.updateGenerator',
   plan: [
     updateGeneratorPlan('generator', 'generator.byId', a => a.generatorId),
     updateGeneratorPlan('authzGenerator', 'authz.generator', a => ({
@@ -105,7 +103,6 @@ export const deleteGenerator = defineDecision<
   DeleteGeneratorFacts,
   PolicyResult
 >({
-  id: 'generators.deleteGenerator',
   plan: [
     deleteGeneratorPlan('generator', 'generator.byId', a => a.generatorId),
     deleteGeneratorPlan('authzGenerator', 'authz.generator', a => ({

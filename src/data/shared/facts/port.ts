@@ -22,7 +22,6 @@ export interface FactPlanEntry<Args, FactsSoFar, Input> {
 // the resolved facts. The plan determines both async and reactive execution
 // order — reactive also depends on it to keep React hook order stable.
 export interface Decision<Args, Facts, Result> {
-  readonly id: string
   readonly plan: readonly FactPlanEntry<Args, Partial<Facts>, unknown>[]
   readonly rule: (args: Args, facts: Facts) => Result
 }

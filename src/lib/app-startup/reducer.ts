@@ -83,7 +83,7 @@ export function reduce(state: StartupState, action: Action): StartupState {
 
     default:
       throw new Error(
-        `unhandled action: ${(action satisfies never as Action).type}`
+        `unhandled action: ${JSON.stringify(action satisfies never)}`
       )
   }
 }

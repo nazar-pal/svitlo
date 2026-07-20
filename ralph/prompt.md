@@ -36,8 +36,8 @@ Complete the task.
 
 Before committing, run the feedback loops:
 
-- `pnpm run test` to run the tests
-- `pnpm run typecheck` to run the type checker
+- `bun run test` to run the tests
+- `bun run typecheck` to run the type checker
 
 # COMMIT
 

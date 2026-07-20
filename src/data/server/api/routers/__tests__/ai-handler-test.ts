@@ -36,9 +36,10 @@ interface SuggestInput {
 }
 
 // The shimmed builder returns the raw handler; cast to its call signature.
-const suggestMaintenancePlan = aiRouter.suggestMaintenancePlan as unknown as (
-  args: { input: SuggestInput }
-) => Promise<MaintenanceSuggestion>
+const suggestMaintenancePlan =
+  aiRouter.suggestMaintenancePlan as unknown as (args: {
+    input: SuggestInput
+  }) => Promise<MaintenanceSuggestion>
 
 function rawTask(
   triggerType: 'hours' | 'calendar' | 'whichever_first',

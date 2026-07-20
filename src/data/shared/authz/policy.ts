@@ -27,8 +27,15 @@ export interface GeneratorAuthzFact {
 
 // Payload the `authz.org` fact resolver returns (the non-null branch), with
 // the same single-definition rationale as `GeneratorAuthzFact` above.
+// `organizations.admin_user_id` is NOT NULL in Postgres — the only place it
+// is actually enforced, since PowerSync builds the local SQLite tables from
+// column types alone and drops the client schema's `.notNull()`. Absence is
+// carried by the `| null` on the fact itself (org not found), so read sites
+// keep coalescing with `?? null` rather than trusting this field. Contrast
+// `GeneratorAuthzFact.orgAdminUserId`, which is nullable in the type too
+// because it comes from a LEFT JOIN.
 export interface OrgAuthzFact {
-  adminUserId: string | null
+  adminUserId: string
 }
 
 // Convenience over the raw `authz.generator` fact row, which is `undefined`

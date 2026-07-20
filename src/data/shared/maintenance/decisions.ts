@@ -37,7 +37,6 @@ export const createTemplate = defineDecision<
   CreateTemplateFacts,
   PolicyResult
 >({
-  id: 'maintenance.createTemplate',
   plan: [
     createTemplatePlan(
       'generatorExists',
@@ -82,7 +81,6 @@ export const updateTemplate = defineDecision<
   UpdateTemplateFacts,
   PolicyResult
 >({
-  id: 'maintenance.updateTemplate',
   plan: [
     updateTemplatePlan(
       'template',
@@ -153,7 +151,6 @@ export const deleteTemplate = defineDecision<
   DeleteTemplateFacts,
   PolicyResult
 >({
-  id: 'maintenance.deleteTemplate',
   plan: [
     deleteTemplatePlan(
       'template',
@@ -200,7 +197,6 @@ export const recordMaintenance = defineDecision<
   RecordMaintenanceFacts,
   PolicyResult
 >({
-  id: 'maintenance.recordMaintenance',
   plan: [
     recordMaintenancePlan(
       'generatorExists',
@@ -249,7 +245,6 @@ export const deleteRecord = defineDecision<
   DeleteRecordFacts,
   PolicyResult
 >({
-  id: 'maintenance.deleteRecord',
   plan: [
     deleteRecordPlan('record', 'maintenanceRecord.byId', a => a.recordId),
     deleteRecordPlan('authzGenerator', 'authz.generator', (a, f) =>
@@ -287,7 +282,6 @@ export const updateRecord = defineDecision<
   UpdateRecordFacts,
   PolicyResult
 >({
-  id: 'maintenance.updateRecord',
   plan: [
     updateRecordPlan('record', 'maintenanceRecord.byId', a => a.recordId),
     updateRecordPlan('authzGenerator', 'authz.generator', (a, f) =>

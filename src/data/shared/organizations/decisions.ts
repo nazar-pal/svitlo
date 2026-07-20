@@ -34,7 +34,6 @@ export const renameOrganization = defineDecision<
   RenameOrganizationFacts,
   PolicyResult
 >({
-  id: 'organizations.renameOrganization',
   plan: [
     renameOrganizationPlan('org', 'organization.byId', a => a.organizationId)
   ],
@@ -69,7 +68,6 @@ export const deleteOrganization = defineDecision<
   DeleteOrganizationFacts,
   DeleteOrganizationResult
 >({
-  id: 'organizations.deleteOrganization',
   plan: [
     deleteOrganizationPlan('org', 'organization.byId', a => a.organizationId)
   ],

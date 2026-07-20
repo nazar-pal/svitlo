@@ -2,9 +2,14 @@ import type {
   GeneratorAuthzFact,
   OrgAuthzFact
 } from '@/data/shared/authz/policy'
-import type { RecordRef } from '@/data/shared/maintenance'
+import type { InvitationRef } from '@/data/shared/invitations'
+import type {
+  RecordRef,
+  TemplateRef as TemplateTriggerRef
+} from '@/data/shared/maintenance'
+import type { MemberRef as OrgMembershipRef } from '@/data/shared/members'
+import type { OrganizationRef } from '@/data/shared/organizations'
 import type { SessionRef } from '@/data/shared/sessions'
-import type { TriggerType } from '@/lib/maintenance/trigger-type'
 
 // One contract per fact key: the input a decision plan supplies and the fact
 // shape a resolver must produce. Both side-specific registries are
@@ -23,22 +28,15 @@ export interface OrgMemberInput {
   organizationId: string
 }
 
-export interface OrgMembershipRef {
-  id: string
-  organizationId: string
-  userId: string
-}
-
-export interface InvitationRef {
-  organizationId: string
-  inviteeEmail: string
-}
-
-export interface TemplateTriggerRef {
-  generatorId: string
-  triggerType: TriggerType
-  triggerHoursInterval: number | null
-  triggerCalendarDays: number | null
+// Re-exported under the names the registries already import, so the fact
+// shapes stay owned by their domain modules instead of being re-declared
+// here — a field added to `MemberRef` now reaches both registries and the
+// `satisfies` check catches the drift.
+export type {
+  InvitationRef,
+  OrganizationRef,
+  OrgMembershipRef,
+  TemplateTriggerRef
 }
 
 interface FactContracts {
@@ -52,10 +50,7 @@ interface FactContracts {
     fact: GeneratorAuthzFact | null
   }
   'authz.org': { input: string; fact: OrgAuthzFact | null }
-  'organization.byId': {
-    input: string
-    fact: { id: string; adminUserId: string } | null
-  }
+  'organization.byId': { input: string; fact: OrganizationRef | null }
   'orgMembership.hasForUserAndOrg': { input: OrgMemberInput; fact: boolean }
   'orgMembership.byUserAndOrg': {
     input: OrgMemberInput

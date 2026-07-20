@@ -21,6 +21,7 @@ import type {
   FactOf,
   GeneratorUserInput,
   InvitationRef,
+  OrganizationRef,
   OrgMemberInput,
   OrgMembershipRef,
   TemplateTriggerRef
@@ -115,10 +116,10 @@ const authzOrg: Resolver<string, OrgAuthzFact | null> = async (db, orgId) => {
   return row ? { adminUserId: row.adminUserId } : null
 }
 
-const organizationById: Resolver<
-  string,
-  { id: string; adminUserId: string } | null
-> = async (db, id) => {
+const organizationById: Resolver<string, OrganizationRef | null> = async (
+  db,
+  id
+) => {
   const row = await db.query.organizations.findFirst({
     where: eq(organizations.id, id),
     columns: { id: true, adminUserId: true }
