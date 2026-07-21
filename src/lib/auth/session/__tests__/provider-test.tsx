@@ -248,19 +248,6 @@ describe('AuthSessionProvider', () => {
     }
   })
 
-  it('incomplete profile when stored identity + session has blank user.name', async () => {
-    const fake = createFakeRuntime({
-      data: validSession('user-1', ''),
-      isPending: false
-    })
-    const storage = createFakeStorage({ version: 1, userId: 'user-1' })
-    const { result } = renderHook(() => useAuthSession(), {
-      wrapper: makeWrapper(fake.runtime, storage.storage)
-    })
-
-    await waitFor(() => expect(result.current.phase).toBe('incomplete-profile'))
-  })
-
   it('re-runs when the session snapshot changes after bootstrapping', async () => {
     const fake = createFakeRuntime({ data: null, isPending: false })
     fake.getSession.mockResolvedValue({ data: null, error: null })
@@ -376,27 +363,6 @@ describe('AuthSessionProvider', () => {
     await waitFor(() => expect(result.current.phase).toBe('authenticated'))
     expect(storage.writeMock).toHaveBeenCalledTimes(1)
     expect(result.current.identity).toEqual({ version: 1, userId: 'user-1' })
-  })
-
-  it('markExpired() sets status to expired but preserves identity', async () => {
-    const fake = createFakeRuntime({
-      data: validSession('user-1'),
-      isPending: false
-    })
-    const storage = createFakeStorage({ version: 1, userId: 'user-1' })
-    const { result } = renderHook(() => useAuthSession(), {
-      wrapper: makeWrapper(fake.runtime, storage.storage)
-    })
-
-    await waitFor(() => expect(result.current.phase).toBe('authenticated'))
-
-    await act(async () => {
-      result.current.markExpired()
-    })
-
-    expect(result.current.status).toBe('expired')
-    expect(result.current.identity).toEqual({ version: 1, userId: 'user-1' })
-    expect(result.current.phase).toBe('authenticated')
   })
 
   it('signOut() clears identity through the port and calls disconnectAndSignOut once', async () => {

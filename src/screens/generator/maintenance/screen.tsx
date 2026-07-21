@@ -18,7 +18,8 @@ import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
   computeAllMaintenanceItems,
-  formatMaintenanceLabel
+  formatMaintenanceLabel,
+  formatScheduleLabel
 } from '@/lib/maintenance/due'
 
 export default function MaintenanceScreen() {
@@ -144,31 +145,7 @@ export default function MaintenanceScreen() {
                       {template.taskName}
                     </ListGroup.ItemTitle>
                     <ListGroup.ItemDescription>
-                      {template.isOneTime
-                        ? template.triggerType === 'hours'
-                          ? t('maintenanceTemplate.onceAtHours', {
-                              hours: String(template.triggerHoursInterval)
-                            })
-                          : template.triggerType === 'calendar'
-                            ? t('maintenanceTemplate.onceAtDays', {
-                                days: String(template.triggerCalendarDays)
-                              })
-                            : t('maintenanceTemplate.onceAtBoth', {
-                                hours: String(template.triggerHoursInterval),
-                                days: String(template.triggerCalendarDays)
-                              })
-                        : template.triggerType === 'hours'
-                          ? t('maintenanceTemplate.everyHours', {
-                              hours: String(template.triggerHoursInterval)
-                            })
-                          : template.triggerType === 'calendar'
-                            ? t('maintenanceTemplate.everyDays', {
-                                days: String(template.triggerCalendarDays)
-                              })
-                            : t('maintenanceTemplate.everyBoth', {
-                                hours: String(template.triggerHoursInterval),
-                                days: String(template.triggerCalendarDays)
-                              })}
+                      {formatScheduleLabel(template)}
                       {lastRecord
                         ? ' · ' +
                           t('maintenanceTemplate.last', {

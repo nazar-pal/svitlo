@@ -15,8 +15,8 @@ import {
   TRIGGER_TYPES,
   type TriggerType,
   isTriggerType,
-  showsCalendar,
-  showsHours
+  usesCalendar,
+  usesHours
 } from '@/lib/maintenance/trigger-type'
 
 export type EditableItem = SuggestionTask & { selected: boolean }
@@ -36,8 +36,8 @@ export function SuggestionCard({
     calendar: t('maintenanceTemplate.calendar'),
     whichever_first: t('maintenanceTemplate.first')
   }
-  const showHours = showsHours(item.triggerType)
-  const showCalendar = showsCalendar(item.triggerType)
+  const showHours = usesHours(item.triggerType)
+  const showCalendar = usesCalendar(item.triggerType)
 
   return (
     <View className={`py-3 ${!item.selected ? 'opacity-40' : ''}`}>

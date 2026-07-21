@@ -16,7 +16,11 @@ export const handleInvitations: TableHandler = async ctx => {
     const inviteeEmail = values.inviteeEmail as string
 
     const shielded = replayShieldAlreadyExists(
-      await checks.createInvitation(userId, orgId, inviteeEmail),
+      await checks.createInvitation({
+        callerUserId: userId,
+        organizationId: orgId,
+        inviteeEmail
+      }),
       'INVITATION_ALREADY_SENT'
     )
     if (shielded.status === 'consume') return shielded.result
@@ -43,7 +47,10 @@ export const handleInvitations: TableHandler = async ctx => {
     // to the decline path. Both branches ultimately DELETE the same row,
     // so whichever check approves is enough.
     const cancel = replayShieldNotFound(
-      await checks.cancelInvitation(userId, id),
+      await checks.cancelInvitation({
+        callerUserId: userId,
+        invitationId: id
+      }),
       'INVITATION_NOT_FOUND'
     )
     if (cancel.status === 'ok') {
@@ -53,7 +60,10 @@ export const handleInvitations: TableHandler = async ctx => {
     // Replay path: row already gone, sync queue should advance silently.
     if (cancel.result.ok) return cancel.result
 
-    const decline = await checks.declineInvitation(userEmail, id)
+    const decline = await checks.declineInvitation({
+      userEmail,
+      invitationId: id
+    })
     if (!decline.ok) return fail(decline.code)
 
     await db.delete(invitations).where(eq(invitations.id, id))

@@ -8,12 +8,6 @@ import {
 
 import { protectedProcedure } from '../orpc'
 
-export {
-  maintenanceSuggestionSchema,
-  rawTaskSchema,
-  taskSchema
-} from '@/data/shared/maintenance-suggestion'
-
 const rawSuggestionSchema = z.object({
   maxConsecutiveRunHours: z.number().nullable(),
   requiredRestHours: z.number().nullable(),
@@ -171,13 +165,10 @@ export const aiRouter = {
         raw = genericFallback(input.generatorModel)
       }
 
-      const isGeneric = raw.isGeneric
-
       const repairedTasks = repairTasks(raw.tasks)
 
       return maintenanceSuggestionSchema.parse({
         ...raw,
-        isGeneric,
         tasks: repairedTasks
       })
     })

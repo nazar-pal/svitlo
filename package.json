@@ -28,7 +28,8 @@
     "e2e:maintenance": "maestro test .maestro/flows/maintenance/",
     "e2e:org": "maestro test .maestro/flows/organization/",
     "e2e:nav": "maestro test .maestro/flows/navigation/",
-    "e2e:smoke": "maestro test --include-tags smoke .maestro/"
+    "e2e:smoke": "maestro test --include-tags smoke .maestro/",
+    "prepare": "husky"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.63",
@@ -111,7 +112,10 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.4",
     "eslint-config-expo": "^55.0.0",
+    "husky": "^9.1.7",
     "jest-expo": "^55.0.16",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.2",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "typescript": "~5.9.2"
   },

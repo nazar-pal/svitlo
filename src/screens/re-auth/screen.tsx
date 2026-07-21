@@ -1,16 +1,26 @@
 import { useRouter } from 'expo-router'
-import { Button, Input, Label, TextField } from 'heroui-native'
-import React, { useRef, useState } from 'react'
+import { Button } from 'heroui-native'
+import { useRef, useState } from 'react'
 import { Alert, Pressable, Text, TextInput, View } from 'react-native'
 
 import { AppleSignInButton } from '@/components/apple-sign-in-button'
 import { FormError } from '@/components/form-error'
+import { FormField } from '@/components/form/form-field'
 import { KeyboardAwareScrollView } from '@/components/uniwind'
+import { fail, ok } from '@/data/shared/result'
 import { signInSchema } from '@/data/shared/validation'
 import { authClient } from '@/lib/auth/auth-client'
 import { useAuthSession } from '@/lib/auth/session'
 import { useAppleSignIn } from '@/lib/auth/use-apple-sign-in'
+import { type BuildResult, useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useTranslation } from '@/lib/i18n'
+
+// Must stay a `type`: `useForm`'s `TValues extends Record<string, unknown>`
+// constraint needs the implicit index signature interfaces don't get.
+type SignInInput = {
+  email: string
+  password: string
+}
 
 export default function ReAuthScreen() {
   const router = useRouter()
@@ -18,10 +28,6 @@ export default function ReAuthScreen() {
   const { identity } = useAuthSession()
 
   const [showEmailForm, setShowEmailForm] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isEmailSubmitting, setIsEmailSubmitting] = useState(false)
-  const [emailError, setEmailError] = useState('')
   const passwordRef = useRef<TextInput>(null)
 
   async function handleAccountMismatch(newUserId: string | undefined) {
@@ -43,38 +49,40 @@ export default function ReAuthScreen() {
     }
   })
 
-  async function handleEmailSignIn() {
-    if (isEmailSubmitting) return
-    setIsEmailSubmitting(true)
-    setEmailError('')
+  const { submit, formError, isSubmitting, bind } = useForm<
+    SignInInput,
+    SignInInput
+  >({
+    initial: { email: '', password: '' },
+    build: (values): BuildResult<SignInInput> => {
+      const parsed = validateWithZod(signInSchema, values)
+      if (!parsed.ok) return parsed
+      return {
+        ok: true,
+        data: {
+          email: parsed.data.email.trim().toLowerCase(),
+          password: parsed.data.password
+        }
+      }
+    },
+    mutate: async input => {
+      const res = await authClient.signIn.email(input)
+      if (res.error)
+        return fail('AUTH_FAILED', {
+          message: res.error.message ?? t('auth.somethingWentWrong')
+        })
+      // Signing into a different account than the local data belongs to is
+      // not a success — the mismatch must fail here, before `useForm` fires
+      // the success haptic and `onSuccess` navigates away.
+      if (await handleAccountMismatch(res.data?.user?.id))
+        return fail('AUTH_FAILED', { message: t('auth.differentAccountDesc') })
+      return ok
+    },
+    onSuccess: () => router.back()
+  })
 
-    const parsed = signInSchema.safeParse({ email, password })
-    if (!parsed.success) {
-      setEmailError(parsed.error.issues[0].message)
-      setIsEmailSubmitting(false)
-      return
-    }
-
-    const result = await authClient.signIn.email({
-      email: email.trim().toLowerCase(),
-      password
-    })
-
-    if (result.error) {
-      setEmailError(result.error.message ?? t('auth.somethingWentWrong'))
-      setIsEmailSubmitting(false)
-      return
-    }
-
-    const newUserId = result.data?.user?.id
-    if (await handleAccountMismatch(newUserId)) {
-      setIsEmailSubmitting(false)
-      return
-    }
-
-    setIsEmailSubmitting(false)
-    router.back()
-  }
+  const emailBinding = bind.text('email')
+  const passwordBinding = bind.text('password')
 
   return (
     <KeyboardAwareScrollView
@@ -102,44 +110,38 @@ export default function ReAuthScreen() {
 
         {showEmailForm ? (
           <View className="gap-4">
-            <TextField>
-              <Label>{t('auth.email')}</Label>
-              <Input
-                placeholder={t('auth.emailPlaceholder')}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="emailAddress"
-                returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-              />
-            </TextField>
+            <FormField
+              binding={emailBinding}
+              label={t('auth.email')}
+              placeholder={t('auth.emailPlaceholder')}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="emailAddress"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+            />
 
-            <TextField>
-              <Label>{t('auth.password')}</Label>
-              <Input
-                ref={passwordRef}
-                placeholder={t('auth.enterPassword')}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                textContentType="password"
-                returnKeyType="done"
-                onSubmitEditing={handleEmailSignIn}
-              />
-            </TextField>
+            <FormField
+              binding={passwordBinding}
+              label={t('auth.password')}
+              ref={passwordRef}
+              placeholder={t('auth.enterPassword')}
+              secureTextEntry
+              autoCapitalize="none"
+              textContentType="password"
+              returnKeyType="done"
+              onSubmitEditing={submit}
+            />
 
-            <FormError message={emailError} />
+            <FormError message={formError} />
 
             <Button
               variant="primary"
-              isDisabled={isEmailSubmitting}
-              onPress={handleEmailSignIn}
+              isDisabled={isSubmitting}
+              onPress={submit}
             >
-              {isEmailSubmitting ? t('auth.signingIn') : t('auth.signIn')}
+              {isSubmitting ? t('auth.signingIn') : t('auth.signIn')}
             </Button>
           </View>
         ) : (

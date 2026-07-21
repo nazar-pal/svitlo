@@ -34,8 +34,11 @@ export function createOrganizationMutations(ctx: MutationContext) {
       UpdateOrganizationInput
     >(ctx, {
       parse: ([, , input]) => updateOrganizationSchema.safeParse(input),
-      check: (c, [userId, orgId]) =>
-        c.checks.organizations.renameOrganization(userId, orgId),
+      check: (c, [callerUserId, organizationId]) =>
+        c.checks.organizations.renameOrganization({
+          callerUserId,
+          organizationId
+        }),
       apply: async ({ db, args: [, orgId], parsed }) => {
         await db
           .update(organizations)
@@ -45,8 +48,11 @@ export function createOrganizationMutations(ctx: MutationContext) {
     }),
 
     deleteOrganization: defineMutation<[string, string]>(ctx, {
-      check: (c, [userId, orgId]) =>
-        c.checks.organizations.deleteOrganization(userId, orgId),
+      check: (c, [callerUserId, organizationId]) =>
+        c.checks.organizations.deleteOrganization({
+          callerUserId,
+          organizationId
+        }),
       tx: true,
       apply: async ({ db, args: [, orgId] }) => {
         await cascadeDelete(db, organizations, organizations.id, orgId)

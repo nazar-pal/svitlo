@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Alert, useWindowDimensions, View } from 'react-native'
+import { useWindowDimensions, View } from 'react-native'
 import Animated, {
   scrollTo,
   useAnimatedRef,
@@ -11,8 +11,7 @@ import { scheduleOnRN } from 'react-native-worklets'
 
 import { storage } from '@/lib/storage'
 import { EmptyState } from '@/components/empty-state'
-import { deleteGenerator } from '@/data/client/mutations'
-import { runMutation } from '@/lib/alerts'
+import { confirmDeleteGenerator } from '@/lib/alerts'
 import { impactLight } from '@/lib/haptics'
 import { useTranslation } from '@/lib/i18n'
 import {
@@ -211,24 +210,7 @@ export default function HomeScreen() {
                       role="destructive"
                       onPress={() => {
                         const gen = carouselItems[safeIndex]!.generator
-                        Alert.alert(
-                          t('generator.deleteGenerator'),
-                          t('generator.deleteGeneratorConfirm', {
-                            title: gen.title
-                          }),
-                          [
-                            { text: t('common.cancel'), style: 'cancel' },
-                            {
-                              text: t('common.delete'),
-                              style: 'destructive',
-                              onPress: () =>
-                                runMutation(
-                                  () => deleteGenerator(userId, gen.id),
-                                  { feedback: 'warning' }
-                                )
-                            }
-                          ]
-                        )
+                        confirmDeleteGenerator(userId, gen.id, gen.title)
                       }}
                     />
                   </SwiftMenu>

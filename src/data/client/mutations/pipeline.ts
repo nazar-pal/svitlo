@@ -12,13 +12,19 @@ import type { MutationContext } from './context'
 
 type OkBranch<T> = Extract<T, { ok: true }>
 
-// Fail branch splits by whether the code takes params: bare codes may use
-// the wide `ParamFreeMutationErrorCode` union (so `PolicyResult`-shaped
-// checks assign directly); parameterized codes must supply their typed
-// `params`. A check cannot return a parameterized code without them.
+// Fail-branch codes must come from the `MutationError` union so a decision
+// whose code is outside it (e.g. the authz decisions' `NOT_AUTHORIZED`)
+// cannot compile into a client mutation and surface untranslatable.
+// Decision-facade checks also carry `facts` on both branches (that's how
+// the async adapter attaches already-fetched rows for defence-in-depth) —
+// the ok branch keeps an open index signature so `checkOk` extras survive,
+// while the param-free fail branch admits only `facts`, guaranteeing that
+// only parameterized codes can carry `params` into the `'params' in result`
+// dispatch below. Parameterized codes must still supply their typed
+// `params`.
 type CheckOutcome =
-  | { ok: true }
-  | { ok: false; code: ParamFreeMutationErrorCode }
+  | { ok: true; [k: string]: unknown }
+  | { ok: false; code: ParamFreeMutationErrorCode; facts?: unknown }
   | ({ ok: false } & Extract<MutationError, { params: unknown }>)
 
 type ValidateOutcome<TVali> =
@@ -93,8 +99,15 @@ export function defineMutation<
     if (def.check) {
       const result = await def.check(ctx, args, parsed)
       if (!result.ok) {
-        const { ok: _ok, ...error } = result
-        return { ok: false, error: error as unknown as MutationError }
+        // Decision-facade checks carry `facts` on every branch; rebuild the
+        // error from `code`/`params` alone so the wire shape stays
+        // `{ code, params? }` exactly as the discriminated union allows.
+        return {
+          ok: false,
+          error: ('params' in result
+            ? { code: result.code, params: result.params }
+            : { code: result.code }) as MutationError
+        }
       }
       checkOk = result as OkBranch<TCheck>
     }

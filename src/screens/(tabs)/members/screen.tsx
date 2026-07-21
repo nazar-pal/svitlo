@@ -2,12 +2,7 @@ import { EmptyState } from '@/components/empty-state'
 import { HeaderSubmitButton } from '@/components/navigation/header-submit-button'
 import { SectionHeader } from '@/components/section-header'
 import { useTranslation } from '@/lib/i18n'
-import {
-  useCanCancelInvitation,
-  useCanCreateInvitation
-} from '@/data/client/invitations/policy-hooks'
-import { useCanRemoveMember } from '@/data/client/members/policy-hooks'
-import { isPolicyAllowed } from '@/data/client/policy-hooks-shared'
+import { isPolicyAllowed, policies, usePolicy } from '@/data/client/use-policy'
 import { cancelInvitation, removeMember } from '@/data/client/mutations'
 import {
   getAllUsers,
@@ -15,11 +10,11 @@ import {
   getOrgInvitations,
   getOrgMembers
 } from '@/data/client/queries'
-import { runMutation } from '@/lib/alerts'
+import { confirmDestructive, runMutation } from '@/lib/alerts'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useSelectedOrg } from '@/lib/organization/use-selected-org'
 import { getUserName } from '@/lib/utils/get-user-name'
-import { useUserOrgs } from '@/lib/organization/use-user-orgs'
+import { useLocalUserId } from '@/lib/powersync'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import {
@@ -29,7 +24,7 @@ import {
   Separator,
   useThemeColor
 } from 'heroui-native'
-import { Alert, ScrollView, View } from 'react-native'
+import { ScrollView, View } from 'react-native'
 
 import {
   buildMemberList,
@@ -45,7 +40,7 @@ export default function MembersScreen() {
   const { q } = useLocalSearchParams<{ q?: string }>()
   const searchText = q ?? ''
 
-  const { userId } = useUserOrgs()
+  const userId = useLocalUserId()
 
   // Selected organization
   const { data: orgData } = useDrizzleQuery(
@@ -70,7 +65,16 @@ export default function MembersScreen() {
   // All users for resolving names
   const { data: users } = useDrizzleQuery(getAllUsers())
 
-  const createInvitePolicy = useCanCreateInvitation(userId, selectedOrgId)
+  const createInvitePolicy = usePolicy(
+    policies.invitations.createInvitation,
+    userId && selectedOrgId
+      ? {
+          callerUserId: userId,
+          organizationId: selectedOrgId,
+          inviteeEmail: ''
+        }
+      : null
+  )
   const canInvite = isPolicyAllowed(createInvitePolicy)
 
   function getUserInfo(uid: string) {
@@ -80,18 +84,15 @@ export default function MembersScreen() {
     }
   }
 
-  async function handleRemoveMember(memberId: string) {
-    Alert.alert(t('members.removeMember'), t('members.removeMemberDesc'), [
-      { text: t('common.cancel'), style: 'cancel' },
+  function handleRemoveMember(memberId: string) {
+    confirmDestructive(
+      t('members.removeMember'),
+      t('members.removeMemberDesc'),
       {
-        text: t('common.remove'),
-        style: 'destructive',
-        onPress: () =>
-          runMutation(() => removeMember(userId, memberId), {
-            feedback: 'warning'
-          })
+        confirmLabel: t('common.remove'),
+        mutation: () => removeMember(userId, memberId)
       }
-    ])
+    )
   }
 
   async function handleCancelInvitation(invitationId: string) {
@@ -238,7 +239,10 @@ function MemberRow({
 }) {
   const { t } = useTranslation()
   const { memberId } = person
-  const policy = useCanRemoveMember(userId, memberId)
+  const policy = usePolicy(
+    policies.members.removeMember,
+    userId && memberId ? { callerUserId: userId, memberId } : null
+  )
   const canRemove = isPolicyAllowed(policy)
 
   return (
@@ -291,7 +295,12 @@ function PendingInvitationRow({
   onCancel: (invitationId: string) => void
 }) {
   const { t } = useTranslation()
-  const policy = useCanCancelInvitation(userId, invitation.id)
+  const policy = usePolicy(
+    policies.invitations.cancelInvitation,
+    userId && invitation.id
+      ? { callerUserId: userId, invitationId: invitation.id }
+      : null
+  )
   const canCancel = isPolicyAllowed(policy)
 
   return (

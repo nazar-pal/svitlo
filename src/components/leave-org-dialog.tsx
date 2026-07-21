@@ -8,7 +8,7 @@ import { getOrganization } from '@/data/client/queries'
 import { runMutation } from '@/lib/alerts'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import { useTranslation } from '@/lib/i18n'
-import { useUserOrgs } from '@/lib/organization/use-user-orgs'
+import { useLocalUserId } from '@/lib/powersync'
 
 interface LeaveOrgDialogProps {
   orgId: string | null
@@ -22,7 +22,7 @@ export function LeaveOrgDialog({
   onLeft
 }: LeaveOrgDialogProps) {
   const { t } = useTranslation()
-  const { userId } = useUserOrgs()
+  const userId = useLocalUserId()
   const { toast } = useToast()
   const { data: orgs } = useDrizzleQuery(
     orgId ? getOrganization(orgId) : undefined

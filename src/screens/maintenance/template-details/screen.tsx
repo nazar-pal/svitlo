@@ -23,9 +23,11 @@ import { formatDate, useTranslation } from '@/lib/i18n'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
 import {
   computeAllMaintenanceItems,
-  formatMaintenanceLabel
+  formatMaintenanceLabel,
+  formatScheduleLabel
 } from '@/lib/maintenance/due'
 import { useUserOrgs } from '@/lib/organization/use-user-orgs'
+import { useLocalUserId } from '@/lib/powersync'
 
 export default function TemplateDetailsScreen() {
   const { t } = useTranslation()
@@ -34,7 +36,8 @@ export default function TemplateDetailsScreen() {
     templateId: string
   }>()
   const router = useRouter()
-  const { isAdmin, userId } = useUserOrgs()
+  const { isAdmin } = useUserOrgs()
+  const userId = useLocalUserId()
   const [mutedColor, dangerColor, warningColor, successColor] = useThemeColor([
     'muted',
     'danger',
@@ -74,31 +77,7 @@ export default function TemplateDetailsScreen() {
 
   const isOneTimeDone = template.isOneTime && !!lastRecord
 
-  const scheduleLabel = template.isOneTime
-    ? template.triggerType === 'hours'
-      ? t('maintenanceTemplate.onceAtHours', {
-          hours: String(template.triggerHoursInterval)
-        })
-      : template.triggerType === 'calendar'
-        ? t('maintenanceTemplate.onceAtDays', {
-            days: String(template.triggerCalendarDays)
-          })
-        : t('maintenanceTemplate.onceAtBoth', {
-            hours: String(template.triggerHoursInterval),
-            days: String(template.triggerCalendarDays)
-          })
-    : template.triggerType === 'hours'
-      ? t('maintenanceTemplate.everyHours', {
-          hours: String(template.triggerHoursInterval)
-        })
-      : template.triggerType === 'calendar'
-        ? t('maintenanceTemplate.everyDays', {
-            days: String(template.triggerCalendarDays)
-          })
-        : t('maintenanceTemplate.everyBoth', {
-            hours: String(template.triggerHoursInterval),
-            days: String(template.triggerCalendarDays)
-          })
+  const scheduleLabel = formatScheduleLabel(template)
 
   const urgencyColor = !itemInfo
     ? mutedColor

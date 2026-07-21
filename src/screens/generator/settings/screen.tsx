@@ -1,13 +1,12 @@
 import { useRouter } from 'expo-router'
 import { Button } from 'heroui-native'
-import { Alert, View } from 'react-native'
+import { View } from 'react-native'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import {
   assignUserToGenerator,
-  deleteGenerator,
   unassignUserFromGenerator,
   updateGenerator
 } from '@/data/client/mutations'
@@ -19,7 +18,11 @@ import {
   getOrgMembers
 } from '@/data/client/queries'
 import { updateGeneratorSchema } from '@/data/shared/validation'
-import { runMutation } from '@/lib/alerts'
+import {
+  confirmDeleteGenerator,
+  confirmDestructive,
+  runMutation
+} from '@/lib/alerts'
 import { useAuthedEntity } from '@/lib/hooks/use-authed-entity'
 import { useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
@@ -83,21 +86,8 @@ function SettingsForm({ userId, generator }: SettingsFormProps) {
   const resolveUserName = (uid: string) => getUserName(users, uid)
 
   function handleDelete() {
-    Alert.alert(
-      t('generator.deleteGenerator'),
-      t('generator.deleteGeneratorConfirm', { title: generator.title }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: () =>
-            runMutation(() => deleteGenerator(userId, generatorId), {
-              feedback: 'warning',
-              onSuccess: () => router.dismissAll()
-            })
-        }
-      ]
+    confirmDeleteGenerator(userId, generatorId, generator.title, () =>
+      router.dismissAll()
     )
   }
 
@@ -108,18 +98,15 @@ function SettingsForm({ userId, generator }: SettingsFormProps) {
   }
 
   function handleUnassign(targetUserId: string) {
-    Alert.alert(t('generator.unassign'), t('generator.unassignConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
+    confirmDestructive(
+      t('generator.unassign'),
+      t('generator.unassignConfirm'),
       {
-        text: t('common.remove'),
-        style: 'destructive',
-        onPress: () =>
-          runMutation(
-            () => unassignUserFromGenerator(userId, generatorId, targetUserId),
-            { feedback: 'warning' }
-          )
+        confirmLabel: t('common.remove'),
+        mutation: () =>
+          unassignUserFromGenerator(userId, generatorId, targetUserId)
       }
-    ])
+    )
   }
 
   const titleBinding = bind.text('title')

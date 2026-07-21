@@ -9,7 +9,7 @@ export function createSessionMutations(ctx: MutationContext) {
   return {
     startSession: defineMutation<[string, string]>(ctx, {
       check: (c, [userId, generatorId]) =>
-        c.checks.sessions.startSession(userId, generatorId),
+        c.checks.sessions.startSession({ userId, generatorId }),
       apply: async ({ ctx: c, db, args: [userId, generatorId] }) => {
         await db.insert(generatorSessions).values({
           id: c.newId(),
@@ -24,7 +24,7 @@ export function createSessionMutations(ctx: MutationContext) {
 
     deleteSession: defineMutation<[string, string]>(ctx, {
       check: (c, [userId, sessionId]) =>
-        c.checks.sessions.deleteSession(userId, sessionId),
+        c.checks.sessions.deleteSession({ userId, sessionId }),
       apply: async ({ db, args: [, sessionId] }) => {
         await db
           .delete(generatorSessions)
@@ -34,7 +34,7 @@ export function createSessionMutations(ctx: MutationContext) {
 
     stopSession: defineMutation<[string, string]>(ctx, {
       check: (c, [userId, sessionId]) =>
-        c.checks.sessions.stopSession(userId, sessionId),
+        c.checks.sessions.stopSession({ userId, sessionId }),
       apply: async ({ ctx: c, db, args: [userId, sessionId] }) => {
         await db
           .update(generatorSessions)
@@ -50,7 +50,13 @@ export function createSessionMutations(ctx: MutationContext) {
       [string, string, { startedAt: string; stoppedAt: string }]
     >(ctx, {
       check: (c, [userId, sessionId, input]) =>
-        c.checks.sessions.updateSession(userId, sessionId, input, c.now()),
+        c.checks.sessions.updateSession({
+          userId,
+          sessionId,
+          startedAt: input.startedAt,
+          stoppedAt: input.stoppedAt,
+          now: c.now()
+        }),
       apply: async ({ db, args: [, sessionId, input] }) => {
         await db
           .update(generatorSessions)
@@ -66,7 +72,13 @@ export function createSessionMutations(ctx: MutationContext) {
       [string, { generatorId: string; startedAt: string; stoppedAt: string }]
     >(ctx, {
       check: (c, [userId, input]) =>
-        c.checks.sessions.logManualSession(userId, input, c.now()),
+        c.checks.sessions.logManualSession({
+          userId,
+          generatorId: input.generatorId,
+          startedAt: input.startedAt,
+          stoppedAt: input.stoppedAt,
+          now: c.now()
+        }),
       apply: async ({ ctx: c, db, args: [userId, input] }) => {
         await db.insert(generatorSessions).values({
           id: c.newId(),

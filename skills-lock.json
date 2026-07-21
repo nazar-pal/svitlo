@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "Expo UI Jetpack Compose": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "computedHash": "52db319a6e4b0a5c6fe4d4add7ee32ede16abffab2143a1d81da48cd610a5b1b"
+    },
     "Expo UI SwiftUI": {
       "source": "expo/skills",
       "sourceType": "github",
@@ -9,12 +14,17 @@
     "agent-email-inbox": {
       "source": "resend/resend-skills",
       "sourceType": "github",
-      "computedHash": "77c68e08a3c42760cfa9757debcc5be35fec7db908a82dfc62638afb8695a5f2"
+      "computedHash": "25ffa798578026fcfdc5bdbe5b10ec2d2cd1784f8a94344c0ac055f3a82b57d4"
     },
     "better-auth-best-practices": {
       "source": "better-auth/skills",
       "sourceType": "github",
       "computedHash": "a4c830509e85557b59339d8d93a4e243e9e59c686e7678854d39230e12c2a6dc"
+    },
+    "better-auth-security-best-practices": {
+      "source": "better-auth/skills",
+      "sourceType": "github",
+      "computedHash": "5717187bba9c22030c7174c74012f01c359f21e2ce87e0eb80e24244d8b8c915"
     },
     "building-native-ui": {
       "source": "expo/skills",
@@ -26,10 +36,15 @@
       "sourceType": "github",
       "computedHash": "31c027d02dbf1faa37f58191f574b9443143042fb2b684fe32df53ab0270487c"
     },
-    "email-best-practices": {
-      "source": "resend/email-best-practices",
+    "email-and-password-best-practices": {
+      "source": "better-auth/skills",
       "sourceType": "github",
-      "computedHash": "7e6c8d495e66e88a20dc45d17d24b445d6c5c9072855c78d8800fff994bc813f"
+      "computedHash": "747d7f73bd9e2ec5317b8ef88dc70f97df716d00e3d02de4051feebaa48b062d"
+    },
+    "email-best-practices": {
+      "source": "resend/resend-skills",
+      "sourceType": "github",
+      "computedHash": "73502c047040e1d55b1c90c86b661784279f0956de06d7dc74738c904d122c22"
     },
     "expo-api-routes": {
       "source": "expo/skills",
@@ -64,7 +79,7 @@
     "heroui-native": {
       "source": "heroui-inc/heroui",
       "sourceType": "github",
-      "computedHash": "a9d9dbd7a39a31b03052b5267f3e6e21dd40b1e34cb2928c4e8a67ced7a427f0"
+      "computedHash": "d2fc03a13d03678d40799726a144ba72ba1cb08126176ddbf0a0461c901aef29"
     },
     "mastra": {
       "source": "mastra-ai/skills",
@@ -81,25 +96,40 @@
       "sourceType": "github",
       "computedHash": "391693eee67001639ab65474df185da3ea5cf9ee4b99badecfd64561113edbb4"
     },
+    "organization-best-practices": {
+      "source": "better-auth/skills",
+      "sourceType": "github",
+      "computedHash": "79a5a85b43d10e9fe37582b3506b051a33a991817b938f349099baa5ddba21aa"
+    },
     "powersync": {
       "source": "powersync-ja/agent-skills",
       "sourceType": "github",
-      "computedHash": "c5515e22c8a6b76544d4b3dd3ef15244dbb317f27836ecc6723b2792118bd2da"
+      "computedHash": "b84bf1780055522a7310be01637a5a6c4200dab2e8625ea1c2fa5544c2950b88"
     },
     "react-email": {
-      "source": "resend/react-email",
+      "source": "resend/resend-skills",
       "sourceType": "github",
-      "computedHash": "9b8a308f7c8d5df05b0cf00e45348bffbd427d78dee3eef0b898e4b3da3e56d1"
+      "computedHash": "d1fe70541c06ebf1cc58b774d35634399c466e55684776cfba6768a2079ad79b"
     },
     "resend": {
       "source": "resend/resend-skills",
       "sourceType": "github",
-      "computedHash": "e756972f463d161f3c227eab41d119fd7430249736bc770d00b21c3eeb68f91a"
+      "computedHash": "936851c3e22e6de1d416134a9cd170d7540ddebe5a1c0113eef66537c843c6ed"
+    },
+    "resend-cli": {
+      "source": "resend/resend-skills",
+      "sourceType": "github",
+      "computedHash": "3d7a36a5b726b3248e8bcc734a01d43f46b984f0d32c4fe1c5b987ececd57964"
     },
     "uniwind": {
       "source": "uni-stack/uniwind",
       "sourceType": "github",
-      "computedHash": "69723f989a9fb09528f8fbdfbb2b4d3917223bc4538fcb5de1b07e0b72cb0873"
+      "computedHash": "76e8e9be3a60fe60d9229c7a0c6e4c30bdde2e23ff377dbfa827b80226bd4d89"
+    },
+    "upgrading-expo": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "computedHash": "939a6820e0d6ead943bb4ad93cec647815e73fbc04043401773b2138e9e13b69"
     },
     "use-dom": {
       "source": "expo/skills",
@@ -109,12 +139,12 @@
     "vercel-composition-patterns": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
-      "computedHash": "f98931159fa9c7fed043bcd18a891a46dcf89ababa38df13a4c5b7b30dc0ce07"
+      "computedHash": "575757e3e25761c8c562d6e395d29f0b76c98b1273c0bd72d88e6ab1bc9c7d42"
     },
     "vercel-react-native-skills": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
-      "computedHash": "2e9088a7333666d8c2833b8ff58bd51b955501c42b4c7244f72b4cbf22dafcc4"
+      "computedHash": "41d24eafa7c3d82e270439808f7cfbc4d51aeb2d14f2809a2267c16275784d06"
     },
     "zod-4": {
       "source": "prowler-cloud/prowler",

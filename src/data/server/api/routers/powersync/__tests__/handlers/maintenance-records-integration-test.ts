@@ -77,8 +77,10 @@ describe('handleMaintenanceRecords', () => {
     expect(result.ok).toBe(false)
   })
 
-  // SECURITY: only notes is updatable
-  it('update: only notes is updatable, other fields dropped', async () => {
+  // SECURITY: generator_id / performed_by_user_id stay immutable on update.
+  // `notes` and `performed_at` are the only legitimately editable columns;
+  // any other field on the wire is silently dropped.
+  it('update: tenancy + ownership fields dropped, notes preserved', async () => {
     await seedRecord(fixture.testDb.db)
     const result = await handleMaintenanceRecords(
       fixture.makeCtx({
@@ -98,6 +100,93 @@ describe('handleMaintenanceRecords', () => {
     expect(row!.notes).toBe('legit note')
     expect(row!.generatorId).toBe(IDS.generator)
     expect(row!.performedByUserId).toBe(IDS.admin)
+  })
+
+  it('update: persists performed_at when present in payload', async () => {
+    await seedRecord(fixture.testDb.db)
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        data: { performed_at: '2026-01-10T08:00:00Z', notes: 'edited' }
+      })
+    )
+    expect(result.ok).toBe(true)
+    const row = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(row!.performedAt).toEqual(new Date('2026-01-10T08:00:00Z'))
+    expect(row!.notes).toBe('edited')
+  })
+
+  it('update: rejects performed_at in the future and leaves the row intact', async () => {
+    await seedRecord(fixture.testDb.db)
+    const before = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        data: { performed_at: '2099-01-01T00:00:00Z' }
+      })
+    )
+    expect(result.ok).toBe(false)
+    const after = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(after!.performedAt).toEqual(before!.performedAt)
+  })
+
+  it('update: rejects an unparseable performed_at and leaves the row intact', async () => {
+    await seedRecord(fixture.testDb.db)
+    const before = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        data: { performed_at: 'not-a-date' }
+      })
+    )
+    expect(result.ok).toBe(false)
+    const after = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(after!.performedAt).toEqual(before!.performedAt)
+  })
+
+  it('update: rejects a non-string performed_at', async () => {
+    await seedRecord(fixture.testDb.db)
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        data: { performed_at: 12345 }
+      })
+    )
+    expect(result.ok).toBe(false)
+  })
+
+  it('update: rejects outsider performed_at edit', async () => {
+    await seedRecord(fixture.testDb.db)
+    const before = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        userId: IDS.outsider,
+        data: { performed_at: '2026-01-10T08:00:00Z' }
+      })
+    )
+    expect(result.ok).toBe(false)
+    const after = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(after!.performedAt).toEqual(before!.performedAt)
   })
 
   it('update: notes null', async () => {
@@ -149,6 +238,96 @@ describe('handleMaintenanceRecords', () => {
       where: eq(maintenanceRecords.id, IDS.record)
     })
     expect(row!.notes).not.toBe('Hacked')
+  })
+
+  it("update: non-admin cannot edit other's record", async () => {
+    await seedRecord(fixture.testDb.db, IDS.admin)
+    await seedAssignment(fixture.testDb.db)
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        userId: IDS.member,
+        data: { notes: 'tampered' }
+      })
+    )
+    expect(result.ok).toBe(false)
+    const row = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(row!.notes).not.toBe('tampered')
+  })
+
+  it('update: non-admin can edit own record', async () => {
+    await seedRecord(fixture.testDb.db, IDS.member)
+    await seedAssignment(fixture.testDb.db)
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        userId: IDS.member,
+        data: { notes: 'my note' }
+      })
+    )
+    expect(result.ok).toBe(true)
+    const row = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(row!.notes).toBe('my note')
+  })
+
+  it("update: non-admin cannot edit other's performedAt", async () => {
+    await seedRecord(fixture.testDb.db, IDS.admin)
+    await seedAssignment(fixture.testDb.db)
+    const before = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        userId: IDS.member,
+        data: { performed_at: '2026-01-10T08:00:00Z' }
+      })
+    )
+    expect(result.ok).toBe(false)
+    const after = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(after!.performedAt).toEqual(before!.performedAt)
+  })
+
+  it("update: admin can edit anyone's record", async () => {
+    await seedRecord(fixture.testDb.db, IDS.member)
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        data: { notes: 'admin override' }
+      })
+    )
+    expect(result.ok).toBe(true)
+  })
+
+  // Twin of the case above, on the other update branch: `performed_at` routes
+  // through `updateRecord` rather than `deleteRecord`, so it threads its own
+  // `authzGenerator` fact into the owner-or-admin check. Admin-edits-someone-
+  // else is the only shape that reads that fact — an owner short-circuits
+  // before it, and a deny case passes even when the fact is missing.
+  it("update: admin can edit anyone's performedAt", async () => {
+    await seedRecord(fixture.testDb.db, IDS.member)
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        data: { performed_at: '2026-01-10T08:00:00Z' }
+      })
+    )
+    expect(result.ok).toBe(true)
+    const row = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(row!.performedAt).toEqual(new Date('2026-01-10T08:00:00Z'))
   })
 
   it('rejects outsider delete and leaves the record intact', async () => {

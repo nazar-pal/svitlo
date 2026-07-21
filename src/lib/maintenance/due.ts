@@ -7,6 +7,7 @@ import type {
 } from '@/data/client/db-schema/maintenance'
 import { t } from '@/lib/i18n'
 import { formatHours, hoursBetween } from '@/lib/utils/time'
+import { usesCalendar, usesHours } from './trigger-type'
 
 export type MaintenanceUrgency = 'overdue' | 'due_soon' | 'ok'
 
@@ -59,10 +60,7 @@ function computeRemaining(
   let hoursRemaining: number | null = null
   let daysRemaining: number | null = null
 
-  if (
-    template.triggerType === 'hours' ||
-    template.triggerType === 'whichever_first'
-  ) {
+  if (usesHours(template.triggerType)) {
     const interval = template.triggerHoursInterval!
     const hoursSince = lastPerformedAt
       ? sessionHoursSince(sessions, lastPerformedAt)
@@ -70,10 +68,7 @@ function computeRemaining(
     hoursRemaining = interval - hoursSince
   }
 
-  if (
-    template.triggerType === 'calendar' ||
-    template.triggerType === 'whichever_first'
-  ) {
+  if (usesCalendar(template.triggerType)) {
     const intervalDays = template.triggerCalendarDays!
     const referenceDate = lastPerformedAt ?? template.createdAt
     daysRemaining = intervalDays - daysBetween(referenceDate, now)
@@ -278,4 +273,38 @@ export function formatMaintenanceLabel(
   if (daysRemaining !== null)
     return t('due.inDays', { days: String(Math.round(daysRemaining)) })
   return ''
+}
+
+/**
+ * Render a maintenance template's recurrence schedule (e.g. "Every 100h",
+ * "Once at 30 days") from its one-time flag and trigger type.
+ */
+export function formatScheduleLabel(
+  template: Pick<
+    MaintenanceTemplate,
+    'isOneTime' | 'triggerType' | 'triggerHoursInterval' | 'triggerCalendarDays'
+  >
+): string {
+  const hours = String(template.triggerHoursInterval)
+  const days = String(template.triggerCalendarDays)
+  const oneTime = !!template.isOneTime
+
+  switch (template.triggerType) {
+    case 'hours':
+      return oneTime
+        ? t('maintenanceTemplate.onceAtHours', { hours })
+        : t('maintenanceTemplate.everyHours', { hours })
+    case 'calendar':
+      return oneTime
+        ? t('maintenanceTemplate.onceAtDays', { days })
+        : t('maintenanceTemplate.everyDays', { days })
+    case 'whichever_first':
+      return oneTime
+        ? t('maintenanceTemplate.onceAtBoth', { hours, days })
+        : t('maintenanceTemplate.everyBoth', { hours, days })
+    default:
+      throw new Error(
+        `unhandled trigger type: ${template.triggerType satisfies never}`
+      )
+  }
 }

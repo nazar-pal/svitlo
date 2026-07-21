@@ -58,6 +58,23 @@ describe('defineMutation', () => {
     expect(applied).not.toHaveBeenCalled()
   })
 
+  it('strips decision facts from a check failure so the wire error is only { code }', async () => {
+    const mutation = defineMutation<
+      [],
+      undefined,
+      { ok: false; code: 'ONLY_ADMIN_CAN_INVITE'; facts?: unknown }
+    >(h.ctx, {
+      check: async () => ({
+        ok: false,
+        code: 'ONLY_ADMIN_CAN_INVITE',
+        facts: { row: 'x' }
+      }),
+      apply: async () => {}
+    })
+    const result = await mutation()
+    expect(result).toStrictEqual(fail('ONLY_ADMIN_CAN_INVITE'))
+  })
+
   it('forwards the success branch of check to apply as checkOk', async () => {
     const applied = jest.fn()
     const mutation = defineMutation<

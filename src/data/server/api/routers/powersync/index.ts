@@ -82,7 +82,10 @@ export const powersyncRouter = {
             ok: false as const,
             error: `Unhandled table: ${input.table}`
           }
-        return handler(wctx)
+        // `await` is required: a bare `return handler(wctx)` lets the handler's
+        // rejection escape this try/catch, so constraint errors would never be
+        // classified into a rejection (PowerSync needs a 2xx, never a throw).
+        return await handler(wctx)
       } catch (error) {
         // Constraint/trigger violations are expected rejections (not bugs).
         // Return structured info so the connector can log them with context.

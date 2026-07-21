@@ -83,9 +83,6 @@ function makeFakePort(): FakePort {
     async alertError(c) {
       alertErrorCalls.push(c)
     },
-    now() {
-      return Date.now()
-    },
     sleep(ms, signal) {
       return new Promise<void>((resolve, reject) => {
         const id = setTimeout(resolve, ms)

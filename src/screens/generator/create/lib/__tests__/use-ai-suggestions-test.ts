@@ -42,9 +42,6 @@ const noopPort: AIPort = {
     return true
   },
   async alertError() {},
-  now() {
-    return 0
-  },
   async sleep() {}
 }
 

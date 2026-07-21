@@ -1,11 +1,17 @@
 import { eq } from 'drizzle-orm'
 
 import { generatorSessions } from '@/data/server/db-schema'
-import { createServerAuthz } from '@/data/server/authz'
 
+import { isOwnerOrGeneratorAdmin } from './checks'
 import { replayShieldNotFound } from './replay'
 import { transformSyncRow } from '../transform'
-import { fail, ok, type Insert, type TableHandler } from './types'
+import {
+  fail,
+  isParseableDateString,
+  ok,
+  type Insert,
+  type TableHandler
+} from './types'
 
 export const handleGeneratorSessions: TableHandler = async ctx => {
   const { db, userId, op, id, data } = ctx
@@ -15,7 +21,7 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     const values = transformSyncRow(generatorSessions, data)
     const generatorId = values.generatorId as string
 
-    const result = await checks.startSession(userId, generatorId)
+    const result = await checks.startSession({ userId, generatorId })
     if (!result.ok) {
       // Lost-ack replay: PowerSync resends the same CRUD entry (same `id`,
       // same user) when the client never saw the original upload ack. When
@@ -58,14 +64,20 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     //   `updateSession` → { started_at, stopped_at } (manual time edit)
     // `started_at` presence distinguishes the two.
     if ('started_at' in data) {
-      const startedAt = data.started_at as string
-      const stoppedAt = data.stopped_at as string
-      const result = await checks.updateSession(
-        userId,
-        id,
-        { startedAt, stoppedAt },
-        ctx.now()
+      const startedAt = data.started_at
+      const stoppedAt = data.stopped_at
+      if (
+        !isParseableDateString(startedAt) ||
+        !isParseableDateString(stoppedAt)
       )
+        return fail('Invalid session times')
+      const result = await checks.updateSession({
+        userId,
+        sessionId: id,
+        startedAt,
+        stoppedAt,
+        now: ctx.now()
+      })
       if (!result.ok) return fail(result.code)
 
       await db
@@ -78,15 +90,18 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
       return ok
     }
 
-    const result = await checks.stopSession(userId, id)
+    const result = await checks.stopSession({ userId, sessionId: id })
     if (!result.ok) return fail(result.code)
 
     const fields: Partial<Insert<typeof generatorSessions>> = {}
     if ('stopped_by_user_id' in data) fields.stoppedByUserId = userId
-    if ('stopped_at' in data)
-      fields.stoppedAt = data.stopped_at
-        ? new Date(data.stopped_at as string)
-        : null
+    if ('stopped_at' in data) {
+      const stoppedAt = data.stopped_at
+      if (!stoppedAt) fields.stoppedAt = null
+      else if (!isParseableDateString(stoppedAt))
+        return fail('Invalid stopped_at')
+      else fields.stoppedAt = new Date(stoppedAt)
+    }
 
     if (Object.keys(fields).length > 0)
       await db
@@ -99,21 +114,19 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
 
   if (op === 'delete') {
     const shielded = replayShieldNotFound(
-      await checks.deleteSession(userId, id),
+      await checks.deleteSession({ userId, sessionId: id }),
       'SESSION_NOT_FOUND'
     )
     if (shielded.status === 'consume') return shielded.result
 
-    // Server-only extra: non-admins may only delete their own sessions. The
-    // shared policy allows any user with generator access, matching client
-    // behaviour; the server layers an ownership rule on top as defence in
-    // depth for the sync protocol. Reuse the session the policy already
-    // fetched — no second `findSession` round trip.
-    const authz = createServerAuthz(db)
-    const { session } = shielded.data
-    const isAdmin = await authz.isGeneratorOrgAdmin(userId, session.generatorId)
-    if (!isAdmin && session.startedByUserId !== userId)
-      return fail('Can only delete your own sessions')
+    const session = shielded.data.facts.session
+    if (!session) return fail('Session not found')
+    const allowed = isOwnerOrGeneratorAdmin({
+      userId,
+      ownerUserId: session.startedByUserId,
+      generatorFact: shielded.data.facts.authzGenerator
+    })
+    if (!allowed) return fail('Can only delete your own sessions')
 
     await db.delete(generatorSessions).where(eq(generatorSessions.id, id))
     return ok

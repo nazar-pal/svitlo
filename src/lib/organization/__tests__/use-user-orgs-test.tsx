@@ -24,11 +24,11 @@ jest.mock('@/lib/powersync/database', () => ({
 }))
 
 jest.mock('@/lib/powersync/use-local-user', () => ({
-  useLocalUser: jest.fn()
+  useLocalUserId: jest.fn()
 }))
 
-const { useLocalUser } = jest.requireMock<{
-  useLocalUser: jest.Mock
+const { useLocalUserId } = jest.requireMock<{
+  useLocalUserId: jest.Mock
 }>('@/lib/powersync/use-local-user')
 
 const { useUserOrgs } = require('../use-user-orgs')
@@ -50,19 +50,18 @@ afterAll(() => {
 
 describe('useUserOrgs', () => {
   it('returns empty userOrgs when user is not loaded', async () => {
-    useLocalUser.mockReturnValue(null)
+    useLocalUserId.mockReturnValue('')
 
     const { result } = renderHook(() => useUserOrgs())
 
     await waitFor(() => {
       expect(result.current.userOrgs).toEqual([])
-      expect(result.current.userId).toBe('')
     })
   })
 
   it('returns org for admin user', async () => {
     seedBaseScenario(mockDb)
-    useLocalUser.mockReturnValue({ id: IDS.adminUser })
+    useLocalUserId.mockReturnValue(IDS.adminUser)
 
     const { result } = renderHook(() => useUserOrgs())
 
@@ -74,7 +73,7 @@ describe('useUserOrgs', () => {
 
   it('returns org for member user', async () => {
     seedBaseScenario(mockDb)
-    useLocalUser.mockReturnValue({ id: IDS.memberUser })
+    useLocalUserId.mockReturnValue(IDS.memberUser)
 
     const { result } = renderHook(() => useUserOrgs())
 
@@ -86,7 +85,7 @@ describe('useUserOrgs', () => {
 
   it('returns empty userOrgs for outsider', async () => {
     seedBaseScenario(mockDb)
-    useLocalUser.mockReturnValue({ id: IDS.outsiderUser })
+    useLocalUserId.mockReturnValue(IDS.outsiderUser)
 
     const { result } = renderHook(() => useUserOrgs())
 
@@ -107,7 +106,7 @@ describe('useUserOrgs', () => {
       })
       .run()
 
-    useLocalUser.mockReturnValue({ id: IDS.outsiderUser })
+    useLocalUserId.mockReturnValue(IDS.outsiderUser)
 
     const { result } = renderHook(() => useUserOrgs())
 
@@ -119,7 +118,7 @@ describe('useUserOrgs', () => {
 
   it('isAdmin returns true for admin of the org', async () => {
     seedBaseScenario(mockDb)
-    useLocalUser.mockReturnValue({ id: IDS.adminUser })
+    useLocalUserId.mockReturnValue(IDS.adminUser)
 
     const { result } = renderHook(() => useUserOrgs())
 
@@ -130,7 +129,7 @@ describe('useUserOrgs', () => {
 
   it('isAdmin returns false for member of the org', async () => {
     seedBaseScenario(mockDb)
-    useLocalUser.mockReturnValue({ id: IDS.memberUser })
+    useLocalUserId.mockReturnValue(IDS.memberUser)
 
     const { result } = renderHook(() => useUserOrgs())
 
@@ -141,7 +140,7 @@ describe('useUserOrgs', () => {
 
   it('isAdmin returns false for null orgId', async () => {
     seedBaseScenario(mockDb)
-    useLocalUser.mockReturnValue({ id: IDS.adminUser })
+    useLocalUserId.mockReturnValue(IDS.adminUser)
 
     const { result } = renderHook(() => useUserOrgs())
 

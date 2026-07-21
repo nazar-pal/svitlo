@@ -6,7 +6,9 @@ import {
   invitations,
   organizationMembers
 } from '@/data/server/db-schema'
-import { createServerAuthz } from '@/data/server/authz'
+import { serverLookup } from '@/data/server/registry'
+import * as authz from '@/data/shared/authz/decisions'
+import { runDecisionAsync } from '@/data/shared/facts/async-adapter'
 import {
   transferAssignmentsAndRemoveMember,
   type MemberWritePort
@@ -62,14 +64,18 @@ function createServerMemberWritePort(db: Db): MemberWritePort {
 
 export const handleOrganizationMembers: TableHandler = async ctx => {
   const { db, userId, userEmail, op, id, data } = ctx
-  const authz = createServerAuthz(db)
 
   if (op === 'insert') {
     const values = transformSyncRow(organizationMembers, data)
     const orgId = values.organizationId as string
     const memberUserId = values.userId as string
 
-    if (await authz.isOrgAdmin(userId, orgId)) {
+    const adminCheck = await runDecisionAsync(
+      authz.isOrgAdmin,
+      { userId, orgId },
+      serverLookup(db)
+    )
+    if (adminCheck.ok) {
       await db
         .insert(organizationMembers)
         .values({ ...values, id } as Insert<typeof organizationMembers>)
@@ -107,7 +113,7 @@ export const handleOrganizationMembers: TableHandler = async ctx => {
     // admin, this resolves straight away with the member + adminUserId the
     // side effect needs.
     const remove = replayShieldNotFound(
-      await checks.removeMember(userId, id),
+      await checks.removeMember({ callerUserId: userId, memberId: id }),
       'MEMBER_NOT_FOUND'
     )
     if (remove.status === 'ok') {
@@ -131,7 +137,10 @@ export const handleOrganizationMembers: TableHandler = async ctx => {
     if (!member) return ok
     if (member.userId !== userId) return remove.result
 
-    const leave = await checks.leaveOrganization(userId, member.organizationId)
+    const leave = await checks.leaveOrganization({
+      userId,
+      organizationId: member.organizationId
+    })
     if (!leave.ok) return fail(leave.code)
     await transferAssignmentsAndRemoveMember(port, {
       member: leave.member,

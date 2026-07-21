@@ -16,8 +16,8 @@ import {
   TRIGGER_TYPES,
   isTriggerType,
   parseOptionalNumber,
-  showsCalendar,
-  showsHours
+  usesCalendar,
+  usesHours
 } from '@/lib/maintenance/trigger-type'
 import { useTriggerLabels } from '@/lib/maintenance/use-trigger-labels'
 
@@ -56,11 +56,11 @@ function EditForm({ userId, template }: EditFormProps) {
         taskName: values.taskName,
         description: values.description || null,
         triggerType: values.triggerType,
-        triggerHoursInterval: showsHours(values.triggerType)
+        triggerHoursInterval: usesHours(values.triggerType)
           ? (parseOptionalNumber(values.triggerHoursInterval, parseFloat) ??
             null)
           : null,
-        triggerCalendarDays: showsCalendar(values.triggerType)
+        triggerCalendarDays: usesCalendar(values.triggerType)
           ? (parseOptionalNumber(values.triggerCalendarDays, s =>
               parseInt(s, 10)
             ) ?? null)
@@ -71,8 +71,8 @@ function EditForm({ userId, template }: EditFormProps) {
   })
 
   const triggerType = form.values.triggerType
-  const showHours = showsHours(triggerType)
-  const showCalendar = showsCalendar(triggerType)
+  const showHours = usesHours(triggerType)
+  const showCalendar = usesCalendar(triggerType)
 
   const taskNameBinding = bind.text('taskName')
   const descriptionBinding = bind.text('description')

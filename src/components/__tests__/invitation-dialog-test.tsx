@@ -85,18 +85,14 @@ jest.mock('@/lib/haptics', () => ({
 }))
 
 jest.mock('@/lib/powersync', () => ({
-  useLocalUser: jest.fn()
-}))
-
-jest.mock('@/lib/organization/use-user-orgs', () => ({
-  useUserOrgs: jest.fn()
+  useLocalUser: jest.fn(),
+  useLocalUserId: jest.fn()
 }))
 
 import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
 import { runMutation } from '@/lib/alerts'
 import type { InvitationDetails } from '@/lib/hooks/use-pending-invitations'
-import { useUserOrgs } from '@/lib/organization/use-user-orgs'
-import { useLocalUser } from '@/lib/powersync'
+import { useLocalUser, useLocalUserId } from '@/lib/powersync'
 
 import { InvitationDialog } from '../invitation-dialog'
 
@@ -104,7 +100,7 @@ const acceptInvitationMock = acceptInvitation as jest.Mock
 const declineInvitationMock = declineInvitation as jest.Mock
 const runMutationMock = runMutation as jest.Mock
 const useLocalUserMock = useLocalUser as jest.Mock
-const useUserOrgsMock = useUserOrgs as jest.Mock
+const useLocalUserIdMock = useLocalUserId as jest.Mock
 
 const invitationOne: InvitationDetails = {
   id: 'inv-1',
@@ -121,7 +117,7 @@ const invitationTwo: InvitationDetails = {
 beforeEach(() => {
   jest.resetAllMocks()
   useLocalUserMock.mockReturnValue({ id: 'user-1', email: 'me@example.com' })
-  useUserOrgsMock.mockReturnValue({ userId: 'user-1' })
+  useLocalUserIdMock.mockReturnValue('user-1')
   acceptInvitationMock.mockResolvedValue({ ok: true })
   declineInvitationMock.mockResolvedValue({ ok: true })
   runMutationMock.mockImplementation(async (mutation, options) => {

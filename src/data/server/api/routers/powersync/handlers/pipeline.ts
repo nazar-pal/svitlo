@@ -131,8 +131,11 @@ interface TableHandlerDef<
  *   - `sessions`        — insert does an ownership-confirming second fetch
  *                         before consuming `GENERATOR_ALREADY_ACTIVE`; update
  *                         dispatches between stop-session and time-edit shapes.
- *   - `maintenance-records` — update reuses the delete check as its rule gate
- *                         and translates one failure code ad-hoc.
+ *   - `maintenance-records` — update dispatches on `performed_at` presence
+ *                         between the `updateRecord` and `deleteRecord` rule
+ *                         gates, and translates one failure code ad-hoc;
+ *                         both branches then layer a server-only
+ *                         owner-or-admin check.
  *   - `organizations`   — update runs the replay shield BEFORE parsing so a
  *                         malformed payload against an already-deleted org is
  *                         silently acked instead of surfacing a parse error.

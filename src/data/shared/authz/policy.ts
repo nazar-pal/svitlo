@@ -12,3 +12,43 @@ export const canAccessGenerator = (
   orgAdminUserId: string | null,
   hasAssignment: boolean
 ): boolean => isOrgAdmin(userId, orgAdminUserId) || hasAssignment
+
+// Payload the `authz.generator` fact resolver returns (the non-null branch).
+// Declared at this pure base layer so the producers (server Postgres + client
+// SQLite registries) and the consumers (domain decisions) reference one
+// definition: renaming or dropping a field becomes a compile error at every
+// site instead of silently drifting across the untyped fact-lookup boundary.
+// Absence is composed per site (`| null` when the generator is missing,
+// `| undefined` when the plan entry was skipped). The resolver selects FROM
+// the generators table, so a null fact also means the generator row itself
+// is missing — decisions built on it need no separate existence lookup.
+export interface GeneratorAuthzFact {
+  orgAdminUserId: string | null
+  hasAssignment: boolean
+}
+
+// Payload the `authz.org` fact resolver returns (the non-null branch), with
+// the same single-definition rationale as `GeneratorAuthzFact` above.
+// `organizations.admin_user_id` is NOT NULL in Postgres — the only place it
+// is actually enforced, since PowerSync builds the local SQLite tables from
+// column types alone and drops the client schema's `.notNull()`. Absence is
+// carried by the `| null` on the fact itself (org not found), so read sites
+// keep coalescing with `?? null` rather than trusting this field. Contrast
+// `GeneratorAuthzFact.orgAdminUserId`, which is nullable in the type too
+// because it comes from a LEFT JOIN.
+export interface OrgAuthzFact {
+  adminUserId: string
+}
+
+// Convenience over the raw `authz.generator` fact row, which is `undefined`
+// when its plan entry was skipped and `null` when the generator was not
+// found. Both cases fall back to the "no access" inputs.
+export const canAccessGeneratorFact = (
+  userId: string,
+  fact: GeneratorAuthzFact | null | undefined
+): boolean =>
+  canAccessGenerator(
+    userId,
+    fact?.orgAdminUserId ?? null,
+    fact?.hasAssignment ?? false
+  )

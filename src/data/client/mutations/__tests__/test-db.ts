@@ -14,6 +14,8 @@ import type { ClientDb } from '@/lib/powersync/database'
 
 import type { WriteTx } from '../tx'
 
+import type { SnapshotTable } from './drizzle-snapshot-types'
+
 // Auto-derived from schema exports. No manual sync needed.
 const CLIENT_TABLES = Object.values(clientSchema).filter(v =>
   is(v, SQLiteTable)
@@ -69,28 +71,9 @@ function createTestWriteTx(
 // Derived automatically from the server Drizzle schema via drizzle-kit snapshot.
 // When you add/modify/remove a unique constraint or index in the server schema,
 // it propagates here with zero manual sync.
-
-interface SnapshotUniqueConstraint {
-  name: string
-  columns: string[]
-}
-
-interface SnapshotIndexColumn {
-  expression: string
-}
-
-interface SnapshotIndex {
-  name: string
-  columns: SnapshotIndexColumn[]
-  isUnique: boolean
-  where?: string
-}
-
-interface SnapshotTable {
-  name: string
-  uniqueConstraints?: Record<string, SnapshotUniqueConstraint>
-  indexes?: Record<string, SnapshotIndex>
-}
+//
+// Snapshot shapes live in `./drizzle-snapshot-types` — drizzle-kit does not
+// export these types, so they're hand-declared once and shared.
 
 // Intentionally NOT applied: CHECK constraints.
 //

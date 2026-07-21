@@ -15,7 +15,8 @@ export const handleMaintenanceTemplates = defineTableHandler({
     // integration tests assert those constraints directly. Adding a Zod
     // schema here would short-circuit those tests and duplicate the rule.
     check: ({ userId, checks }, parsed) =>
-      checks.maintenance.createTemplate(userId, {
+      checks.maintenance.createTemplate({
+        userId,
         generatorId: parsed.generatorId as string
       }),
     apply: async ({ db, id }, parsed) => {
@@ -30,10 +31,14 @@ export const handleMaintenanceTemplates = defineTableHandler({
     schema: updateMaintenanceTemplateSchema,
     errorLabel: 'maintenance template update',
     check: ({ userId, id, checks }, parsed) =>
-      checks.maintenance.updateTemplate(userId, id, {
-        triggerType: parsed.triggerType,
-        triggerHoursInterval: parsed.triggerHoursInterval,
-        triggerCalendarDays: parsed.triggerCalendarDays
+      checks.maintenance.updateTemplate({
+        userId,
+        templateId: id,
+        update: {
+          triggerType: parsed.triggerType,
+          triggerHoursInterval: parsed.triggerHoursInterval,
+          triggerCalendarDays: parsed.triggerCalendarDays
+        }
       }),
     apply: async ({ db, id }, parsed) => {
       if (Object.keys(parsed).length > 0)
@@ -45,7 +50,7 @@ export const handleMaintenanceTemplates = defineTableHandler({
   },
   delete: {
     check: ({ userId, id, checks }) =>
-      checks.maintenance.deleteTemplate(userId, id),
+      checks.maintenance.deleteTemplate({ userId, templateId: id }),
     shield: { kind: 'notFound', code: 'TEMPLATE_NOT_FOUND' },
     apply: async ({ db, id }) => {
       await db

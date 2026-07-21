@@ -214,6 +214,33 @@ describe('deleteMaintenanceTemplate', () => {
     expect(row).toBeUndefined()
   })
 
+  // maintenanceTemplates is a cascade parent of maintenanceRecords (the
+  // records.templateId FK is onDelete:cascade on the server). SQLite enforces
+  // no FKs client-side, so deleteMaintenanceTemplate must walk the cascade
+  // itself — mirroring deleteGenerator/deleteOrganization. Seed a record under
+  // the template and assert the delete leaves no orphan.
+  it('admin deletes a template and its maintenance records are cascaded', async () => {
+    seedMaintenanceRecord(h.db)
+
+    const result = await deleteMaintenanceTemplate(IDS.adminUser, IDS.template)
+    expect(result.ok).toBe(true)
+
+    const [row] = h.db
+      .select()
+      .from(maintenanceTemplates)
+      .where(eq(maintenanceTemplates.id, IDS.template))
+      .all()
+    expect(row).toBeUndefined()
+
+    expect(
+      h.db
+        .select()
+        .from(maintenanceRecords)
+        .where(eq(maintenanceRecords.templateId, IDS.template))
+        .all()
+    ).toHaveLength(0)
+  })
+
   it('rejects non-admin and leaves the template intact', async () => {
     const result = await deleteMaintenanceTemplate(IDS.memberUser, IDS.template)
     expect(result.ok).toBe(false)

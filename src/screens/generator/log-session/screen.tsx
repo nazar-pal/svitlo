@@ -8,12 +8,12 @@ import { useTranslation } from '@/lib/i18n'
 import { ValueFormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { logManualSession } from '@/data/client/mutations'
-import { isPolicyAllowed } from '@/data/client/policy-hooks-shared'
 import { getGenerator } from '@/data/client/queries'
-import { useCanLogManualSession } from '@/data/client/sessions/policy-hooks'
+import { isPolicyAllowed, policies, usePolicy } from '@/data/client/use-policy'
 import { useAuthedParams } from '@/lib/hooks/use-authed-params'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
+import { useResampledNow } from '@/lib/hooks/use-resampled-now'
 
 export default function LogSessionScreen() {
   const ctx = useAuthedParams(['id'])
@@ -63,10 +63,15 @@ function LogSessionForm({
   const startedAtBinding = bind.value('startedAt')
   const stoppedAtBinding = bind.value('stoppedAt')
 
-  const policy = useCanLogManualSession(userId, {
+  const startedAtISO = startedAtBinding.value.toISOString()
+  const stoppedAtISO = stoppedAtBinding.value.toISOString()
+  const now = useResampledNow(stoppedAtISO)
+  const policy = usePolicy(policies.sessions.logManualSession, {
+    userId,
     generatorId,
-    startedAt: startedAtBinding.value.toISOString(),
-    stoppedAt: stoppedAtBinding.value.toISOString()
+    startedAt: startedAtISO,
+    stoppedAt: stoppedAtISO,
+    now
   })
 
   return (

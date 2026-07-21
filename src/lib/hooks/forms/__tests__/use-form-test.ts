@@ -48,6 +48,31 @@ describe('useForm', () => {
       expect(result.current.isSubmitting).toBe(false)
     })
 
+    it('awaits an async onSuccess before submit resolves', async () => {
+      const order: string[] = []
+      const mutate = jest.fn().mockResolvedValue(ok)
+      const onSuccess = jest.fn().mockImplementation(async () => {
+        await Promise.resolve()
+        order.push('onSuccess')
+      })
+      const { result } = renderHook(() =>
+        useForm({
+          initial: { name: 'Alice' },
+          build: values => ({ ok: true, data: values }),
+          mutate,
+          onSuccess
+        })
+      )
+
+      await act(async () => {
+        await result.current.submit()
+        order.push('after-submit')
+      })
+
+      expect(order).toEqual(['onSuccess', 'after-submit'])
+      expect(result.current.isSubmitting).toBe(false)
+    })
+
     it('exposes form state via the form handle', () => {
       const { result } = renderHook(() =>
         useForm({
@@ -253,6 +278,38 @@ describe('useForm', () => {
 
       expect(build).not.toHaveBeenCalled()
       expect(mutate).not.toHaveBeenCalled()
+      expect(onSuccess).toHaveBeenCalledTimes(1)
+    })
+
+    it('ignores a second submit while an async onSuccess is pending', async () => {
+      let release!: () => void
+      const gate = new Promise<void>(resolve => {
+        release = resolve
+      })
+      const onSuccess = jest.fn().mockImplementation(() => gate)
+      const { result } = renderHook(() =>
+        useForm({
+          initial: { name: 'Alice' },
+          build: values => ({ ok: true, data: values }),
+          mutate: jest.fn().mockResolvedValue(ok),
+          onSuccess,
+          shortCircuit: () => true
+        })
+      )
+
+      let firstCall!: Promise<void>
+      let secondCall!: Promise<void>
+      act(() => {
+        firstCall = result.current.submit()
+        secondCall = result.current.submit()
+      })
+
+      await act(async () => {
+        release()
+        await firstCall
+        await secondCall
+      })
+
       expect(onSuccess).toHaveBeenCalledTimes(1)
     })
   })

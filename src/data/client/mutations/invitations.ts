@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 
 import { invitations, organizationMembers } from '@/data/client/db-schema'
-import type { AcceptInvitationResult } from '@/data/shared/invitations'
+import type { CheckFacade } from '@/data/shared/checks'
 import {
   insertInvitationSchema,
   type InsertInvitationInput
@@ -10,6 +10,10 @@ import {
 import type { MutationContext } from './context'
 import { defineMutation } from './pipeline'
 
+type AcceptInvitationCheck = Awaited<
+  ReturnType<CheckFacade['invitations']['acceptInvitation']>
+>
+
 export function createInvitationMutations(ctx: MutationContext) {
   return {
     createInvitation: defineMutation<
@@ -17,12 +21,12 @@ export function createInvitationMutations(ctx: MutationContext) {
       InsertInvitationInput
     >(ctx, {
       parse: ([, input]) => insertInvitationSchema.safeParse(input),
-      check: (c, [userId], parsed) =>
-        c.checks.invitations.createInvitation(
-          userId,
-          parsed.organizationId,
-          parsed.inviteeEmail
-        ),
+      check: (c, [callerUserId], parsed) =>
+        c.checks.invitations.createInvitation({
+          callerUserId,
+          organizationId: parsed.organizationId,
+          inviteeEmail: parsed.inviteeEmail
+        }),
       apply: async ({ ctx: c, db, args: [userId], parsed }) => {
         await db.insert(invitations).values({
           id: c.newId(),
@@ -37,10 +41,14 @@ export function createInvitationMutations(ctx: MutationContext) {
     acceptInvitation: defineMutation<
       [string, string, string],
       undefined,
-      AcceptInvitationResult
+      AcceptInvitationCheck
     >(ctx, {
       check: (c, [userId, userEmail, invitationId]) =>
-        c.checks.invitations.acceptInvitation(userId, userEmail, invitationId),
+        c.checks.invitations.acceptInvitation({
+          userId,
+          userEmail,
+          invitationId
+        }),
       tx: true,
       apply: async ({
         ctx: c,
@@ -60,15 +68,15 @@ export function createInvitationMutations(ctx: MutationContext) {
 
     declineInvitation: defineMutation<[string, string]>(ctx, {
       check: (c, [userEmail, invitationId]) =>
-        c.checks.invitations.declineInvitation(userEmail, invitationId),
+        c.checks.invitations.declineInvitation({ userEmail, invitationId }),
       apply: async ({ db, args: [, invitationId] }) => {
         await db.delete(invitations).where(eq(invitations.id, invitationId))
       }
     }),
 
     cancelInvitation: defineMutation<[string, string]>(ctx, {
-      check: (c, [userId, invitationId]) =>
-        c.checks.invitations.cancelInvitation(userId, invitationId),
+      check: (c, [callerUserId, invitationId]) =>
+        c.checks.invitations.cancelInvitation({ callerUserId, invitationId }),
       apply: async ({ db, args: [, invitationId] }) => {
         await db.delete(invitations).where(eq(invitations.id, invitationId))
       }

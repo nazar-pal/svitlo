@@ -7,12 +7,12 @@ import { ValueFormField } from '@/components/form/form-field'
 import { FormScreen } from '@/components/form/form-screen'
 import { updateSession } from '@/data/client/mutations'
 import type { GeneratorSession } from '@/data/client/db-schema'
-import { isPolicyAllowed } from '@/data/client/policy-hooks-shared'
 import { getGenerator, getGeneratorSession } from '@/data/client/queries'
-import { useCanUpdateSession } from '@/data/client/sessions/policy-hooks'
+import { isPolicyAllowed, policies, usePolicy } from '@/data/client/use-policy'
 import { useAuthedEntity } from '@/lib/hooks/use-authed-entity'
 import { useForm } from '@/lib/hooks/forms'
 import { useDrizzleQuery } from '@/lib/hooks/use-drizzle-query'
+import { useResampledNow } from '@/lib/hooks/use-resampled-now'
 
 export default function EditSessionScreen() {
   const loaded = useAuthedEntity(['sessionId'], params =>
@@ -56,9 +56,15 @@ function EditForm({ userId, session }: EditFormProps) {
     onSuccess: () => router.back()
   })
 
-  const policy = useCanUpdateSession(userId, session.id, {
-    startedAt: form.values.startedAt.toISOString(),
-    stoppedAt: form.values.stoppedAt.toISOString()
+  const startedAtISO = form.values.startedAt.toISOString()
+  const stoppedAtISO = form.values.stoppedAt.toISOString()
+  const now = useResampledNow(stoppedAtISO)
+  const policy = usePolicy(policies.sessions.updateSession, {
+    userId,
+    sessionId: session.id,
+    startedAt: startedAtISO,
+    stoppedAt: stoppedAtISO,
+    now
   })
 
   return (

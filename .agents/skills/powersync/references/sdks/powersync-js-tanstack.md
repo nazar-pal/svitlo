@@ -7,6 +7,8 @@ metadata:
 
 # PowerSync TanStack Integrations
 
+> **Load this when** using TanStack Query (React) or TanStack DB (multi-framework) with PowerSync. Always load `powersync-js.md` first.
+
 TanStack-specific integrations for the PowerSync JavaScript SDK. Use this reference alongside `references/sdks/powersync-js.md` when using TanStack Query (React) or TanStack DB (multi-framework) with PowerSync.
 
 | Resource | Description |
@@ -35,7 +37,7 @@ Use `@powersync/react` hooks (from `references/sdks/powersync-js-react.md`) when
 ### Install
 
 ```bash
-npm install @powersync/tanstack-react-query
+npm install @powersync/tanstack-react-query@latest
 ```
 
 TanStack Query also requires its core peer:
@@ -85,7 +87,7 @@ When navigating to or refreshing a page, a brief UI flicker (10–50ms) can occu
 
 ## TanStack DB
 
-> Alpha: The PowerSync TanStack DB collection is currently in an [Alpha](https://docs.powersync.com/resources/feature-status) release.
+> Alpha: The PowerSync TanStack DB collection is currently in an [Alpha](https://docs.powersync.com/resources/feature-status.md) release.
 
 `@tanstack/powersync-db-collection` lets you use TanStack DB collections backed by PowerSync. In-memory collections stay in sync with PowerSync's SQLite database, providing offline-first reactive data with optimistic mutations.
 
@@ -107,10 +109,10 @@ Use plain PowerSync (`.watch()` / `usePowerSyncQuery`) when:
 
 ```bash
 # Web
-npm install @tanstack/powersync-db-collection @powersync/web @journeyapps/wa-sqlite
+npm install @tanstack/powersync-db-collection@latest @powersync/web@latest @journeyapps/wa-sqlite@latest
 
 # React Native
-npm install @tanstack/powersync-db-collection @powersync/react-native
+npm install @tanstack/powersync-db-collection@latest @powersync/react-native@latest
 ```
 
 Also install a TanStack DB framework adapter for your UI framework:
