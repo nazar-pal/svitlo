@@ -7,7 +7,13 @@ import type { RecordRef } from '@/data/shared/maintenance'
 import { isOwnerOrGeneratorAdmin } from './checks'
 import { replayShieldNotFound } from './replay'
 import { transformSyncRow } from '../transform'
-import { fail, ok, type Insert, type TableHandler } from './types'
+import {
+  fail,
+  isParseableDateString,
+  ok,
+  type Insert,
+  type TableHandler
+} from './types'
 
 export const handleMaintenanceRecords: TableHandler = async ctx => {
   const { db, userId, op, id, data } = ctx
@@ -76,14 +82,8 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
       authzGenerator?: authzPolicy.GeneratorAuthzFact | null
     }
     if ('performed_at' in data) {
-      // Untrusted wire data: an unparseable date would sail through the
-      // future-date policy check (`NaN > now` is false) and only blow up as
-      // a Drizzle serialization error. Reject it up front instead.
       const performedAt = data.performed_at
-      if (
-        typeof performedAt !== 'string' ||
-        Number.isNaN(Date.parse(performedAt))
-      )
+      if (!isParseableDateString(performedAt))
         return fail('Invalid performed_at')
       const result = await checks.updateRecord({
         userId,
@@ -91,18 +91,18 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
         performedAt,
         now: ctx.now()
       })
-      if (!result.ok) {
-        if (result.code === 'RECORD_NOT_FOUND') return fail('Record not found')
-        return fail(result.code)
-      }
+      if (!result.ok)
+        return fail(
+          result.code === 'RECORD_NOT_FOUND' ? 'Record not found' : result.code
+        )
       facts = result.facts
       fields.performedAt = new Date(performedAt)
     } else {
       const result = await checks.deleteRecord({ userId, recordId: id })
-      if (!result.ok) {
-        if (result.code === 'RECORD_NOT_FOUND') return fail('Record not found')
-        return fail(result.code)
-      }
+      if (!result.ok)
+        return fail(
+          result.code === 'RECORD_NOT_FOUND' ? 'Record not found' : result.code
+        )
       facts = result.facts
     }
 

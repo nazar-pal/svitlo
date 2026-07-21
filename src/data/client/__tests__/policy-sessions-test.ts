@@ -15,6 +15,7 @@ import {
   createTestDatabase,
   resetDatabase
 } from '@/data/client/mutations/__tests__/test-db'
+import { stripFacts } from './strip-facts'
 
 let mockDb: ReturnType<typeof drizzle>
 let mockSqlite: Database.Database
@@ -58,14 +59,6 @@ beforeEach(() => {
 afterAll(() => {
   closeDatabase(mockSqlite)
 })
-
-// Parity helper: async adapter attaches `facts` on both branches, but
-// reactive PolicyView projects that away — strip `facts` so shapes line up.
-function stripFacts(check: { ok: boolean; code?: string }) {
-  return check.ok
-    ? { status: 'ready', ok: true }
-    : { status: 'ready', ok: false, code: check.code }
-}
 
 // ── usePolicy(sessions.startSession) ────────────────────────────────────────
 

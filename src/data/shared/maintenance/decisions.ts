@@ -42,9 +42,6 @@ export const createTemplate = defineDecision<
       generatorId: a.generatorId
     }))
   ],
-  // `authz.generator` resolves FROM the generators table, so a null fact
-  // means the generator row itself is missing — no separate existence
-  // lookup needed.
   rule: (args, facts) =>
     createMaintenanceTemplatePolicy({
       generatorExists: facts.authzGenerator !== null,
@@ -204,9 +201,6 @@ export const recordMaintenance = defineDecision<
       a => a.templateId
     )
   ],
-  // `authz.generator` resolves FROM the generators table, so a null fact
-  // means the generator row itself is missing — no separate existence
-  // lookup needed.
   rule: (args, facts) =>
     recordMaintenancePolicy({
       generatorExists: facts.authzGenerator !== null,

@@ -63,7 +63,12 @@ export function useForm<TValues extends Record<string, unknown>, TInput>(
   async function submit() {
     if (inFlightRef.current) return
     if (options.shortCircuit?.(form)) {
-      await options.onSuccess?.()
+      inFlightRef.current = true
+      try {
+        await options.onSuccess?.()
+      } finally {
+        inFlightRef.current = false
+      }
       return
     }
 

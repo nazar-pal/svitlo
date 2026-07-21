@@ -3,10 +3,6 @@ import type { drizzle } from 'drizzle-orm/better-sqlite3'
 import { renderHook, waitFor } from '@testing-library/react-native'
 
 import { IDS, seedBaseScenario } from '@/data/client/mutations/__tests__/seed'
-// Organizations have no reactive UI gate, so their decisions are not in the
-// `policies` map — this suite passes the decision to `usePolicy` directly
-// to exercise the reactive adapter over the organizations plan.
-import * as organizationsD from '@/data/shared/organizations/decisions'
 import {
   closeDatabase,
   createTestDatabase,
@@ -29,6 +25,10 @@ jest.mock('@/lib/powersync/database', () => ({
 jest.mock('@/lib/powersync', () => ({}))
 
 const { usePolicy } = require('@/data/client/use-policy')
+// Organizations have no reactive UI gate, so their decisions are not in the
+// `policies` map — this suite passes the decision to `usePolicy` directly
+// to exercise the reactive adapter over the organizations plan.
+const organizationsD = require('@/data/shared/organizations/decisions')
 
 beforeAll(async () => {
   const testDb = await createTestDatabase()

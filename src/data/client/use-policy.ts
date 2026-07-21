@@ -41,9 +41,11 @@ export function usePolicy<Args, Facts, R extends PolicyResult>(
 
 // Only domains with reactive UI gates are exposed here. Generators,
 // assignments, maintenance, and organizations are mutation-only today —
-// they have no affordance/disable state in the screens, so adding them
-// would be dead code. Mutation paths consume those checks via
-// `MutationContext.checks` (see `mutations/context.ts`) instead.
+// no screen gates on them reactively, so exposing them would be dead code.
+// (Domains are exposed whole, so some decisions inside these namespaces
+// also ride along async-only until a screen adopts them reactively.)
+// Mutation paths consume those checks via `MutationContext.checks` (see
+// `mutations/context.ts`) instead.
 export const policies = {
   sessions: sessionsD,
   members: membersD,

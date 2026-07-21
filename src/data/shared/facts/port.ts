@@ -18,6 +18,11 @@ export interface FactPlanEntry<Args, FactsSoFar, Input> {
   readonly input: (args: Args, facts: FactsSoFar) => Input | null
 }
 
+// One async lookup signature shared by the adapter, the check facade, and
+// the side registries: resolve a fact key + plan-supplied input to the fact
+// value via the side-specific resolver.
+export type FactLookup = (key: FactKey, input: unknown) => Promise<unknown>
+
 // A decision is a pure plan: ordered fact lookups + a rule that runs against
 // the resolved facts. The plan determines both async and reactive execution
 // order — reactive also depends on it to keep React hook order stable.

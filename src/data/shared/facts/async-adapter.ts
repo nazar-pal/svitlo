@@ -1,4 +1,4 @@
-import type { Decision } from './port'
+import type { Decision, FactLookup } from './port'
 
 // Common "policy result" shape the rule may return. Rules may carry extra
 // fields on the success branch (e.g. `acceptInvitationPolicy` returns
@@ -38,7 +38,7 @@ type OkBranch<T> = Extract<T, { ok: true }>
 export async function runDecisionAsync<Args, Facts, Result extends RuleResult>(
   decision: Decision<Args, Facts, Result>,
   args: Args,
-  lookup: (key: string, input: unknown) => Promise<unknown>
+  lookup: FactLookup
 ): Promise<
   | (OkBranch<Result> & { facts: Facts })
   | { ok: false; code: FailCode<Result>; facts: Facts }

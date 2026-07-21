@@ -15,6 +15,12 @@ export type Db = typeof db
 
 export type Insert<T extends { $inferInsert: unknown }> = T['$inferInsert']
 
+// Untrusted wire data: an unparseable date would sail through the policies'
+// future-date checks (`NaN > now` is false) and only blow up as a Drizzle
+// serialization error. Handlers reject such values up front with this guard.
+export const isParseableDateString = (value: unknown): value is string =>
+  typeof value === 'string' && !Number.isNaN(Date.parse(value))
+
 export interface WriteContext {
   db: Db
   userId: string

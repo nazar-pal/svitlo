@@ -2,7 +2,7 @@ import {
   runDecisionAsync,
   type RuleResult
 } from '@/data/shared/facts/async-adapter'
-import type { Decision } from '@/data/shared/facts/port'
+import type { Decision, FactLookup } from '@/data/shared/facts/port'
 
 import * as assignmentsD from './assignments/decisions'
 import * as generatorsD from './generators/decisions'
@@ -25,14 +25,12 @@ import * as sessionsD from './sessions/decisions'
 
 function wrap<Args, Facts, R extends RuleResult>(
   decision: Decision<Args, Facts, R>,
-  lookup: (key: string, input: unknown) => Promise<unknown>
+  lookup: FactLookup
 ) {
   return (args: Args) => runDecisionAsync(decision, args, lookup)
 }
 
-export function buildCheckFacade(
-  lookup: (key: string, input: unknown) => Promise<unknown>
-) {
+export function buildCheckFacade(lookup: FactLookup) {
   return {
     sessions: {
       startSession: wrap(sessionsD.startSession, lookup),

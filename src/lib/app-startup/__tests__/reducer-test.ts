@@ -74,7 +74,13 @@ describe('reduce', () => {
     })
 
     it('is ignored from any other phase', () => {
-      for (const phase of ['cold-start', 'first-sync', 'ready'] as const) {
+      for (const phase of [
+        'cold-start',
+        'unauthenticated',
+        'db-failed',
+        'first-sync',
+        'ready'
+      ] as const) {
         const before = at(phase)
         expect(reduce(before, { type: 'INIT_SUCCEEDED' })).toBe(before)
       }
@@ -96,10 +102,12 @@ describe('reduce', () => {
     })
 
     it('ignores a stale failure once we have left initializing-db (timer-leak guard)', () => {
-      const before = at('first-sync')
-      expect(
-        reduce(before, { type: 'INIT_FAILED', message: 'late timeout' })
-      ).toBe(before)
+      for (const phase of ['first-sync', 'db-failed', 'ready'] as const) {
+        const before = at(phase)
+        expect(
+          reduce(before, { type: 'INIT_FAILED', message: 'late timeout' })
+        ).toBe(before)
+      }
     })
   })
 

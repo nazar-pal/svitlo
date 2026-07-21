@@ -26,6 +26,7 @@ import type {
   MemberRef,
   TemplateRef
 } from '@/data/shared/facts/contracts'
+import type { FactLookup } from '@/data/shared/facts/port'
 import type { RecordRef } from '@/data/shared/maintenance'
 import type { SessionRef } from '@/data/shared/sessions'
 
@@ -284,9 +285,7 @@ const serverFactRegistry = {
   'maintenanceRecord.byId': maintenanceRecordById
 } satisfies { [K in FactKey]: Resolver<FactInput<K>, FactOf<K>> }
 
-export function serverLookup(
-  db: Db
-): (key: string, input: unknown) => Promise<unknown> {
+export function serverLookup(db: Db): FactLookup {
   // Per-key `Input` types erase to `unknown` at the lookup boundary — the
   // adapters traffic in `unknown` either way.
   const erased = serverFactRegistry as unknown as Record<

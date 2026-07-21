@@ -66,9 +66,6 @@ export const updateGenerator = defineDecision<
       generatorId: a.generatorId
     }))
   ],
-  // `authz.generator` resolves FROM the generators table, so a null fact
-  // means the generator row itself is missing — no separate existence
-  // lookup needed.
   rule: (args, facts) => {
     if (!facts.authzGenerator) return fail('GENERATOR_NOT_FOUND')
     if (
@@ -106,9 +103,6 @@ export const deleteGenerator = defineDecision<
       generatorId: a.generatorId
     }))
   ],
-  // `authz.generator` resolves FROM the generators table, so a null fact
-  // means the generator row itself is missing — no separate existence
-  // lookup needed.
   rule: (args, facts) => {
     if (!facts.authzGenerator) return fail('GENERATOR_NOT_FOUND')
     if (

@@ -31,8 +31,9 @@ import { eq } from 'drizzle-orm'
 
 import { organizations } from '@/data/client/db-schema'
 import { clientLookup } from '@/data/client/registry'
+import type { FactKey } from '@/data/shared/facts/contracts'
 
-function lookup(key: string, input: unknown) {
+function lookup(key: FactKey, input: unknown) {
   return clientLookup(mockTestDb.db)(key, input)
 }
 

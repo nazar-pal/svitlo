@@ -20,6 +20,13 @@ export interface GeneratorUserInput {
   generatorId: string
 }
 
+// Bare existence ref for `generator.byId`. Generators have no shared domain
+// module (their decisions carry all the shape they need), so the ref lives
+// here with the other cross-side contract shapes.
+export interface GeneratorRef {
+  id: string
+}
+
 export interface OrgMemberInput {
   userId: string
   organizationId: string
@@ -34,7 +41,7 @@ export type { InvitationRef, MemberRef, OrganizationRef, TemplateRef }
 interface FactContracts {
   'session.byId': { input: string; fact: SessionRef | null }
   'session.hasOpenForGenerator': { input: string; fact: boolean }
-  'generator.byId': { input: string; fact: { id: string } | null }
+  'generator.byId': { input: string; fact: GeneratorRef | null }
   'generator.orgId': { input: string; fact: string | null }
   'authz.generator': {
     input: GeneratorUserInput
@@ -53,6 +60,8 @@ interface FactContracts {
     fact: boolean
   }
   'invitation.byId': { input: string; fact: InvitationRef | null }
+  // `inviteeEmail` arrives pre-normalized (trim + lowercase) by the
+  // `createInvitation` plan; both registries re-normalize as defence-in-depth.
   'invitation.byOrgAndEmail': {
     input: { organizationId: string; inviteeEmail: string }
     fact: InvitationRef | null

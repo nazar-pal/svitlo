@@ -25,6 +25,7 @@ import type {
   MemberRef,
   TemplateRef
 } from '@/data/shared/facts/contracts'
+import type { FactLookup } from '@/data/shared/facts/port'
 import type { RecordRef } from '@/data/shared/maintenance'
 import type { SessionRef } from '@/data/shared/sessions'
 import type { DrizzleCompilable } from '@/lib/hooks/use-drizzle-query'
@@ -339,9 +340,7 @@ const erasedRegistry: Record<
 // Async lookup: reads registry[key], executes the builder, returns the
 // projection. Same key namespace as the reactive adapter, so a single
 // decision's plan drives both paths.
-export function clientLookup(
-  db: ClientDb
-): (key: string, input: unknown) => Promise<unknown> {
+export function clientLookup(db: ClientDb): FactLookup {
   return async (key, input) => {
     const entry = erasedRegistry[key]
     if (!entry) throw new Error(`no client resolver for fact key "${key}"`)

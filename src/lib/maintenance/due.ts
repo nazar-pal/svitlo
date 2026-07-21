@@ -6,8 +6,8 @@ import type {
   MaintenanceTemplate
 } from '@/data/client/db-schema/maintenance'
 import { t } from '@/lib/i18n'
-import { usesCalendar, usesHours } from './trigger-type'
 import { formatHours, hoursBetween } from '@/lib/utils/time'
+import { usesCalendar, usesHours } from './trigger-type'
 
 export type MaintenanceUrgency = 'overdue' | 'due_soon' | 'ok'
 

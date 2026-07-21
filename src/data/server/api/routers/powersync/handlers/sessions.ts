@@ -5,7 +5,13 @@ import { generatorSessions } from '@/data/server/db-schema'
 import { isOwnerOrGeneratorAdmin } from './checks'
 import { replayShieldNotFound } from './replay'
 import { transformSyncRow } from '../transform'
-import { fail, ok, type Insert, type TableHandler } from './types'
+import {
+  fail,
+  isParseableDateString,
+  ok,
+  type Insert,
+  type TableHandler
+} from './types'
 
 export const handleGeneratorSessions: TableHandler = async ctx => {
   const { db, userId, op, id, data } = ctx
@@ -58,16 +64,11 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     //   `updateSession` → { started_at, stopped_at } (manual time edit)
     // `started_at` presence distinguishes the two.
     if ('started_at' in data) {
-      // Untrusted wire data: an unparseable date would sail through the
-      // policy's `END_TIME_IN_FUTURE` check (`NaN > now` is false) and only
-      // blow up as a Drizzle serialization error. Reject it up front instead.
       const startedAt = data.started_at
       const stoppedAt = data.stopped_at
       if (
-        typeof startedAt !== 'string' ||
-        Number.isNaN(Date.parse(startedAt)) ||
-        typeof stoppedAt !== 'string' ||
-        Number.isNaN(Date.parse(stoppedAt))
+        !isParseableDateString(startedAt) ||
+        !isParseableDateString(stoppedAt)
       )
         return fail('Invalid session times')
       const result = await checks.updateSession({
@@ -97,10 +98,7 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     if ('stopped_at' in data) {
       const stoppedAt = data.stopped_at
       if (!stoppedAt) fields.stoppedAt = null
-      else if (
-        typeof stoppedAt !== 'string' ||
-        Number.isNaN(Date.parse(stoppedAt))
-      )
+      else if (!isParseableDateString(stoppedAt))
         return fail('Invalid stopped_at')
       else fields.stoppedAt = new Date(stoppedAt)
     }

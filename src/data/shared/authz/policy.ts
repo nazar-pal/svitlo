@@ -19,7 +19,9 @@ export const canAccessGenerator = (
 // definition: renaming or dropping a field becomes a compile error at every
 // site instead of silently drifting across the untyped fact-lookup boundary.
 // Absence is composed per site (`| null` when the generator is missing,
-// `| undefined` when the plan entry was skipped).
+// `| undefined` when the plan entry was skipped). The resolver selects FROM
+// the generators table, so a null fact also means the generator row itself
+// is missing — decisions built on it need no separate existence lookup.
 export interface GeneratorAuthzFact {
   orgAdminUserId: string | null
   hasAssignment: boolean

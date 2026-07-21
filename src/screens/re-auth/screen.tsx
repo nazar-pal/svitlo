@@ -15,6 +15,8 @@ import { useAppleSignIn } from '@/lib/auth/use-apple-sign-in'
 import { type BuildResult, useForm, validateWithZod } from '@/lib/hooks/forms'
 import { useTranslation } from '@/lib/i18n'
 
+// Must stay a `type`: `useForm`'s `TValues extends Record<string, unknown>`
+// constraint needs the implicit index signature interfaces don't get.
 type SignInInput = {
   email: string
   password: string

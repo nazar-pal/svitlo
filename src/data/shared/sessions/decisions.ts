@@ -1,4 +1,5 @@
 import * as authzPolicy from '@/data/shared/authz/policy'
+import type { GeneratorRef } from '@/data/shared/facts/contracts'
 import { defineDecision, factPlanFor } from '@/data/shared/facts/decisions'
 
 import {
@@ -30,7 +31,7 @@ interface StartSessionArgs {
 }
 
 interface StartSessionFacts {
-  generator: { id: string } | null
+  generator: GeneratorRef | null
   authzGenerator?: authzPolicy.GeneratorAuthzFact | null
   openSession?: boolean
 }
@@ -190,7 +191,7 @@ interface LogManualSessionArgs {
 }
 
 interface LogManualSessionFacts {
-  generator: { id: string } | null
+  generator: GeneratorRef | null
   authzGenerator?: authzPolicy.GeneratorAuthzFact | null
 }
 

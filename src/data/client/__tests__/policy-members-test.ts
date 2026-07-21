@@ -8,6 +8,7 @@ import {
   createTestDatabase,
   resetDatabase
 } from '@/data/client/mutations/__tests__/test-db'
+import { stripFacts } from './strip-facts'
 
 let mockDb: ReturnType<typeof drizzle>
 let mockSqlite: Database.Database
@@ -43,12 +44,6 @@ beforeEach(() => {
 afterAll(() => {
   closeDatabase(mockSqlite)
 })
-
-function stripFacts(check: { ok: boolean; code?: string }) {
-  return check.ok
-    ? { status: 'ready', ok: true }
-    : { status: 'ready', ok: false, code: check.code }
-}
 
 describe('usePolicy(members.removeMember)', () => {
   it('reports loading when args are null', () => {
