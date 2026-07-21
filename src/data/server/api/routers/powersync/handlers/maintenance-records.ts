@@ -44,12 +44,12 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
     if (shielded.status === 'consume') return shielded.result
 
     const record = shielded.data.facts.record
-    if (!record) return fail('RECORD_NOT_FOUND')
-    const allowed = isOwnerOrGeneratorAdmin(
+    if (!record) return fail('Record not found')
+    const allowed = isOwnerOrGeneratorAdmin({
       userId,
-      record.performedByUserId,
-      shielded.data.facts.authzGenerator
-    )
+      ownerUserId: record.performedByUserId,
+      generatorFact: shielded.data.facts.authzGenerator
+    })
     if (!allowed) return fail('Can only delete your own maintenance records')
 
     await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, id))
@@ -107,11 +107,11 @@ export const handleMaintenanceRecords: TableHandler = async ctx => {
     }
 
     if (!facts.record) return fail('Record not found')
-    const allowed = isOwnerOrGeneratorAdmin(
+    const allowed = isOwnerOrGeneratorAdmin({
       userId,
-      facts.record.performedByUserId,
-      facts.authzGenerator
-    )
+      ownerUserId: facts.record.performedByUserId,
+      generatorFact: facts.authzGenerator
+    })
     if (!allowed) return fail('Can only edit your own maintenance records')
 
     if (Object.keys(fields).length > 0)

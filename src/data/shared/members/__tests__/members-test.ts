@@ -109,7 +109,3 @@ describe('leaveOrganizationPolicy', () => {
     ).toEqual({ ok: true, member, adminUserId: ADMIN })
   })
 })
-
-// Boundary tests: the orchestrator composes fact lookups + authz + policy.
-// Policy branches are covered above; these tests pin the glue — fact-fetch
-// short-circuits, concurrent fetches, and authz-result forwarding.

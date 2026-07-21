@@ -15,7 +15,7 @@ import {
 
 // ── renameOrganization ──────────────────────────────────────────────────────
 
-export interface RenameOrganizationArgs {
+interface RenameOrganizationArgs {
   callerUserId: string
   organizationId: string
 }
@@ -49,7 +49,7 @@ export const renameOrganization = defineDecision<
 
 // ── deleteOrganization ──────────────────────────────────────────────────────
 
-export interface DeleteOrganizationArgs {
+interface DeleteOrganizationArgs {
   callerUserId: string
   organizationId: string
 }

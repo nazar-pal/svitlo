@@ -1,5 +1,6 @@
 import {
   policyFail as fail,
+  policyOk as ok,
   type PolicyResult
 } from '@/data/shared/policy-result'
 
@@ -26,7 +27,7 @@ export const renameOrganizationPolicy = (facts: {
 }): PolicyResult => {
   if (!facts.org) return fail('ORGANIZATION_NOT_FOUND')
   if (!facts.isCallerOrgAdmin) return fail('ONLY_ADMIN_CAN_RENAME_ORG')
-  return { ok: true }
+  return ok
 }
 
 export const deleteOrganizationPolicy = (facts: {

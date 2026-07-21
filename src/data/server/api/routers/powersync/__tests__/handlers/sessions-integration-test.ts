@@ -344,6 +344,47 @@ describe('handleGeneratorSessions', () => {
     if (!result.ok) expect(result.error).toBe('END_TIME_IN_FUTURE')
   })
 
+  it('update: rejects an unparseable time edit and leaves the row intact', async () => {
+    await seedSession(fixture.testDb.db, IDS.admin, {
+      stoppedAt: new Date('2026-01-15T13:00:00Z')
+    })
+    const before = await fixture.testDb.db.query.generatorSessions.findFirst({
+      where: eq(generatorSessions.id, IDS.session)
+    })
+    const result = await handleGeneratorSessions(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.session,
+        data: {
+          started_at: 'not-a-date',
+          stopped_at: '2026-01-15T11:00:00Z'
+        }
+      })
+    )
+    expect(result.ok).toBe(false)
+    const after = await fixture.testDb.db.query.generatorSessions.findFirst({
+      where: eq(generatorSessions.id, IDS.session)
+    })
+    expect(after!.startedAt).toEqual(before!.startedAt)
+    expect(after!.stoppedAt).toEqual(before!.stoppedAt)
+  })
+
+  it('update: rejects an unparseable stopped_at on the stop branch', async () => {
+    await seedSession(fixture.testDb.db)
+    const result = await handleGeneratorSessions(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.session,
+        data: { stopped_at: 'not-a-date', stopped_by_user_id: IDS.admin }
+      })
+    )
+    expect(result.ok).toBe(false)
+    const row = await fixture.testDb.db.query.generatorSessions.findFirst({
+      where: eq(generatorSessions.id, IDS.session)
+    })
+    expect(row!.stoppedAt).toBeNull()
+  })
+
   it('update: accepts editing a stopped session with valid times', async () => {
     await seedSession(fixture.testDb.db, IDS.admin, {
       stoppedAt: new Date('2026-01-15T13:00:00Z')

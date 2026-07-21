@@ -13,7 +13,7 @@ import {
 
 // ── createGenerator ─────────────────────────────────────────────────────────
 
-export interface CreateGeneratorArgs {
+interface CreateGeneratorArgs {
   userId: string
   organizationId: string
 }
@@ -41,13 +41,12 @@ export const createGenerator = defineDecision<
 
 // ── updateGenerator ─────────────────────────────────────────────────────────
 
-export interface UpdateGeneratorArgs {
+interface UpdateGeneratorArgs {
   userId: string
   generatorId: string
 }
 
 interface UpdateGeneratorFacts {
-  generator: { id: string } | null
   authzGenerator: authzPolicy.GeneratorAuthzFact | null
 }
 
@@ -62,19 +61,18 @@ export const updateGenerator = defineDecision<
   PolicyResult
 >({
   plan: [
-    updateGeneratorPlan('generator', 'generator.byId', a => a.generatorId),
     updateGeneratorPlan('authzGenerator', 'authz.generator', a => ({
       userId: a.userId,
       generatorId: a.generatorId
     }))
   ],
+  // `authz.generator` resolves FROM the generators table, so a null fact
+  // means the generator row itself is missing — no separate existence
+  // lookup needed.
   rule: (args, facts) => {
-    if (!facts.generator) return fail('GENERATOR_NOT_FOUND')
+    if (!facts.authzGenerator) return fail('GENERATOR_NOT_FOUND')
     if (
-      !authzPolicy.isOrgAdmin(
-        args.userId,
-        facts.authzGenerator?.orgAdminUserId ?? null
-      )
+      !authzPolicy.isOrgAdmin(args.userId, facts.authzGenerator.orgAdminUserId)
     )
       return fail('ONLY_ADMIN_CAN_UPDATE_GENERATORS')
     return ok
@@ -83,13 +81,12 @@ export const updateGenerator = defineDecision<
 
 // ── deleteGenerator ─────────────────────────────────────────────────────────
 
-export interface DeleteGeneratorArgs {
+interface DeleteGeneratorArgs {
   userId: string
   generatorId: string
 }
 
 interface DeleteGeneratorFacts {
-  generator: { id: string } | null
   authzGenerator: authzPolicy.GeneratorAuthzFact | null
 }
 
@@ -104,19 +101,18 @@ export const deleteGenerator = defineDecision<
   PolicyResult
 >({
   plan: [
-    deleteGeneratorPlan('generator', 'generator.byId', a => a.generatorId),
     deleteGeneratorPlan('authzGenerator', 'authz.generator', a => ({
       userId: a.userId,
       generatorId: a.generatorId
     }))
   ],
+  // `authz.generator` resolves FROM the generators table, so a null fact
+  // means the generator row itself is missing — no separate existence
+  // lookup needed.
   rule: (args, facts) => {
-    if (!facts.generator) return fail('GENERATOR_NOT_FOUND')
+    if (!facts.authzGenerator) return fail('GENERATOR_NOT_FOUND')
     if (
-      !authzPolicy.isOrgAdmin(
-        args.userId,
-        facts.authzGenerator?.orgAdminUserId ?? null
-      )
+      !authzPolicy.isOrgAdmin(args.userId, facts.authzGenerator.orgAdminUserId)
     )
       return fail('ONLY_ADMIN_CAN_DELETE_GENERATORS')
     return ok

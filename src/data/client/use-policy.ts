@@ -1,6 +1,5 @@
 import * as invitationsD from '@/data/shared/invitations/decisions'
 import * as membersD from '@/data/shared/members/decisions'
-import * as organizationsD from '@/data/shared/organizations/decisions'
 import * as sessionsD from '@/data/shared/sessions/decisions'
 import type { Decision, PolicyView } from '@/data/shared/facts/port'
 import {
@@ -41,15 +40,14 @@ export function usePolicy<Args, Facts, R extends PolicyResult>(
 }
 
 // Only domains with reactive UI gates are exposed here. Generators,
-// assignments, and maintenance are mutation-only today — they have no
-// affordance/disable state in the screens, so adding them would be dead
-// code. Mutation paths consume those checks via `MutationContext.checks`
-// (see `mutations/context.ts`) instead.
+// assignments, maintenance, and organizations are mutation-only today —
+// they have no affordance/disable state in the screens, so adding them
+// would be dead code. Mutation paths consume those checks via
+// `MutationContext.checks` (see `mutations/context.ts`) instead.
 export const policies = {
   sessions: sessionsD,
   members: membersD,
-  invitations: invitationsD,
-  organizations: organizationsD
+  invitations: invitationsD
 }
 
 // Re-export so screens can narrow `PolicyView` without reaching into the

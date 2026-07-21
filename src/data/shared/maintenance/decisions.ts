@@ -17,13 +17,12 @@ import {
 
 // ── createTemplate ──────────────────────────────────────────────────────────
 
-export interface CreateTemplateArgs {
+interface CreateTemplateArgs {
   userId: string
   generatorId: string
 }
 
 interface CreateTemplateFacts {
-  generatorExists: boolean
   authzGenerator: authzPolicy.GeneratorAuthzFact | null
 }
 
@@ -38,19 +37,17 @@ export const createTemplate = defineDecision<
   PolicyResult
 >({
   plan: [
-    createTemplatePlan(
-      'generatorExists',
-      'generator.exists',
-      a => a.generatorId
-    ),
     createTemplatePlan('authzGenerator', 'authz.generator', a => ({
       userId: a.userId,
       generatorId: a.generatorId
     }))
   ],
+  // `authz.generator` resolves FROM the generators table, so a null fact
+  // means the generator row itself is missing — no separate existence
+  // lookup needed.
   rule: (args, facts) =>
     createMaintenanceTemplatePolicy({
-      generatorExists: facts.generatorExists,
+      generatorExists: facts.authzGenerator !== null,
       isCallerGeneratorOrgAdmin: authzPolicy.isOrgAdmin(
         args.userId,
         facts.authzGenerator?.orgAdminUserId ?? null
@@ -60,7 +57,7 @@ export const createTemplate = defineDecision<
 
 // ── updateTemplate ──────────────────────────────────────────────────────────
 
-export interface UpdateTemplateArgs {
+interface UpdateTemplateArgs {
   userId: string
   templateId: string
   update: UpdateTemplateInput
@@ -131,7 +128,7 @@ export const updateTemplate = defineDecision<
 
 // ── deleteTemplate ──────────────────────────────────────────────────────────
 
-export interface DeleteTemplateArgs {
+interface DeleteTemplateArgs {
   userId: string
   templateId: string
 }
@@ -175,14 +172,13 @@ export const deleteTemplate = defineDecision<
 
 // ── recordMaintenance ───────────────────────────────────────────────────────
 
-export interface RecordMaintenanceArgs {
+interface RecordMaintenanceArgs {
   userId: string
   generatorId: string
   templateId: string
 }
 
 interface RecordMaintenanceFacts {
-  generatorExists: boolean
   authzGenerator: authzPolicy.GeneratorAuthzFact | null
   template: TemplateRef | null
 }
@@ -198,11 +194,6 @@ export const recordMaintenance = defineDecision<
   PolicyResult
 >({
   plan: [
-    recordMaintenancePlan(
-      'generatorExists',
-      'generator.exists',
-      a => a.generatorId
-    ),
     recordMaintenancePlan('authzGenerator', 'authz.generator', a => ({
       userId: a.userId,
       generatorId: a.generatorId
@@ -213,9 +204,12 @@ export const recordMaintenance = defineDecision<
       a => a.templateId
     )
   ],
+  // `authz.generator` resolves FROM the generators table, so a null fact
+  // means the generator row itself is missing — no separate existence
+  // lookup needed.
   rule: (args, facts) =>
     recordMaintenancePolicy({
-      generatorExists: facts.generatorExists,
+      generatorExists: facts.authzGenerator !== null,
       hasGeneratorAccess: authzPolicy.canAccessGeneratorFact(
         args.userId,
         facts.authzGenerator
@@ -228,7 +222,7 @@ export const recordMaintenance = defineDecision<
 
 // ── deleteRecord ────────────────────────────────────────────────────────────
 
-export interface DeleteRecordArgs {
+interface DeleteRecordArgs {
   userId: string
   recordId: string
 }
@@ -263,7 +257,7 @@ export const deleteRecord = defineDecision<
 
 // ── updateRecord ────────────────────────────────────────────────────────────
 
-export interface UpdateRecordArgs {
+interface UpdateRecordArgs {
   userId: string
   recordId: string
   performedAt: string

@@ -23,9 +23,6 @@ interface PlainConfirm extends ConfirmDestructiveBase {
   onConfirm?: () => void
 }
 
-// The two modes are mutually exclusive: a mutation confirm gets its haptic
-// and `onSuccess` from `runMutation`, a plain confirm fires the haptic
-// itself and only has `onConfirm`.
 type ConfirmDestructiveOptions = MutationConfirm | PlainConfirm
 
 /**

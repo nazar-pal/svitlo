@@ -14,7 +14,7 @@ import {
 
 // ── assignUserToGenerator ───────────────────────────────────────────────────
 
-export interface AssignUserToGeneratorArgs {
+interface AssignUserToGeneratorArgs {
   callerUserId: string
   generatorId: string
   targetUserId: string
@@ -81,7 +81,7 @@ export const assignUserToGenerator = defineDecision<
 
 // ── unassignUserFromGenerator ───────────────────────────────────────────────
 
-export interface UnassignUserFromGeneratorArgs {
+interface UnassignUserFromGeneratorArgs {
   callerUserId: string
   generatorId: string
   targetUserId: string

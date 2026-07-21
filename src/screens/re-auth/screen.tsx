@@ -27,7 +27,6 @@ export default function ReAuthScreen() {
 
   const [showEmailForm, setShowEmailForm] = useState(false)
   const passwordRef = useRef<TextInput>(null)
-  const signedInUserIdRef = useRef<string | undefined>(undefined)
 
   async function handleAccountMismatch(newUserId: string | undefined) {
     if (newUserId && identity?.userId && newUserId !== identity.userId) {
@@ -70,13 +69,14 @@ export default function ReAuthScreen() {
         return fail('AUTH_FAILED', {
           message: res.error.message ?? t('auth.somethingWentWrong')
         })
-      signedInUserIdRef.current = res.data?.user?.id
+      // Signing into a different account than the local data belongs to is
+      // not a success — the mismatch must fail here, before `useForm` fires
+      // the success haptic and `onSuccess` navigates away.
+      if (await handleAccountMismatch(res.data?.user?.id))
+        return fail('AUTH_FAILED', { message: t('auth.differentAccountDesc') })
       return ok
     },
-    async onSuccess() {
-      if (await handleAccountMismatch(signedInUserIdRef.current)) return
-      router.back()
-    }
+    onSuccess: () => router.back()
   })
 
   const emailBinding = bind.text('email')

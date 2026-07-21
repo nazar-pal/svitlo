@@ -9,7 +9,7 @@ import { acceptInvitation, declineInvitation } from '@/data/client/mutations'
 import { runMutation } from '@/lib/alerts'
 import { useTranslation } from '@/lib/i18n'
 import type { InvitationDetails } from '@/lib/hooks/use-pending-invitations'
-import { useLocalUser } from '@/lib/powersync'
+import { useLocalUser, useLocalUserId } from '@/lib/powersync'
 
 const slideInFromRight = new Keyframe({
   0: { opacity: 0, transform: [{ translateX: 50 }] },
@@ -31,9 +31,8 @@ export function InvitationDialog({
   onClose
 }: InvitationDialogProps) {
   const { t } = useTranslation()
-  const localUser = useLocalUser()
-  const userId = localUser?.id ?? ''
-  const userEmail = localUser?.email ?? ''
+  const userId = useLocalUserId()
+  const userEmail = useLocalUser()?.email ?? ''
   const [step, setStep] = useState(0)
 
   const isOpen = invitations.length > 0

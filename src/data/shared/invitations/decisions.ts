@@ -13,7 +13,7 @@ import {
 
 // ── createInvitation ────────────────────────────────────────────────────────
 
-export interface CreateInvitationArgs {
+interface CreateInvitationArgs {
   callerUserId: string
   organizationId: string
   inviteeEmail: string
@@ -59,7 +59,7 @@ export const createInvitation = defineDecision<
 
 // ── acceptInvitation ────────────────────────────────────────────────────────
 
-export interface AcceptInvitationArgs {
+interface AcceptInvitationArgs {
   userId: string
   userEmail: string
   invitationId: string
@@ -104,7 +104,7 @@ export const acceptInvitation = defineDecision<
 
 // ── declineInvitation ───────────────────────────────────────────────────────
 
-export interface DeclineInvitationArgs {
+interface DeclineInvitationArgs {
   userEmail: string
   invitationId: string
 }
@@ -135,7 +135,7 @@ export const declineInvitation = defineDecision<
 
 // ── cancelInvitation ────────────────────────────────────────────────────────
 
-export interface CancelInvitationArgs {
+interface CancelInvitationArgs {
   callerUserId: string
   invitationId: string
 }

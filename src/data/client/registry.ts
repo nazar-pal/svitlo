@@ -22,8 +22,8 @@ import type {
   InvitationRef,
   OrganizationRef,
   OrgMemberInput,
-  OrgMembershipRef,
-  TemplateTriggerRef
+  MemberRef,
+  TemplateRef
 } from '@/data/shared/facts/contracts'
 import type { RecordRef } from '@/data/shared/maintenance'
 import type { SessionRef } from '@/data/shared/sessions'
@@ -173,39 +173,10 @@ const generatorOrgIdEntry: Entry<
   project: rows => rows[0]?.organizationId ?? null
 }
 
-const generatorExistsEntry: Entry<string, { id: string }, boolean> = {
-  build: (db, id) =>
-    db
-      .select({ id: generators.id })
-      .from(generators)
-      .where(eq(generators.id, id))
-      .limit(1),
-  project: rows => rows.length > 0
-}
-
-const orgMembershipHasForUserAndOrgEntry: Entry<
-  OrgMemberInput,
-  { id: string },
-  boolean
-> = {
-  build: (db, { userId, organizationId }) =>
-    db
-      .select({ id: organizationMembers.id })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.organizationId, organizationId),
-          eq(organizationMembers.userId, userId)
-        )
-      )
-      .limit(1),
-  project: rows => rows.length > 0
-}
-
 const orgMembershipByUserAndOrgEntry: Entry<
   OrgMemberInput,
-  OrgMembershipRef,
-  OrgMembershipRef | null
+  MemberRef,
+  MemberRef | null
 > = {
   build: (db, { userId, organizationId }) =>
     db
@@ -225,11 +196,16 @@ const orgMembershipByUserAndOrgEntry: Entry<
   project: rows => rows[0] ?? null
 }
 
-const orgMembershipByIdEntry: Entry<
-  string,
-  OrgMembershipRef,
-  OrgMembershipRef | null
+const orgMembershipHasForUserAndOrgEntry: Entry<
+  OrgMemberInput,
+  MemberRef,
+  boolean
 > = {
+  build: orgMembershipByUserAndOrgEntry.build,
+  project: rows => rows.length > 0
+}
+
+const orgMembershipByIdEntry: Entry<string, MemberRef, MemberRef | null> = {
   build: (db, id) =>
     db
       .select({
@@ -300,8 +276,8 @@ const invitationByOrgAndEmailEntry: Entry<
 
 const maintenanceTemplateByIdEntry: Entry<
   string,
-  TemplateTriggerRef,
-  TemplateTriggerRef | null
+  TemplateRef,
+  TemplateRef | null
 > = {
   build: (db, id) =>
     db
@@ -337,7 +313,6 @@ const maintenanceRecordByIdEntry: Entry<string, RecordRef, RecordRef | null> = {
 const clientFactRegistry = {
   'session.byId': sessionByIdEntry,
   'generator.byId': generatorByIdEntry,
-  'generator.exists': generatorExistsEntry,
   'generator.orgId': generatorOrgIdEntry,
   'session.hasOpenForGenerator': sessionHasOpenForGeneratorEntry,
   'authz.generator': authzGeneratorEntry,

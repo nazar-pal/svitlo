@@ -17,11 +17,14 @@ type OkBranch<T> = Extract<T, { ok: true }>
 // cannot compile into a client mutation and surface untranslatable.
 // Decision-facade checks also carry `facts` on both branches (that's how
 // the async adapter attaches already-fetched rows for defence-in-depth) —
-// the extra field is accepted via the open index signatures. Parameterized
-// codes must still supply their typed `params`.
+// the ok branch keeps an open index signature so `checkOk` extras survive,
+// while the param-free fail branch admits only `facts`, guaranteeing that
+// only parameterized codes can carry `params` into the `'params' in result`
+// dispatch below. Parameterized codes must still supply their typed
+// `params`.
 type CheckOutcome =
   | { ok: true; [k: string]: unknown }
-  | { ok: false; code: ParamFreeMutationErrorCode; [k: string]: unknown }
+  | { ok: false; code: ParamFreeMutationErrorCode; facts?: unknown }
   | ({ ok: false } & Extract<MutationError, { params: unknown }>)
 
 type ValidateOutcome<TVali> =

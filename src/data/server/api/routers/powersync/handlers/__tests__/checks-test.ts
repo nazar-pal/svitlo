@@ -12,38 +12,65 @@ const OUTSIDER = 'user-outsider'
 // (plan entry skipped) — both must fail closed for a non-owner.
 describe('isOwnerOrGeneratorAdmin', () => {
   it('allows the row owner regardless of the generator fact', () => {
-    expect(isOwnerOrGeneratorAdmin(OWNER, OWNER, null)).toBe(true)
-    expect(isOwnerOrGeneratorAdmin(OWNER, OWNER, undefined)).toBe(true)
+    expect(
+      isOwnerOrGeneratorAdmin({
+        userId: OWNER,
+        ownerUserId: OWNER,
+        generatorFact: null
+      })
+    ).toBe(true)
+    expect(
+      isOwnerOrGeneratorAdmin({
+        userId: OWNER,
+        ownerUserId: OWNER,
+        generatorFact: undefined
+      })
+    ).toBe(true)
   })
 
   it("allows the generator org admin acting on someone else's row", () => {
     expect(
-      isOwnerOrGeneratorAdmin(ADMIN, OWNER, {
-        orgAdminUserId: ADMIN,
-        hasAssignment: false
+      isOwnerOrGeneratorAdmin({
+        userId: ADMIN,
+        ownerUserId: OWNER,
+        generatorFact: { orgAdminUserId: ADMIN, hasAssignment: false }
       })
     ).toBe(true)
   })
 
   it('denies a merely-assigned non-owner, unlike the shared policy', () => {
     expect(
-      isOwnerOrGeneratorAdmin(OUTSIDER, OWNER, {
-        orgAdminUserId: ADMIN,
-        hasAssignment: true
+      isOwnerOrGeneratorAdmin({
+        userId: OUTSIDER,
+        ownerUserId: OWNER,
+        generatorFact: { orgAdminUserId: ADMIN, hasAssignment: true }
       })
     ).toBe(false)
   })
 
   it('denies a non-owner when the generator fact is missing', () => {
-    expect(isOwnerOrGeneratorAdmin(OUTSIDER, OWNER, null)).toBe(false)
-    expect(isOwnerOrGeneratorAdmin(OUTSIDER, OWNER, undefined)).toBe(false)
+    expect(
+      isOwnerOrGeneratorAdmin({
+        userId: OUTSIDER,
+        ownerUserId: OWNER,
+        generatorFact: null
+      })
+    ).toBe(false)
+    expect(
+      isOwnerOrGeneratorAdmin({
+        userId: OUTSIDER,
+        ownerUserId: OWNER,
+        generatorFact: undefined
+      })
+    ).toBe(false)
   })
 
   it('denies a non-owner on an orphan generator with no org admin', () => {
     expect(
-      isOwnerOrGeneratorAdmin(OUTSIDER, OWNER, {
-        orgAdminUserId: null,
-        hasAssignment: true
+      isOwnerOrGeneratorAdmin({
+        userId: OUTSIDER,
+        ownerUserId: OWNER,
+        generatorFact: { orgAdminUserId: null, hasAssignment: true }
       })
     ).toBe(false)
   })

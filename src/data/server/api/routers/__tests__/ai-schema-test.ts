@@ -1,12 +1,4 @@
-jest.mock('../../orpc', () => ({
-  protectedProcedure: {
-    input: () => ({ output: () => ({ handler: () => ({}) }) })
-  }
-}))
-
-jest.mock('@/data/server/ai/maintenance-agent', () => ({}))
-
-import { maintenanceSuggestionSchema } from '../ai'
+import { maintenanceSuggestionSchema } from '@/data/shared/maintenance-suggestion'
 
 function suggestion(tasks: unknown[]) {
   return {

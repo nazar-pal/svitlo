@@ -3,6 +3,10 @@ import type { drizzle } from 'drizzle-orm/better-sqlite3'
 import { renderHook, waitFor } from '@testing-library/react-native'
 
 import { IDS, seedBaseScenario } from '@/data/client/mutations/__tests__/seed'
+// Organizations have no reactive UI gate, so their decisions are not in the
+// `policies` map — this suite passes the decision to `usePolicy` directly
+// to exercise the reactive adapter over the organizations plan.
+import * as organizationsD from '@/data/shared/organizations/decisions'
 import {
   closeDatabase,
   createTestDatabase,
@@ -24,7 +28,7 @@ jest.mock('@/lib/powersync/database', () => ({
 
 jest.mock('@/lib/powersync', () => ({}))
 
-const { policies, usePolicy } = require('@/data/client/use-policy')
+const { usePolicy } = require('@/data/client/use-policy')
 
 beforeAll(async () => {
   const testDb = await createTestDatabase()
@@ -44,7 +48,7 @@ afterAll(() => {
 describe('usePolicy(organizations.renameOrganization)', () => {
   it('reports loading when args are null', () => {
     const { result } = renderHook(() =>
-      usePolicy(policies.organizations.renameOrganization, null)
+      usePolicy(organizationsD.renameOrganization, null)
     )
     expect(result.current).toEqual({ status: 'loading' })
   })
@@ -52,7 +56,7 @@ describe('usePolicy(organizations.renameOrganization)', () => {
   it('rejects with ORGANIZATION_NOT_FOUND when the org does not exist', async () => {
     seedBaseScenario(mockDb)
     const { result } = renderHook(() =>
-      usePolicy(policies.organizations.renameOrganization, {
+      usePolicy(organizationsD.renameOrganization, {
         callerUserId: IDS.adminUser,
         organizationId: 'does-not-exist'
       })
@@ -69,7 +73,7 @@ describe('usePolicy(organizations.renameOrganization)', () => {
   it('rejects with ONLY_ADMIN_CAN_RENAME_ORG for a non-admin caller', async () => {
     seedBaseScenario(mockDb)
     const { result } = renderHook(() =>
-      usePolicy(policies.organizations.renameOrganization, {
+      usePolicy(organizationsD.renameOrganization, {
         callerUserId: IDS.memberUser,
         organizationId: IDS.org
       })
@@ -86,7 +90,7 @@ describe('usePolicy(organizations.renameOrganization)', () => {
   it('accepts the happy path for the admin', async () => {
     seedBaseScenario(mockDb)
     const { result } = renderHook(() =>
-      usePolicy(policies.organizations.renameOrganization, {
+      usePolicy(organizationsD.renameOrganization, {
         callerUserId: IDS.adminUser,
         organizationId: IDS.org
       })

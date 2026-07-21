@@ -3,11 +3,8 @@ import type {
   OrgAuthzFact
 } from '@/data/shared/authz/policy'
 import type { InvitationRef } from '@/data/shared/invitations'
-import type {
-  RecordRef,
-  TemplateRef as TemplateTriggerRef
-} from '@/data/shared/maintenance'
-import type { MemberRef as OrgMembershipRef } from '@/data/shared/members'
+import type { RecordRef, TemplateRef } from '@/data/shared/maintenance'
+import type { MemberRef } from '@/data/shared/members'
 import type { OrganizationRef } from '@/data/shared/organizations'
 import type { SessionRef } from '@/data/shared/sessions'
 
@@ -28,22 +25,16 @@ export interface OrgMemberInput {
   organizationId: string
 }
 
-// Re-exported under the names the registries already import, so the fact
-// shapes stay owned by their domain modules instead of being re-declared
-// here — a field added to `MemberRef` now reaches both registries and the
-// `satisfies` check catches the drift.
-export type {
-  InvitationRef,
-  OrganizationRef,
-  OrgMembershipRef,
-  TemplateTriggerRef
-}
+// Re-exported so the registries can import every fact shape from one
+// place while the shapes stay owned by their domain modules — a field
+// added to `MemberRef` now reaches both registries and the `satisfies`
+// check catches the drift.
+export type { InvitationRef, MemberRef, OrganizationRef, TemplateRef }
 
 interface FactContracts {
   'session.byId': { input: string; fact: SessionRef | null }
   'session.hasOpenForGenerator': { input: string; fact: boolean }
   'generator.byId': { input: string; fact: { id: string } | null }
-  'generator.exists': { input: string; fact: boolean }
   'generator.orgId': { input: string; fact: string | null }
   'authz.generator': {
     input: GeneratorUserInput
@@ -54,9 +45,9 @@ interface FactContracts {
   'orgMembership.hasForUserAndOrg': { input: OrgMemberInput; fact: boolean }
   'orgMembership.byUserAndOrg': {
     input: OrgMemberInput
-    fact: OrgMembershipRef | null
+    fact: MemberRef | null
   }
-  'orgMembership.byId': { input: string; fact: OrgMembershipRef | null }
+  'orgMembership.byId': { input: string; fact: MemberRef | null }
   'assignment.hasForUserAndGenerator': {
     input: GeneratorUserInput
     fact: boolean
@@ -66,7 +57,7 @@ interface FactContracts {
     input: { organizationId: string; inviteeEmail: string }
     fact: InvitationRef | null
   }
-  'maintenanceTemplate.byId': { input: string; fact: TemplateTriggerRef | null }
+  'maintenanceTemplate.byId': { input: string; fact: TemplateRef | null }
   'maintenanceRecord.byId': { input: string; fact: RecordRef | null }
 }
 

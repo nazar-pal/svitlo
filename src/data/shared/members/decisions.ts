@@ -10,7 +10,7 @@ import {
 
 // ── removeMember ────────────────────────────────────────────────────────────
 
-export interface RemoveMemberArgs {
+interface RemoveMemberArgs {
   callerUserId: string
   memberId: string
 }
@@ -51,7 +51,7 @@ export const removeMember = defineDecision<
 
 // ── leaveOrganization ───────────────────────────────────────────────────────
 
-export interface LeaveOrganizationArgs {
+interface LeaveOrganizationArgs {
   userId: string
   organizationId: string
 }

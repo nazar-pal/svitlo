@@ -8,8 +8,6 @@ import {
 
 import { protectedProcedure } from '../orpc'
 
-export { maintenanceSuggestionSchema } from '@/data/shared/maintenance-suggestion'
-
 const rawSuggestionSchema = z.object({
   maxConsecutiveRunHours: z.number().nullable(),
   requiredRestHours: z.number().nullable(),

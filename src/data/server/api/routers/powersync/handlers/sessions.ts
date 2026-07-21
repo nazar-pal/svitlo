@@ -58,8 +58,18 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     //   `updateSession` → { started_at, stopped_at } (manual time edit)
     // `started_at` presence distinguishes the two.
     if ('started_at' in data) {
-      const startedAt = data.started_at as string
-      const stoppedAt = data.stopped_at as string
+      // Untrusted wire data: an unparseable date would sail through the
+      // policy's `END_TIME_IN_FUTURE` check (`NaN > now` is false) and only
+      // blow up as a Drizzle serialization error. Reject it up front instead.
+      const startedAt = data.started_at
+      const stoppedAt = data.stopped_at
+      if (
+        typeof startedAt !== 'string' ||
+        Number.isNaN(Date.parse(startedAt)) ||
+        typeof stoppedAt !== 'string' ||
+        Number.isNaN(Date.parse(stoppedAt))
+      )
+        return fail('Invalid session times')
       const result = await checks.updateSession({
         userId,
         sessionId: id,
@@ -84,10 +94,16 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
 
     const fields: Partial<Insert<typeof generatorSessions>> = {}
     if ('stopped_by_user_id' in data) fields.stoppedByUserId = userId
-    if ('stopped_at' in data)
-      fields.stoppedAt = data.stopped_at
-        ? new Date(data.stopped_at as string)
-        : null
+    if ('stopped_at' in data) {
+      const stoppedAt = data.stopped_at
+      if (!stoppedAt) fields.stoppedAt = null
+      else if (
+        typeof stoppedAt !== 'string' ||
+        Number.isNaN(Date.parse(stoppedAt))
+      )
+        return fail('Invalid stopped_at')
+      else fields.stoppedAt = new Date(stoppedAt)
+    }
 
     if (Object.keys(fields).length > 0)
       await db
@@ -106,12 +122,12 @@ export const handleGeneratorSessions: TableHandler = async ctx => {
     if (shielded.status === 'consume') return shielded.result
 
     const session = shielded.data.facts.session
-    if (!session) return fail('SESSION_NOT_FOUND')
-    const allowed = isOwnerOrGeneratorAdmin(
+    if (!session) return fail('Session not found')
+    const allowed = isOwnerOrGeneratorAdmin({
       userId,
-      session.startedByUserId,
-      shielded.data.facts.authzGenerator
-    )
+      ownerUserId: session.startedByUserId,
+      generatorFact: shielded.data.facts.authzGenerator
+    })
     if (!allowed) return fail('Can only delete your own sessions')
 
     await db.delete(generatorSessions).where(eq(generatorSessions.id, id))

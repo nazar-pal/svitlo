@@ -24,7 +24,7 @@ import {
 
 // ── startSession ────────────────────────────────────────────────────────────
 
-export interface StartSessionArgs {
+interface StartSessionArgs {
   userId: string
   generatorId: string
 }
@@ -64,7 +64,7 @@ export const startSession = defineDecision<
 
 // ── stopSession ─────────────────────────────────────────────────────────────
 
-export interface StopSessionArgs {
+interface StopSessionArgs {
   userId: string
   sessionId: string
 }
@@ -101,7 +101,7 @@ export const stopSession = defineDecision<
 
 // ── deleteSession ───────────────────────────────────────────────────────────
 
-export interface DeleteSessionArgs {
+interface DeleteSessionArgs {
   userId: string
   sessionId: string
 }
@@ -138,7 +138,7 @@ export const deleteSession = defineDecision<
 
 // ── updateSession ───────────────────────────────────────────────────────────
 
-export interface UpdateSessionArgs {
+interface UpdateSessionArgs {
   userId: string
   sessionId: string
   startedAt: string
@@ -181,7 +181,7 @@ export const updateSession = defineDecision<
 
 // ── logManualSession ────────────────────────────────────────────────────────
 
-export interface LogManualSessionArgs {
+interface LogManualSessionArgs {
   userId: string
   generatorId: string
   startedAt: string

@@ -8,7 +8,7 @@ export type { PolicyResult }
 
 // Fact shape the invitation-lifecycle policy needs. Adapters fetch raw
 // rows and normalize into this schema-agnostic shape. Decisions in
-// `./decisions.ts` wire the facts + authz providers to the rules below.
+// `./decisions.ts` bind fact resolver keys to the rules below.
 export interface InvitationRef {
   organizationId: string
   inviteeEmail: string

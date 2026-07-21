@@ -75,16 +75,6 @@ describe('registry: generator.orgId', () => {
   })
 })
 
-describe('registry: generator.exists', () => {
-  it('returns true for an existing row', async () => {
-    expect(await lookup('generator.exists', IDS.generator)).toBe(true)
-  })
-
-  it('returns false for a missing row', async () => {
-    expect(await lookup('generator.exists', 'nope')).toBe(false)
-  })
-})
-
 // ── session.* ───────────────────────────────────────────────────────────────
 
 describe('registry: session.byId', () => {

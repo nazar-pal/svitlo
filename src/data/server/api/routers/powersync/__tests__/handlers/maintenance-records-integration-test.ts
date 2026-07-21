@@ -138,6 +138,37 @@ describe('handleMaintenanceRecords', () => {
     expect(after!.performedAt).toEqual(before!.performedAt)
   })
 
+  it('update: rejects an unparseable performed_at and leaves the row intact', async () => {
+    await seedRecord(fixture.testDb.db)
+    const before = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        data: { performed_at: 'not-a-date' }
+      })
+    )
+    expect(result.ok).toBe(false)
+    const after = await fixture.testDb.db.query.maintenanceRecords.findFirst({
+      where: eq(maintenanceRecords.id, IDS.record)
+    })
+    expect(after!.performedAt).toEqual(before!.performedAt)
+  })
+
+  it('update: rejects a non-string performed_at', async () => {
+    await seedRecord(fixture.testDb.db)
+    const result = await handleMaintenanceRecords(
+      fixture.makeCtx({
+        op: 'update',
+        id: IDS.record,
+        data: { performed_at: 12345 }
+      })
+    )
+    expect(result.ok).toBe(false)
+  })
+
   it('update: rejects outsider performed_at edit', async () => {
     await seedRecord(fixture.testDb.db)
     const before = await fixture.testDb.db.query.maintenanceRecords.findFirst({

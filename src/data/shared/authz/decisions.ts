@@ -29,7 +29,7 @@ interface OrgAuthzFacts {
   org: policy.OrgAuthzFact | null
 }
 
-export interface IsOrgAdminArgs {
+interface IsOrgAdminArgs {
   userId: string
   orgId: string
 }

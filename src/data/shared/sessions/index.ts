@@ -19,7 +19,7 @@ export interface SessionRef {
 // Pure session-lifecycle rules. No I/O. Callers fetch facts, then ask the
 // policy. Both client (PowerSync SQLite) and server (Postgres) reuse these
 // so the rules live in exactly one place. Decisions in `./decisions.ts`
-// wire the facts + authz providers to these rules.
+// bind fact resolver keys to these rules.
 
 export const startSessionPolicy = (facts: {
   generatorExists: boolean

@@ -15,10 +15,14 @@ export function buildServerChecks(db: Db): CheckFacade {
 // from facts the decision already resolved — no second round trip. Callers
 // must pass the fact from the SAME decision result, not one resolved
 // elsewhere. A missing fact fails closed.
-export const isOwnerOrGeneratorAdmin = (
-  userId: string,
-  ownerUserId: string,
+export const isOwnerOrGeneratorAdmin = ({
+  userId,
+  ownerUserId,
+  generatorFact
+}: {
+  userId: string
+  ownerUserId: string
   generatorFact: authzPolicy.GeneratorAuthzFact | null | undefined
-): boolean =>
+}): boolean =>
   ownerUserId === userId ||
   authzPolicy.isOrgAdmin(userId, generatorFact?.orgAdminUserId ?? null)

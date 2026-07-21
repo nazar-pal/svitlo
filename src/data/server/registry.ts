@@ -23,8 +23,8 @@ import type {
   InvitationRef,
   OrganizationRef,
   OrgMemberInput,
-  OrgMembershipRef,
-  TemplateTriggerRef
+  MemberRef,
+  TemplateRef
 } from '@/data/shared/facts/contracts'
 import type { RecordRef } from '@/data/shared/maintenance'
 import type { SessionRef } from '@/data/shared/sessions'
@@ -104,7 +104,10 @@ const authzGenerator: Resolver<
   if (!row) return null
   return {
     orgAdminUserId: row.orgAdminUserId,
-    hasAssignment: row.hasAssignment
+    // `sql<boolean>` is a compile-time claim only, and this flag grants
+    // access — coerce defensively (the client registry does the same with
+    // `=== 1`) so a driver returning 't'/'f' strings cannot truthy-grant.
+    hasAssignment: row.hasAssignment === true
   }
 }
 
@@ -125,14 +128,6 @@ const organizationById: Resolver<string, OrganizationRef | null> = async (
     columns: { id: true, adminUserId: true }
   })
   return row ?? null
-}
-
-const generatorExists: Resolver<string, boolean> = async (db, id) => {
-  const row = await db.query.generators.findFirst({
-    where: eq(generators.id, id),
-    columns: { id: true }
-  })
-  return row !== undefined
 }
 
 const generatorOrgId: Resolver<string, string | null> = async (db, id) => {
@@ -159,7 +154,7 @@ const orgMembershipHasForUserAndOrg: Resolver<OrgMemberInput, boolean> = async (
 
 const orgMembershipByUserAndOrg: Resolver<
   OrgMemberInput,
-  OrgMembershipRef | null
+  MemberRef | null
 > = async (db, { userId, organizationId }) => {
   const row = await db.query.organizationMembers.findFirst({
     where: and(
@@ -171,7 +166,7 @@ const orgMembershipByUserAndOrg: Resolver<
   return row ?? null
 }
 
-const orgMembershipById: Resolver<string, OrgMembershipRef | null> = async (
+const orgMembershipById: Resolver<string, MemberRef | null> = async (
   db,
   id
 ) => {
@@ -234,10 +229,10 @@ const invitationByOrgAndEmail: Resolver<
   }
 }
 
-const maintenanceTemplateById: Resolver<
-  string,
-  TemplateTriggerRef | null
-> = async (db, id) => {
+const maintenanceTemplateById: Resolver<string, TemplateRef | null> = async (
+  db,
+  id
+) => {
   const row = await db.query.maintenanceTemplates.findFirst({
     where: eq(maintenanceTemplates.id, id),
     columns: {
@@ -274,7 +269,6 @@ const maintenanceRecordById: Resolver<string, RecordRef | null> = async (
 const serverFactRegistry = {
   'session.byId': sessionById,
   'generator.byId': generatorById,
-  'generator.exists': generatorExists,
   'generator.orgId': generatorOrgId,
   'session.hasOpenForGenerator': sessionHasOpenForGenerator,
   'authz.generator': authzGenerator,
