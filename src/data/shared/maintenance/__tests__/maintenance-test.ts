@@ -300,9 +300,3 @@ describe('updateMaintenanceRecordPolicy', () => {
     ).toEqual({ ok: true })
   })
 })
-
-// Boundary tests: orchestrator behaviors the pure policies can't express.
-// (1) updateTemplate's trigger-field merge treats `undefined` as "unchanged"
-// but an explicit `null` as a real clear-to-null. (2) deleteRecord surfaces
-// the fetched record on success so handlers can layer additional rules
-// without a second round trip.

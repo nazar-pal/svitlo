@@ -68,6 +68,16 @@ describe('leaveOrganizationPolicy', () => {
     ).toEqual({ ok: false, code: 'ADMIN_CANNOT_LEAVE' })
   })
 
+  it('prefers ADMIN_CANNOT_LEAVE over NOT_MEMBER_OF_ORG when an admin has no membership row', () => {
+    expect(
+      leaveOrganizationPolicy({
+        member: null,
+        isCallerOrgAdmin: true,
+        adminUserId: ADMIN
+      })
+    ).toEqual({ ok: false, code: 'ADMIN_CANNOT_LEAVE' })
+  })
+
   it('rejects when the caller has no membership row', () => {
     expect(
       leaveOrganizationPolicy({

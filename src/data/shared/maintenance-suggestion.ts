@@ -1,12 +1,16 @@
 import { z } from 'zod'
 
-import { usesCalendar, usesHours } from '@/lib/maintenance/trigger-type'
+import {
+  TRIGGER_TYPES,
+  usesCalendar,
+  usesHours
+} from '@/lib/maintenance/trigger-type'
 
 export const rawTaskSchema = z.object({
   taskName: z.string().describe('Name of the maintenance task'),
   description: z.string().describe('What this task involves'),
   triggerType: z
-    .enum(['hours', 'calendar', 'whichever_first'])
+    .enum(TRIGGER_TYPES)
     .describe(
       'When this task triggers. "hours" = by runtime hours, "calendar" = by calendar days, "whichever_first" = whichever threshold is reached first'
     ),

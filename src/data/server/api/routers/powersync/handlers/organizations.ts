@@ -67,5 +67,5 @@ export const handleOrganizations: TableHandler = async ctx => {
     return ok
   }
 
-  return fail('Invalid operation')
+  return fail('Invalid operation on organizations')
 }
